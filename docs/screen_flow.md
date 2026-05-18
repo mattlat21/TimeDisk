@@ -1,5 +1,7 @@
 # TimeDisk Screen Flow
 
+**Related docs:** [data_model.md](data_model.md) · [mode_flow.md](mode_flow.md) · [adult_authentication.md](adult_authentication.md) · [data_flow.md](data_flow.md)
+
 Simplified screens-only diagram: [screen_flow_simple.md](screen_flow_simple.md).
 
 ```mermaid
@@ -225,7 +227,8 @@ flowchart TB
 
 ## Notes
 
-- **Boot** — on power up, show the splash for **X** seconds, then **Loading / Startup** while fetching the current time from a server; when the time is available, show **Time of Day (Bright)**.
+- **Timeout config fields** (see [data_model.md](data_model.md)): `timeout_splash_sec`, `timeout_tod_dim_sec`, `timeout_aa_sec`, `timeout_main_menu_sec`, `timeout_timer_dim_sec`.
+- **Boot** — on power up, show the splash for `timeout_splash_sec`, then **Loading / Startup** while fetching the current time from a server; when the time is available, show **Time of Day (Bright)**.
 - **T.o.D.** — time-of-day display (idle).
 - **A.A.** — adult authentication (PIN / challenge); used when entering the menu from idle and when ending an active timer.
 - **menu** ↔ **settings** — settings is reachable from the menu and returns to it.

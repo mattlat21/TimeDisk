@@ -8,4 +8,13 @@ Build and flash:
 idf.py build flash
 ```
 
+## Documentation
+
+- [Screen flow](docs/screen_flow.md) — full UI navigation diagram
+- [Screen flow (simplified)](docs/screen_flow_simple.md) — screens only
+- [Data model](docs/data_model.md) — settings, timeouts, schedules, theme
+- [Mode flow](docs/mode_flow.md) — Wake / Wind Down / Sleep / Rest cycling
+- [Adult authentication](docs/adult_authentication.md) — PIN, maths, and `aa_methods` bitmask
+- [Data flow](docs/data_flow.md) — boot, NVS, and runtime data paths
+
 Code is free to use and modify as you like, but not for commercial use — **CC BY-NC** (Attribution-NonCommercial).

@@ -1,6 +1,6 @@
 # TimeDisk screen flow (simplified)
 
-Screens only — no actions, events, or decision nodes. See [screen_flow.md](screen_flow.md) for the full diagram.
+Screens only — no actions, events, or decision nodes. See [screen_flow.md](screen_flow.md) for the full diagram. Data and modes: [data_model.md](data_model.md) · [mode_flow.md](mode_flow.md).
 
 ```mermaid
 flowchart TB
