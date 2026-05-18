@@ -13,6 +13,8 @@ flowchart LR
     powerUp([Power Up])
     nvsLoad[NVS load config]
     splash[Splash UI]
+    wizardSsid[startup_wizard_ssid]
+    wizardPw[startup_wizard_password]
     loading[Loading UI]
     wifi[WiFi connect]
     ntp[NTP sync]
@@ -21,8 +23,10 @@ flowchart LR
 
     powerUp --> nvsLoad
     nvsLoad --> splash
-    splash -->|"timeout_splash_sec"| loading
-  loading --> wifi
+    splash -->|"timeout_splash_sec"| wizardSsid
+    wizardSsid --> wizardPw
+    wizardPw --> loading
+    loading --> wifi
     wifi -->|"wifi_ssid wifi_password"| ntp
     ntp -->|"ntp_server"| rtc
     rtc -->|"time_valid"| todUI
@@ -30,11 +34,16 @@ flowchart LR
 
 | From | To | Data | Trigger |
 | ---- | -- | ---- | ------- |
-| NVS | WiFi stack | `wifi_ssid`, `wifi_password` | After splash |
+| NVS | Boot logic | `wifi_ssid`, `wifi_password` | After splash |
+| User | NVS | `wifi_ssid` | startup_wizard_ssid Next |
+| User | NVS | `wifi_password` (may be `""`) | startup_wizard_password Next |
+| NVS | WiFi stack | `wifi_ssid`, `wifi_password` | After startup wizard / loading |
 | NVS | SNTP client | `ntp_server` | WiFi connected |
 | NTP server | System clock | UTC timestamp | SNTP success |
 | System clock | UI | local time, `time_valid=true` | Time accepted |
 | NVS | UI | `timeout_splash_sec` | Boot |
+
+`startup_wizard_ssid` and `startup_wizard_password` are **skipped** when `wifi_ssid` is already set and `wifi_password` is not null — see [data_model.md](data_model.md#startup-wizard-boot-only).
 
 If time is not valid, screen flow may route to Settings / Loading loop — see [screen_flow.md](screen_flow.md) Boot subgraph.
 
