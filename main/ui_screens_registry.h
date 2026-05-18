@@ -8,7 +8,7 @@ extern "C" {
 #endif
 
 void ui_screen_splash_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
-void ui_screen_wizard_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
+void ui_screen_startup_wifi_wizard_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
 void ui_screen_loading_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
 void ui_screen_tod_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
 void ui_screen_aa_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
@@ -32,8 +32,8 @@ bool ui_screen_aa_pin_ok_pressed(void);
 bool ui_screen_aa_maths_ok_pressed(void);
 void ui_screen_timer_on_show(ui_screen_id_t id);
 void ui_screen_timer_tick(void);
-void ui_screen_wizard_ssid_get_text(char *out, size_t len);
-void ui_screen_wizard_password_get_text(char *out, size_t len);
+void ui_screen_startup_wifi_wizard_ssid_get_text(char *out, size_t len);
+void ui_screen_startup_wifi_wizard_password_get_text(char *out, size_t len);
 uint32_t ui_screen_duration_get_sec(void);
 uint8_t ui_screen_style_get_id(void);
 uint32_t ui_screen_schedule_get_sec(void);

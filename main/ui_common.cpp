@@ -141,3 +141,65 @@ void ui_common_format_hh_mm(char *buf, size_t len, int hour, int min)
 {
     snprintf(buf, len, "%02d:%02d", hour, min);
 }
+
+#define UI_COMMON_LINE_PT_SLOTS 64
+
+static lv_point_precise_t s_line_pt_pool[UI_COMMON_LINE_PT_SLOTS][2];
+static int s_line_pt_pool_next;
+
+void ui_common_line_points_reset(void)
+{
+    s_line_pt_pool_next = 0;
+}
+
+static lv_point_precise_t *ui_common_line_points_alloc(void)
+{
+    if (s_line_pt_pool_next >= UI_COMMON_LINE_PT_SLOTS) {
+        return NULL;
+    }
+    return s_line_pt_pool[s_line_pt_pool_next++];
+}
+
+static lv_obj_t *ui_common_add_line_internal(lv_obj_t *parent, lv_point_precise_t *pts)
+{
+    if (pts == NULL) {
+        return NULL;
+    }
+
+    const ui_theme_t *t = ui_theme_get();
+    lv_obj_t *line = lv_line_create(parent);
+    lv_line_set_points(line, pts, 2);
+    lv_obj_set_style_line_color(line, t->white, 0);
+    lv_obj_set_style_line_width(line, 1, 0);
+    lv_obj_set_style_line_rounded(line, true, 0);
+    lv_obj_remove_flag(line, LV_OBJ_FLAG_CLICKABLE);
+    return line;
+}
+
+lv_obj_t *ui_common_add_vertical_line(lv_obj_t *parent, int x)
+{
+    lv_point_precise_t *pts = ui_common_line_points_alloc();
+    if (pts == NULL) {
+        return NULL;
+    }
+
+    pts[0].x = x;
+    pts[0].y = 0;
+    pts[1].x = x;
+    pts[1].y = UI_DISP;
+    return ui_common_add_line_internal(parent, pts);
+}
+
+lv_obj_t *ui_common_add_horizontal_line(lv_obj_t *parent, int y)
+{
+    lv_point_precise_t *pts = ui_common_line_points_alloc();
+    if (pts == NULL) {
+        return NULL;
+    }
+
+    pts[0].x = 0;
+    pts[0].y = y;
+    pts[1].x = UI_DISP;
+    pts[1].y = y;
+    return ui_common_add_line_internal(parent, pts);
+}

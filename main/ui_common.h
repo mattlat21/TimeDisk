@@ -22,6 +22,14 @@ void ui_common_add_numeric_keypad(lv_obj_t *parent, int start_y, lv_event_cb_t d
 void ui_common_format_mm_ss(char *buf, size_t len, uint32_t sec);
 void ui_common_format_hh_mm(char *buf, size_t len, int hour, int min);
 
+/*
+ * Guide lines (LVGL lv_line). lv_line_set_points() keeps a pointer — each line needs
+ * its own point pair. Call ui_common_line_points_reset() once before adding lines on a screen.
+ */
+void ui_common_line_points_reset(void);
+lv_obj_t *ui_common_add_vertical_line(lv_obj_t *parent, int x);
+lv_obj_t *ui_common_add_horizontal_line(lv_obj_t *parent, int y);
+
 #ifdef __cplusplus
 }
 #endif

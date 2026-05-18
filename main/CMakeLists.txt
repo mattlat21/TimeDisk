@@ -8,7 +8,7 @@ idf_component_register(
         "ui_screens_registry.cpp"
         "ui_screen_splash.cpp"
         "assets/splash.c"
-        "ui_screen_wizard.cpp"
+        "ui_screen_startup_wifi_wizard.cpp"
         "ui_screen_loading.cpp"
         "ui_screen_tod.cpp"
         "ui_screen_aa.cpp"
