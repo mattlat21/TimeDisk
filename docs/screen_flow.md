@@ -1,7 +1,12 @@
-# TimeDisk screen flow
+# TimeDisk Screen Flow
 
 ```mermaid
 flowchart TB
+    %% Boot
+    power_up([Power Up])
+    splash("Splash Screen")
+    loading("Loading / Startup")
+
     %% Screens (green)
     menu("Main Menu")
     tod_dim("Time of Day (Dim)")
@@ -30,6 +35,7 @@ flowchart TB
     confirm_no("No")
     confirm_yes("Yes")
     selected_main_menu_item("Selected Main Menu Item")
+    loading_settings("Settings")
 
     %% User Back Buttons
     back_btn_settings("Back Button")
@@ -51,6 +57,7 @@ flowchart TB
     rest_set_wind_down_time_next_button("Next Button")
 
     %% System events (purple)
+    splash_timeout("Splash Timeout")
     timeout_tod("T.O.D. Dim Timeout")
     fail_start("Fail")
     pass_start("Pass")
@@ -63,6 +70,18 @@ flowchart TB
 
     %% Decision (orange)
     which_main_menu_item_selected{{"Menu Item?"}}
+    time_obtained{{"Current Time Known?"}}
+    settings_is_time_loaded{{"Current Time Known?"}}
+
+    %% Boot sequence
+    subgraph Boot
+        power_up --> splash
+        splash --> splash_timeout --> loading
+        loading --> time_obtained --> |No| loading
+        loading --> loading_settings
+    end
+    time_obtained --> |Yes| tod_bright
+    loading_settings --> settings
 
     %% Idle and authentication
     subgraph Time Of Day
@@ -80,7 +99,7 @@ flowchart TB
         cancel_start --> tod_bright
     end
 
-    %% Menu and settings
+    %% Menu
     subgraph Main Menu
         menu --> selected_main_menu_item --> which_main_menu_item_selected
         menu --> main_menu_timeout
@@ -94,7 +113,7 @@ flowchart TB
 
 
     %% Back to Menu
-    back_btn_settings --> menu
+    settings_is_time_loaded --> |Yes| menu
     sleep_set_wake_up_time_back_button --> menu
     rest_set_rest_end_time_back_button --> menu
     back_duration --> menu
@@ -103,8 +122,9 @@ flowchart TB
 
     %% Settings
     subgraph Settings
-        settings --> back_btn_settings
+        settings --> back_btn_settings --> settings_is_time_loaded
     end
+    settings_is_time_loaded --> |No| loading
 
     %% Time of Day Setup
     subgraph Set Sleep Time
@@ -155,21 +175,24 @@ flowchart TB
     classDef action fill:#bbdefb,stroke:#1565c0,color:#0d47a1
     classDef event fill:#e1bee7,stroke:#6a1b9a,color:#4a148c
     classDef decision fill:#ffe0b2,stroke:#e65100,color:#bf360c
+    classDef start fill:#b2ebf2,stroke:#00838f,color:#006064
 
-    class tod_dim,tod_bright,aa_start,menu,settings,timer_duration,timer_style,timer_bright,timer_dim,aa_end,confirm,sleep_set_wake_up_time,sleep_rest_rest_end_time,sleep_set_wind_down_time,rest_set_rest_end_time,rest_set_wind_down_time screen
+    class splash,loading,tod_dim,tod_bright,aa_start,menu,settings,timer_duration,timer_style,timer_bright,timer_dim,aa_end,confirm,sleep_set_wake_up_time,sleep_rest_rest_end_time,sleep_set_wind_down_time,rest_set_rest_end_time,rest_set_wind_down_time screen
 
-    rest_set_wind_down_time_next_button("Next Button")
-    class tap1,btn_press,cancel_start,ok_duration,back_btn_settings,back_duration,ok_style,back_style,tap2,end_btn,cancel_end,confirm_no,selected_main_menu_item,confirm_yes,sleep_set_wake_up_time_back_button,sleep_rest_rest_end_time_back_button,sleep_set_wind_down_time_back_button,sleep_set_wake_up_time_next_button,sleep_rest_rest_end_time_next_button,sleep_set_wind_down_time_next_button,rest_set_rest_end_time_back_button,rest_set_wind_down_time_back_button,rest_set_rest_end_time_next_button,rest_set_wind_down_time_next_button action
+    class tap1,btn_press,cancel_start,ok_duration,back_btn_settings,back_duration,ok_style,back_style,tap2,end_btn,cancel_end,confirm_no,selected_main_menu_item,confirm_yes,sleep_set_wake_up_time_back_button,sleep_rest_rest_end_time_back_button,sleep_set_wind_down_time_back_button,sleep_set_wake_up_time_next_button,sleep_rest_rest_end_time_next_button,sleep_set_wind_down_time_next_button,rest_set_rest_end_time_back_button,rest_set_wind_down_time_back_button,rest_set_rest_end_time_next_button,rest_set_wind_down_time_next_button,loading_settings action
 
-    class timeout_tod,fail_start,pass_start,timeout_aa_start,dim_timeout,fail_end,timeout_aa_end,pass_end,main_menu_timeout event
+    class splash_timeout,timeout_tod,fail_start,pass_start,timeout_aa_start,dim_timeout,fail_end,timeout_aa_end,pass_end,main_menu_timeout event
 
-    class which_main_menu_item_selected decision
+    class power_up start
+
+    class which_main_menu_item_selected,time_obtained,settings_is_time_loaded decision
 ```
 
 ## Legend
 
 | Color  | Meaning                           |
 | ------ | --------------------------------- |
+| Cyan   | Start (power on)                  |
 | Green  | Screen                            |
 | Blue   | User action or button             |
 | Purple | System event or validation result |
@@ -177,6 +200,7 @@ flowchart TB
 
 ## Notes
 
+- **Boot** — on power up, show the splash for **X** seconds, then **Loading / Startup** while fetching the current time from a server; when the time is available, show **Time of Day (Bright)**.
 - **T.o.D.** — time-of-day display (idle).
-- **U.A.** — user authentication (PIN / challenge); used when entering the menu from idle and when ending an active timer.
+- **A.A.** — adult authentication (PIN / challenge); used when entering the menu from idle and when ending an active timer.
 - **menu** ↔ **settings** — settings is reachable from the menu and returns to it.
