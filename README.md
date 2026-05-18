@@ -16,5 +16,6 @@ idf.py build flash
 - [Mode flow](docs/mode_flow.md) — Wake / Wind Down / Sleep / Rest cycling
 - [Adult authentication](docs/adult_authentication.md) — PIN, maths, and `aa_methods` bitmask
 - [Data flow](docs/data_flow.md) — boot, NVS, and runtime data paths
+- [Wireframes](docs/wireframes/README.md) — 720×720 SVG screens for Figma (splash, menu, AA, timer, …)
 
 Code is free to use and modify as you like, but not for commercial use — **CC BY-NC** (Attribution-NonCommercial).

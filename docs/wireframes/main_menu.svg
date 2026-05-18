@@ -1,0 +1,35 @@
+<svg width="720" height="720" viewBox="0 0 720 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_main_menu)">
+  <circle id="display" cx="360" cy="360" r="353" fill="black" stroke="#7D23BE" stroke-width="14"/>
+
+  <g id="menuPetals">
+    <!-- 4 quadrant wedges: inner r=78, outer r=318 -->
+    <path id="petalSettings" fill="#0F5BF9" d="M 360.8 282.0 L 363.3 42.0 A 318 318 0 0 1 678.0 356.7 L 438.0 359.2 A 78 78 0 0 0 360.8 282.0 Z"/>
+    <path id="petalStartTimer" fill="#0F5BF9" d="M 438.0 360.8 L 678.0 363.3 A 318 318 0 0 1 363.3 678.0 L 360.8 438.0 A 78 78 0 0 0 438.0 360.8 Z"/>
+    <path id="petalSleep" fill="#0F5BF9" d="M 359.2 438.0 L 356.7 678.0 A 318 318 0 0 1 42.0 363.3 L 282.0 360.8 A 78 78 0 0 0 359.2 438.0 Z"/>
+    <path id="petalRest" fill="#0F5BF9" d="M 282.0 359.2 L 42.0 356.7 A 318 318 0 0 1 356.7 42.0 L 359.2 282.0 A 78 78 0 0 0 282.0 359.2 Z"/>
+
+    <g id="petalSeparators" stroke="black" stroke-width="4" stroke-linecap="round">
+      <line x1="360.8" y1="282.0" x2="363.3" y2="42.0"/>
+      <line x1="438.0" y1="360.8" x2="678.0" y2="363.3"/>
+      <line x1="359.2" y1="438.0" x2="356.7" y2="678.0"/>
+      <line x1="282.0" y1="359.2" x2="42.0" y2="356.7"/>
+    </g>
+
+    <text x="500" y="225" text-anchor="middle" fill="white" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="bold">Settings</text>
+    <text x="500" y="505" text-anchor="middle" fill="white" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="bold">Start Timer</text>
+    <text x="220" y="505" text-anchor="middle" fill="white" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="bold">Sleep</text>
+    <text x="220" y="225" text-anchor="middle" fill="white" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="bold">Rest</text>
+  </g>
+
+  <g id="centerBack">
+    <circle cx="360" cy="360" r="62" fill="#FC6700" stroke="black" stroke-width="3"/>
+    <text x="360" y="368" text-anchor="middle" fill="white" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="bold">Back</text>
+  </g>
+</g>
+<defs>
+  <clipPath id="clip0_main_menu">
+    <rect width="720" height="720" fill="white"/>
+  </clipPath>
+</defs>
+</svg>

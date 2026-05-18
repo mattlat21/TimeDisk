@@ -1,6 +1,6 @@
 # TimeDisk Screen Flow
 
-**Related docs:** [data_model.md](data_model.md) · [mode_flow.md](mode_flow.md) · [adult_authentication.md](adult_authentication.md) · [data_flow.md](data_flow.md)
+**Related docs:** [data_model.md](data_model.md) · [mode_flow.md](mode_flow.md) · [adult_authentication.md](adult_authentication.md) · [data_flow.md](data_flow.md) · [wireframes](wireframes/README.md)
 
 Simplified screens-only diagram: [screen_flow_simple.md](screen_flow_simple.md).
 

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="720" viewBox="0 0 720 720">
+  <defs>
+    <clipPath id="displayCircle"><circle cx="360" cy="360" r="354"/></clipPath>
+  </defs>
+  <g clip-path="url(#displayCircle)">
+    <rect id="background" width="720" height="720" fill="#000000"/>
+    <text id="message" x="360" y="300" text-anchor="middle" fill="#6BCA24" font-family="Arial, Helvetica, sans-serif" font-size="40" font-weight="bold">Timer done</text>
+    <text x="360" y="360" text-anchor="middle" fill="#FFFFFF" font-family="Arial" font-size="24">00:00</text>
+    <g id="okButton">
+      <rect x="280" y="420" width="160" height="64" rx="32" fill="#3CB85C"/>
+      <text x="360" y="462" text-anchor="middle" fill="#FFF" font-family="Arial" font-size="26" font-weight="bold">OK</text>
+    </g>
+  </g>
+  <circle id="outerRing" cx="360" cy="360" r="357" fill="none" stroke="#7A24BC" stroke-width="6"/>
+</svg>

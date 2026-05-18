@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="720" viewBox="0 0 720 720">
+  <defs>
+    <clipPath id="displayCircle"><circle cx="360" cy="360" r="354"/></clipPath>
+  </defs>
+  <g clip-path="url(#displayCircle)">
+    <rect id="background" width="720" height="720" fill="#000000"/>
+    <circle id="progressRing" cx="360" cy="320" r="140" fill="none" stroke="#5A189A" stroke-width="12"/>
+    <circle id="progressArc" cx="360" cy="320" r="140" fill="none" stroke="#7A24BC" stroke-width="12" stroke-dasharray="660 880" stroke-linecap="round" transform="rotate(-90 360 320)"/>
+    <text id="countdown" x="360" y="340" text-anchor="middle" fill="#FFFFFF" font-family="Arial" font-size="72" font-weight="bold">05:00</text>
+    <g id="endButton">
+      <rect x="280" y="520" width="160" height="56" rx="28" fill="#3CB85C"/>
+      <text x="360" y="556" text-anchor="middle" fill="#FFF" font-family="Arial" font-size="22" font-weight="bold">End</text>
+    </g>
+  </g>
+  <circle id="outerRing" cx="360" cy="360" r="357" fill="none" stroke="#7A24BC" stroke-width="6"/>
+</svg>

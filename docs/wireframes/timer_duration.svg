@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="720" viewBox="0 0 720 720">
+  <defs>
+    <clipPath id="displayCircle"><circle cx="360" cy="360" r="354"/></clipPath>
+  </defs>
+  <g clip-path="url(#displayCircle)">
+    <rect id="background" width="720" height="720" fill="#000000"/>
+    <text id="title" x="360" y="56" text-anchor="middle" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="bold">Set Duration</text>
+    <rect id="durationDisplay" x="160" y="200" width="400" height="120" rx="16" fill="#5A189A"/>
+    <text id="durationValue" x="360" y="280" text-anchor="middle" fill="#FFFFFF" font-family="Arial" font-size="64" font-weight="bold">05:00</text>
+    <g id="stepper">
+      <circle cx="200" cy="380" r="40" fill="#1D4ED8"/><text x="200" y="388" text-anchor="middle" fill="#FFF" font-family="Arial" font-size="32">&#8722;</text>
+      <circle cx="520" cy="380" r="40" fill="#1D4ED8"/><text x="520" y="388" text-anchor="middle" fill="#FFF" font-family="Arial" font-size="32">+</text>
+    </g>
+    <text x="360" y="450" text-anchor="middle" fill="#AAAAAA" font-family="Arial" font-size="18">Default from last timer: 300 s</text>
+    <g id="sideBack">
+      <rect x="36" y="330" width="64" height="110" rx="32" fill="#E87A2E"/>
+      <text x="68" y="392" text-anchor="middle" fill="#FFF" font-family="Arial" font-size="28">&#8592;</text>
+    </g>
+    <g id="sideNext">
+      <rect x="620" y="330" width="64" height="110" rx="32" fill="#3CB85C"/>
+      <text x="652" y="392" text-anchor="middle" fill="#FFF" font-family="Arial" font-size="18" font-weight="bold">Next</text>
+    </g>
+  </g>
+  <circle id="outerRing" cx="360" cy="360" r="357" fill="none" stroke="#7A24BC" stroke-width="6"/>
+</svg>
