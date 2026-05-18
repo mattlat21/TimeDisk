@@ -12,7 +12,7 @@ void app_config_init_defaults(void)
 
     snprintf(s_cfg.ntp_server, sizeof(s_cfg.ntp_server), "%s", "pool.ntp.org");
 
-    s_cfg.timeout_splash_sec = 10;
+    s_cfg.timeout_splash_sec = 3;
     s_cfg.timeout_tod_dim_sec = 600;
     s_cfg.timeout_aa_sec = 60;
     s_cfg.timeout_main_menu_sec = 60;
