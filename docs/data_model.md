@@ -22,9 +22,27 @@ Canonical schema for persisted settings and runtime state. Documentation only �
 
 | Field | Type | Max length | Default | Notes |
 | ----- | ---- | ---------- | ------- | ----- |
-| `wifi_ssid` | string | 32 | *(empty)* | Network to join on boot |
-| `wifi_password` | string | 64 | *(empty)* | WPA passphrase |
+| `wifi_ssid` | string | 32 | *(unset)* | Network to join on boot |
+| `wifi_password` | string | 64 | *(unset)* | WPA passphrase; may be empty string after user configures |
 | `ntp_server` | string | 128 | `pool.ntp.org` | Hostname or IP for SNTP |
+
+### Unset vs empty
+
+| Field | Unset (null / missing in NVS) | Empty string `""` |
+| ----- | ------------------------------ | ------------------- |
+| `wifi_ssid` | Show [startup_wizard_ssid](screen_flow.md) on boot | Invalid for connect until user sets a non-blank SSID |
+| `wifi_password` | Show [startup_wizard_password](screen_flow.md) on boot | Valid — open network or no passphrase |
+
+**Blank SSID:** treat as unset (same as null) → startup wizard.
+
+### Startup wizard (boot only)
+
+After splash, before Loading — see [screen_flow.md](screen_flow.md) Boot subgraph:
+
+1. **`startup_wizard_ssid`** — if `wifi_ssid` is blank or null; **Next** saves non-blank SSID to NVS.
+2. **`startup_wizard_password`** — if `wifi_password` is null only; **Next** saves to NVS (password may be left blank → store `""`).
+
+SSID wizard runs before password wizard. Settings can change these later without using the startup screens.
 
 ---
 
