@@ -1,5 +1,7 @@
 # TimeDisk Screen Flow
 
+Simplified screens-only diagram: [screen_flow_simple.md](screen_flow_simple.md).
+
 ```mermaid
 flowchart TB
     %% Boot
