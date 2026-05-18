@@ -26,6 +26,7 @@ flowchart TB
     sleep_set_wind_down_time("Sleep: Set Wind Down Time")
     rest_set_rest_end_time("Rest: Set Rest End Time")
     rest_set_wind_down_time("Rest: Set Wind Down Time")
+    timer_triggered("Timer Triggered")
 
     %% User actions (blue)
     tap1("Tap Screen")
@@ -38,6 +39,7 @@ flowchart TB
     confirm_yes("Yes")
     selected_main_menu_item("Selected Main Menu Item")
     loading_settings("Settings")
+    timer_done_ok("OK")
 
     %% User Back Buttons
     back_btn_settings("Back Button")
@@ -69,11 +71,19 @@ flowchart TB
     timeout_aa_end("A.A. Timeout")
     pass_end("Pass")
     main_menu_timeout("Main Menu Timeout")
+    timer_done_timeout("Timer Done Timeout")
 
     %% Decision (orange)
     which_main_menu_item_selected{{"Menu Item?"}}
     time_obtained{{"Current Time Known?"}}
     settings_is_time_loaded{{"Current Time Known?"}}
+    is_timer_triggered_bright{{"Timer Triggered"}}
+    is_timer_triggered_dim{{"Timer Triggered"}}
+
+    %% Helpful Labels
+    timer_done([Back to T.o.D.])
+    timer_back_to_menu([Back to Menu])
+    startToD(["Start Time of Day"])
 
     %% Boot sequence
     subgraph Boot
@@ -100,6 +110,7 @@ flowchart TB
         timeout_aa_start --> tod_bright
         cancel_start --> tod_bright
     end
+    startToD --> tod_bright
 
     %% Menu
     subgraph Main Menu
@@ -118,9 +129,8 @@ flowchart TB
     settings_is_time_loaded --> |Yes| menu
     sleep_set_wake_up_time_back_button --> menu
     rest_set_rest_end_time_back_button --> menu
-    back_duration --> menu
-    confirm_yes --> menu
     pass_start --> menu
+    timer_back_to_menu --> menu
 
     %% Settings
     subgraph Settings
@@ -137,7 +147,7 @@ flowchart TB
         sleep_set_wind_down_time --> sleep_set_wind_down_time_next_button
         sleep_set_wind_down_time --> sleep_set_wind_down_time_back_button --> sleep_rest_rest_end_time
     end
-    sleep_set_wind_down_time_next_button --> tod_bright
+    sleep_set_wind_down_time_next_button --> startToD
 
     subgraph Set Rest Time
         rest_set_rest_end_time --> rest_set_rest_end_time_next_button --> rest_set_wind_down_time
@@ -145,7 +155,7 @@ flowchart TB
         rest_set_wind_down_time --> rest_set_wind_down_time_next_button
         rest_set_wind_down_time --> rest_set_wind_down_time_back_button --> rest_set_rest_end_time
     end
-    rest_set_wind_down_time_next_button --> tod_bright
+    rest_set_wind_down_time_next_button --> startToD
 
     %% Timer setup
     subgraph Timer
@@ -171,30 +181,43 @@ flowchart TB
         confirm --> confirm_no --> timer_bright
         confirm --> confirm_yes
 
+        timer_bright --> is_timer_triggered_bright --> |No| timer_bright
+        timer_dim --> is_timer_triggered_dim --> |No| timer_dim
+
+        is_timer_triggered_bright --> |Yes| timer_triggered
+        is_timer_triggered_dim --> |Yes| timer_triggered
+
+        timer_triggered --> timer_done_ok --> timer_done
+        timer_triggered --> timer_done_timeout --> timer_done
+
+        back_duration --> timer_back_to_menu
+        confirm_yes --> timer_back_to_menu
+
     end
+    timer_done --> tod_bright
 
     classDef screen fill:#c8e6c9,stroke:#2e7d32,color:#1b5e20
     classDef action fill:#bbdefb,stroke:#1565c0,color:#0d47a1
     classDef event fill:#e1bee7,stroke:#6a1b9a,color:#4a148c
     classDef decision fill:#ffe0b2,stroke:#e65100,color:#bf360c
-    classDef start fill:#b2ebf2,stroke:#00838f,color:#006064
+    classDef helpful_label fill:#b2ebf2,stroke:#00838f,color:#006064
 
-    class splash,loading,tod_dim,tod_bright,aa_start,menu,settings,timer_duration,timer_style,timer_bright,timer_dim,aa_end,confirm,sleep_set_wake_up_time,sleep_rest_rest_end_time,sleep_set_wind_down_time,rest_set_rest_end_time,rest_set_wind_down_time screen
+    class splash,loading,tod_dim,tod_bright,aa_start,menu,settings,timer_duration,timer_style,timer_bright,timer_dim,aa_end,confirm,sleep_set_wake_up_time,sleep_rest_rest_end_time,sleep_set_wind_down_time,rest_set_rest_end_time,rest_set_wind_down_time,timer_triggered screen
 
-    class tap1,btn_press,cancel_start,ok_duration,back_btn_settings,back_duration,ok_style,back_style,tap2,end_btn,cancel_end,confirm_no,selected_main_menu_item,confirm_yes,sleep_set_wake_up_time_back_button,sleep_rest_rest_end_time_back_button,sleep_set_wind_down_time_back_button,sleep_set_wake_up_time_next_button,sleep_rest_rest_end_time_next_button,sleep_set_wind_down_time_next_button,rest_set_rest_end_time_back_button,rest_set_wind_down_time_back_button,rest_set_rest_end_time_next_button,rest_set_wind_down_time_next_button,loading_settings action
+    class tap1,btn_press,cancel_start,ok_duration,back_btn_settings,back_duration,ok_style,back_style,tap2,end_btn,cancel_end,confirm_no,selected_main_menu_item,confirm_yes,sleep_set_wake_up_time_back_button,sleep_rest_rest_end_time_back_button,sleep_set_wind_down_time_back_button,sleep_set_wake_up_time_next_button,sleep_rest_rest_end_time_next_button,sleep_set_wind_down_time_next_button,rest_set_rest_end_time_back_button,rest_set_wind_down_time_back_button,rest_set_rest_end_time_next_button,rest_set_wind_down_time_next_button,loading_settings,timer_done_ok action
 
-    class splash_timeout,timeout_tod,fail_start,pass_start,timeout_aa_start,dim_timeout,fail_end,timeout_aa_end,pass_end,main_menu_timeout event
+    class splash_timeout,timeout_tod,fail_start,pass_start,timeout_aa_start,dim_timeout,fail_end,timeout_aa_end,pass_end,main_menu_timeout,timer_done_timeout event
 
-    class power_up start
+    class power_up,timer_done,timer_back_to_menu,startToD helpful_label
 
-    class which_main_menu_item_selected,time_obtained,settings_is_time_loaded decision
+    class which_main_menu_item_selected,time_obtained,settings_is_time_loaded,is_timer_triggered_dim,is_timer_triggered_bright decision
 ```
 
 ## Legend
 
 | Color  | Meaning                           |
 | ------ | --------------------------------- |
-| Cyan   | Start (power on)                  |
+| Cyan   | Helpful Label                     |
 | Green  | Screen                            |
 | Blue   | User action or button             |
 | Purple | System event or validation result |
