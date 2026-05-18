@@ -1,7 +1,7 @@
 #include "lvgl.h"
 #include "bsp/display.h"
 #include "bsp/esp-bsp.h"
-#include "ui_screens.h"
+#include "ui_nav.h"
 
 extern "C" void app_main(void)
 {
@@ -20,6 +20,6 @@ extern "C" void app_main(void)
     bsp_display_brightness_set(100);
 
     bsp_display_lock(0);
-    ui_screens_init();
+    ui_nav_init();
     bsp_display_unlock();
 }
