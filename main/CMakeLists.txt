@@ -4,6 +4,7 @@ idf_component_register(
         "app_config.cpp"
         "ui_theme.cpp"
         "ui_common.cpp"
+        "ui_keyboard.cpp"
         "ui_nav.cpp"
         "ui_screens_registry.cpp"
         "ui_screen_splash.cpp"
