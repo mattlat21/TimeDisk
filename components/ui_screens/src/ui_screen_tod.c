@@ -33,7 +33,7 @@ static void refresh_labels(lv_obj_t *lbl_time, lv_obj_t *lbl_mode)
     app_runtime_t *rt = app_runtime_get();
     char tbuf[16];
     if (rt->time_valid) {
-        ui_format_hh_mm(tbuf, sizeof(tbuf), 12, 0);
+        ui_format_hh_mm_now(tbuf, sizeof(tbuf));
     } else {
         snprintf(tbuf, sizeof(tbuf), "--:--");
     }

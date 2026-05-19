@@ -2,6 +2,8 @@
 
 How configuration and runtime data move between storage, network, and UI. Complements [screen_flow.md](screen_flow.md) (navigation) with **data** paths.
 
+Firmware: `app_network` (WiFi STA + SNTP on Loading), `app_config` / `app_nvs` (persistence). ESP32-P4 uses `esp_wifi_remote` + `esp_hosted` (SDIO companion radio).
+
 **Related docs:** [data_model.md](data_model.md) · [mode_flow.md](mode_flow.md) · [adult_authentication.md](adult_authentication.md)
 
 ---

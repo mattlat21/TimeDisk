@@ -22,6 +22,7 @@ void ui_screens_build_all(lv_obj_t *screens[UI_SCREEN_COUNT]);
 
 void ui_screen_splash_on_show(void);
 void ui_screen_loading_on_show(void);
+void ui_screen_loading_set_status(const char *text);
 void ui_screen_tod_on_show(bool dim);
 void ui_screen_aa_on_show(void);
 void ui_screen_aa_show_pin(void);

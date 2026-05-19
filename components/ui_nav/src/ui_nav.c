@@ -7,6 +7,7 @@
 #include "ui_screens_registry.h"
 #include "ui_theme.h"
 #include "app_config.h"
+#include "app_network.h"
 #include "bsp/esp-bsp.h"
 #include <esp_err.h>
 #include <esp_log.h>
@@ -23,8 +24,9 @@ static aa_session_t s_aa;
 static lv_timer_t *s_idle_timer;
 static lv_timer_t *s_tick_timer;
 static uint32_t s_idle_deadline_ms;
-static uint32_t s_loading_start_ms;
-static bool s_loading_stub_done;
+static uint32_t s_loading_retry_at_ms;
+
+#define LOADING_RETRY_MS 10000U
 
 static uint32_t now_ms(void)
 {
@@ -132,9 +134,9 @@ static void on_enter(ui_screen_id_t screen)
         ui_screen_splash_on_show();
         break;
     case UI_SCREEN_LOADING:
-        s_loading_start_ms = now_ms();
-        s_loading_stub_done = false;
+        s_loading_retry_at_ms = 0;
         ui_screen_loading_on_show();
+        app_network_start_boot_sync();
         break;
     case UI_SCREEN_TOD_BRIGHT:
         ui_screen_tod_on_show(false);
@@ -171,6 +173,10 @@ void ui_nav_go(ui_screen_id_t screen)
     if (screen >= UI_SCREEN_COUNT || s_screens[screen] == NULL) {
         ESP_LOGE(TAG, "invalid screen %d", (int)screen);
         return;
+    }
+
+    if (s_current == UI_SCREEN_LOADING && screen != UI_SCREEN_LOADING) {
+        app_network_cancel_boot_sync();
     }
 
     if (s_aa.active && screen != UI_SCREEN_ADULT_AUTH) {
@@ -358,17 +364,66 @@ static void mode_engine_tick(void)
     }
 }
 
+typedef struct {
+    bool time_ok;
+} loading_async_t;
+
+static void loading_boot_async_cb(void *user_data)
+{
+    loading_async_t *arg = (loading_async_t *)user_data;
+    if (arg == NULL) {
+        return;
+    }
+
+    if (s_current != UI_SCREEN_LOADING) {
+        free(arg);
+        return;
+    }
+
+    if (arg->time_ok) {
+        ui_nav_go(UI_SCREEN_TOD_BRIGHT);
+    } else {
+        s_loading_retry_at_ms = now_ms() + LOADING_RETRY_MS;
+        ui_screen_loading_set_status(app_network_get_status_text());
+    }
+
+    free(arg);
+}
+
+static void network_boot_done_cb(bool time_ok, void *user_data)
+{
+    (void)user_data;
+    loading_async_t *arg = calloc(1, sizeof(*arg));
+    if (arg == NULL) {
+        return;
+    }
+    arg->time_ok = time_ok;
+    lv_async_call(loading_boot_async_cb, arg);
+}
+
+static void loading_screen_tick(void)
+{
+    ui_screen_loading_set_status(app_network_get_status_text());
+
+    if (app_network_boot_sync_active()) {
+        return;
+    }
+
+    if (s_loading_retry_at_ms != 0 && now_ms() < s_loading_retry_at_ms) {
+        return;
+    }
+
+    s_loading_retry_at_ms = 0;
+    app_network_start_boot_sync();
+}
+
 static void tick_timer_cb(lv_timer_t *t)
 {
     (void)t;
     app_runtime_t *rt = app_runtime_get();
 
-    if (s_current == UI_SCREEN_LOADING && !s_loading_stub_done) {
-        if (now_ms() - s_loading_start_ms >= 2000U) {
-            s_loading_stub_done = true;
-            rt->time_valid = true;
-            ui_nav_go(UI_SCREEN_TOD_BRIGHT);
-        }
+    if (s_current == UI_SCREEN_LOADING) {
+        loading_screen_tick();
         return;
     }
 
@@ -397,6 +452,13 @@ void ui_nav_init(void)
     if (cfg_err != ESP_OK) {
         ESP_LOGW(TAG, "app_config_init: %s", esp_err_to_name(cfg_err));
     }
+
+    esp_err_t net_err = app_network_init();
+    if (net_err != ESP_OK) {
+        ESP_LOGW(TAG, "app_network_init: %s", esp_err_to_name(net_err));
+    }
+    app_network_set_boot_done_callback(network_boot_done_cb, NULL);
+
     ui_theme_init();
 
     ui_screens_build_all(s_screens);
