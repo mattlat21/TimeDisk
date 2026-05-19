@@ -4,7 +4,7 @@
  * Wireframe: docs/wireframes/startup_wizard_ssid.svg
  *   - 720×720 circular panel, 14 px purple ring (#7D23BE)
  *   - Title, purple rounded SSID field (563×78 @ x=78 y=215, radius 30)
- *   - On-screen keyboard via ui_keyboard (three rows, four layouts)
+ *   - On-screen keyboard via ui_keyboard (four rows, four layouts)
  *   - Bottom-left orange wedge (X), bottom-right green wedge (check) via ui_wedge_create (bitmap)
  *
  * Screens built here (registered in ui_screens_registry.c):
@@ -32,12 +32,12 @@
 #include <stdio.h>
 #include <string.h>
 
-/* Purple text field — wireframe rect x=78 y=215 w=563 h=78 rx=30 (UI_WF_* at placement) */
+// Text Field
 #define WIFI_FIELD_X_WF     78
-#define WIFI_FIELD_Y_WF     215
+#define WIFI_FIELD_Y_WF     210
 #define WIFI_FIELD_W        563
 #define WIFI_FIELD_H        78
-#define WIFI_FIELD_RADIUS   30
+#define WIFI_FIELD_RADIUS   20
 
 #define WIFI_TITLE_Y_OFFSET 28
 

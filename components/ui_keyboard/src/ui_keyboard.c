@@ -8,6 +8,7 @@
 #include "ui_theme.h"
 #include <string.h>
 
+// Button size and spacing
 #define UI_KB_KEY_DIAM        58
 #define UI_KB_KEY_RADIUS      (UI_KB_KEY_DIAM / 2)
 #define UI_KB_KEY_X_SPACING   6
@@ -15,10 +16,20 @@
 #define UI_KB_ROW_PITCH_HALF  (UI_KB_ROW_PITCH / 2)
 #define UI_KB_KEY_Y_SPACING   8
 #define UI_KB_COL_PITCH       (UI_KB_KEY_DIAM + UI_KB_KEY_Y_SPACING)
-#define UI_KB_ROW1_CY_WF      400
+
+// Row Y Coordinates
+#define UI_KB_ROW1_CY_WF      340
 #define UI_KB_ROW2_CY_WF      (UI_KB_ROW1_CY_WF + UI_KB_COL_PITCH)
 #define UI_KB_ROW3_CY_WF      (UI_KB_ROW2_CY_WF + UI_KB_COL_PITCH)
+#define UI_KB_ROW4_CY_WF      (UI_KB_ROW3_CY_WF + UI_KB_COL_PITCH)
+
 #define UI_KB_MAX_ROW_KEYS    10
+#define UI_KB_SPACE_SLOTS     3
+#define UI_KB_PILL_W          (UI_KB_SPACE_SLOTS * UI_KB_KEY_DIAM + (UI_KB_SPACE_SLOTS - 1) * UI_KB_KEY_X_SPACING)
+/** Bottom row: mode | 1-unit gap | space (3 units) | 1-unit gap | backspace. */
+#define UI_KB_BOTTOM_W        (UI_KB_KEY_DIAM + UI_KB_ROW_PITCH + UI_KB_PILL_W + UI_KB_ROW_PITCH + UI_KB_KEY_DIAM)
+#define UI_KB_PILL_H          UI_KB_KEY_DIAM
+#define UI_KB_PILL_RADIUS     (UI_KB_PILL_H / 2)
 
 struct ui_keyboard {
     ui_keyboard_config_t config;
@@ -52,6 +63,22 @@ static void keyboard_key_cx(lv_obj_t *screen, int *cx, int count, int x_offset)
     for (int i = 0; i < count; i++) {
         cx[i] = first + i * UI_KB_ROW_PITCH;
     }
+}
+
+static void keyboard_bottom_centers(lv_obj_t *screen, int *mode_cx, int *space_cx, int *bs_cx)
+{
+    if (screen == NULL || mode_cx == NULL || space_cx == NULL || bs_cx == NULL) {
+        return;
+    }
+
+    int32_t center_x;
+    ui_layout_get_content_center(screen, &center_x, NULL);
+    const int left = (int)center_x - UI_KB_BOTTOM_W / 2;
+
+    *mode_cx = left + UI_KB_KEY_RADIUS;
+    const int space_left = left + UI_KB_KEY_DIAM + UI_KB_ROW_PITCH;
+    *space_cx = space_left + UI_KB_PILL_W / 2;
+    *bs_cx = space_left + UI_KB_PILL_W + UI_KB_ROW_PITCH + UI_KB_KEY_RADIUS;
 }
 
 static void init_key_chars(void)
@@ -167,6 +194,35 @@ static lv_obj_t *create_key_btn(lv_obj_t *parent, const char *txt, int cx, int c
     return btn;
 }
 
+/** Wide pill key (e.g. space spanning two normal key widths). */
+static lv_obj_t *create_key_pill_btn(lv_obj_t *parent, const char *txt, int cx, int cy,
+                                     lv_event_cb_t cb, ui_keyboard_t *kb, const char *ch_ptr)
+{
+    const ui_theme_t *t = ui_theme_get();
+    lv_obj_t *btn = lv_button_create(parent);
+    lv_obj_set_size(btn, UI_KB_PILL_W, UI_KB_PILL_H);
+    lv_obj_set_pos(btn, cx - UI_KB_PILL_W / 2, cy - UI_KB_PILL_RADIUS);
+    lv_obj_set_style_radius(btn, UI_KB_PILL_RADIUS, 0);
+    lv_obj_set_style_bg_color(btn, t->menu_petal, 0);
+    lv_obj_set_style_shadow_width(btn, 0, 0);
+    lv_obj_set_style_border_width(btn, 0, 0);
+    lv_obj_set_style_pad_all(btn, 0, 0);
+
+    if (txt != NULL && txt[0] != '\0') {
+        lv_obj_t *lab = lv_label_create(btn);
+        lv_label_set_text(lab, txt);
+        lv_obj_set_style_text_color(lab, t->white, 0);
+        lv_obj_set_style_text_font(lab, &lv_font_montserrat_20, 0);
+        lv_obj_center(lab);
+    }
+
+    if (cb != NULL) {
+        lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, kb);
+        lv_obj_set_user_data(btn, (void *)ch_ptr);
+    }
+    return btn;
+}
+
 static void key_cb(lv_event_t *e)
 {
     ui_keyboard_t *kb = lv_event_get_user_data(e);
@@ -182,6 +238,21 @@ static void key_cb(lv_event_t *e)
     }
     kb->config.buf[len] = ch[0];
     kb->config.buf[len + 1] = '\0';
+    lv_label_set_text(kb->config.label, kb->config.buf);
+    notify_activity(kb);
+}
+
+static void backspace_cb(lv_event_t *e)
+{
+    ui_keyboard_t *kb = lv_event_get_user_data(e);
+    if (kb == NULL || kb->config.buf == NULL || kb->config.label == NULL) {
+        return;
+    }
+    size_t len = strlen(kb->config.buf);
+    if (len == 0) {
+        return;
+    }
+    kb->config.buf[len - 1] = '\0';
     lv_label_set_text(kb->config.label, kb->config.buf);
     notify_activity(kb);
 }
@@ -206,6 +277,24 @@ static void place_chars(lv_obj_t *layer, ui_keyboard_t *kb, const char *keys,
     }
 }
 
+/** Row 4: mode (parent) | gap | 3-unit space pill | gap | backspace. */
+static void build_bottom_row(lv_obj_t *layer, ui_keyboard_t *kb)
+{
+    lv_obj_t *screen = lv_obj_get_parent(layer);
+    int mode_cx = 0;
+    int space_cx = 0;
+    int bs_cx = 0;
+    keyboard_bottom_centers(screen, &mode_cx, &space_cx, &bs_cx);
+    const int cy = keyboard_row_cy(screen, UI_KB_ROW4_CY_WF);
+
+    create_key_pill_btn(layer, "", space_cx, cy, key_cb, kb, key_char_ptr(' '));
+    lv_obj_t *bs_btn = create_key_btn(layer, LV_SYMBOL_BACKSPACE, bs_cx, cy, backspace_cb, kb, NULL);
+    lv_obj_t *bs_lab = lv_obj_get_child(bs_btn, 0);
+    if (bs_lab != NULL) {
+        lv_obj_set_style_text_font(bs_lab, &lv_font_montserrat_26, 0);
+    }
+}
+
 static lv_obj_t *create_layer(lv_obj_t *screen)
 {
     int32_t cw;
@@ -226,13 +315,10 @@ static void build_number_layer(lv_obj_t *layer, ui_keyboard_t *kb)
 {
     lv_obj_t *screen = lv_obj_get_parent(layer);
     int cx10[UI_KB_MAX_ROW_KEYS];
-    int cx5[UI_KB_MAX_ROW_KEYS];
     keyboard_key_cx(screen, cx10, 10, 0);
-    keyboard_key_cx(screen, cx5, 5, 0);
     place_chars(layer, kb, "!@#$%^&*()", cx10, 10, keyboard_row_cy(screen, UI_KB_ROW1_CY_WF));
     place_chars(layer, kb, "1234567890", cx10, 10, keyboard_row_cy(screen, UI_KB_ROW2_CY_WF));
-    create_key_btn(layer, "spc", cx5[2], keyboard_row_cy(screen, UI_KB_ROW3_CY_WF),
-                   key_cb, kb, key_char_ptr(' '));
+    build_bottom_row(layer, kb);
 }
 
 static void build_symbol_layer(lv_obj_t *layer, ui_keyboard_t *kb)
@@ -257,8 +343,7 @@ static void build_symbol_layer(lv_obj_t *layer, ui_keyboard_t *kb)
                    key_cb, kb, key_char_ptr(','));
     create_key_btn(layer, "`", cx5[3], keyboard_row_cy(screen, UI_KB_ROW3_CY_WF),
                    key_cb, kb, key_char_ptr('`'));
-    create_key_btn(layer, "spc", cx5[4], keyboard_row_cy(screen, UI_KB_ROW3_CY_WF),
-                   key_cb, kb, key_char_ptr(' '));
+    build_bottom_row(layer, kb);
 }
 
 static void build_letter_layer(lv_obj_t *layer, ui_keyboard_t *kb, const char *r1,
@@ -275,6 +360,7 @@ static void build_letter_layer(lv_obj_t *layer, ui_keyboard_t *kb, const char *r
     place_chars(layer, kb, r1, cx10, 10, keyboard_row_cy(screen, UI_KB_ROW1_CY_WF));
     place_chars(layer, kb, r2, cx9, 9, keyboard_row_cy(screen, UI_KB_ROW2_CY_WF));
     place_chars(layer, kb, r3, cx7, 7, keyboard_row_cy(screen, UI_KB_ROW3_CY_WF));
+    build_bottom_row(layer, kb);
 }
 
 ui_keyboard_t *ui_keyboard_create(lv_obj_t *parent, const ui_keyboard_config_t *config)
@@ -309,11 +395,15 @@ ui_keyboard_t *ui_keyboard_create(lv_obj_t *parent, const ui_keyboard_config_t *
     kb->layers[UI_KEYBOARD_MODE_SYMBOL] = create_layer(parent);
     build_symbol_layer(kb->layers[UI_KEYBOARD_MODE_SYMBOL], kb);
 
-    int mode_cx[UI_KB_MAX_ROW_KEYS];
-    keyboard_key_cx(parent, mode_cx, 8, 0);
-    kb->mode_btn = create_key_btn(parent, mode_btn_label(kb->mode), mode_cx[0],
-                                  keyboard_row_cy(parent, UI_KB_ROW3_CY_WF),
+    int mode_cx = 0;
+    int space_cx = 0;
+    int bs_cx = 0;
+    keyboard_bottom_centers(parent, &mode_cx, &space_cx, &bs_cx);
+    kb->mode_btn = create_key_btn(parent, mode_btn_label(kb->mode), mode_cx,
+                                  keyboard_row_cy(parent, UI_KB_ROW4_CY_WF),
                                   mode_cb, kb, NULL);
+    (void)space_cx;
+    (void)bs_cx;
     lv_obj_t *mode_lab = lv_obj_get_child(kb->mode_btn, 0);
     if (mode_lab != NULL) {
         lv_obj_set_style_text_font(mode_lab, &lv_font_montserrat_20, 0);

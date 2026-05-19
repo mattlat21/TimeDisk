@@ -1,6 +1,6 @@
 /**
  * @file ui_keyboard.h
- * @brief Four-layout on-screen keyboard (lower / upper / number / symbol).
+ * @brief Four-layout on-screen keyboard (lower / upper / number / symbol), four rows.
  */
 
 #pragma once
