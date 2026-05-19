@@ -1,6 +1,6 @@
 # TimeDisk data model
 
-Canonical schema for persisted settings and runtime state. Documentation only — no firmware implementation yet.
+Canonical schema for persisted settings and runtime state. Firmware: `components/app_config` (`app_nvs.c`, namespace `timedisk_cfg`).
 
 **Related docs:** [mode_flow.md](mode_flow.md) · [adult_authentication.md](adult_authentication.md) · [data_flow.md](data_flow.md) · [screen_flow.md](screen_flow.md)
 

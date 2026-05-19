@@ -8,6 +8,7 @@
 #include "ui_theme.h"
 #include "app_config.h"
 #include "bsp/esp-bsp.h"
+#include <esp_err.h>
 #include <esp_log.h>
 #include <esp_random.h>
 #include <stdio.h>
@@ -392,7 +393,10 @@ static void tick_timer_cb(lv_timer_t *t)
 
 void ui_nav_init(void)
 {
-    app_config_init_defaults();
+    esp_err_t cfg_err = app_config_init();
+    if (cfg_err != ESP_OK) {
+        ESP_LOGW(TAG, "app_config_init: %s", esp_err_to_name(cfg_err));
+    }
     ui_theme_init();
 
     ui_screens_build_all(s_screens);

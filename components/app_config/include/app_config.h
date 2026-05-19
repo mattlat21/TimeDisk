@@ -1,16 +1,19 @@
 /**
  * @file app_config.h
- * @brief Application configuration and runtime state (RAM-backed; NVS planned).
+ * @brief Application configuration and runtime state.
  *
- * Holds WiFi credentials, UI timeouts, theme colors, timer/schedule settings,
- * and adult-authentication options. Separate from LVGL/UI code so logic can be
- * tested and persisted without pulling in the graphics stack.
+ * Persistent settings (app_config_t) are stored in NVS namespace timedisk_cfg
+ * via app_nvs. Runtime state (app_runtime_t) lives in RAM only.
+ * Schema: docs/data_model.md
  */
 
 #pragma once
 
+#include <esp_err.h>
 #include <stdbool.h>
 #include <stdint.h>
+
+#include "app_nvs.h"
 
 #define APP_WIFI_SSID_MAX     33
 #define APP_WIFI_PASSWORD_MAX 65
@@ -29,9 +32,10 @@ typedef enum {
     APP_MODE_REST,
 } app_mode_t;
 
-/** Persistent settings (future: NVS blob). */
+/** Persistent settings (NVS-backed). */
 typedef struct {
     char wifi_ssid[APP_WIFI_SSID_MAX];
+    /** false until user completes startup password wizard or Settings saves password. */
     bool wifi_password_set;
     char wifi_password[APP_WIFI_PASSWORD_MAX];
     char ntp_server[APP_NTP_SERVER_MAX];
@@ -67,9 +71,66 @@ typedef struct {
     bool timer_running;
 } app_runtime_t;
 
-void app_config_init_defaults(void);
+/**
+ * Boot-time initialisation: RAM defaults, NVS init, load persisted config.
+ * Call once before UI (replaces app_config_init_defaults).
+ */
+esp_err_t app_config_init(void);
+
+/** Apply factory defaults from data_model.md (does not write NVS). */
+void app_config_apply_defaults(void);
+
+/** Reset runtime state to a fresh session (does not touch NVS). */
+void app_runtime_reset(void);
+
 app_config_t *app_config_get(void);
 app_runtime_t *app_runtime_get(void);
 
 bool app_config_wifi_ssid_missing(void);
 bool app_config_wifi_password_unset(void);
+
+/** Convenience wrappers around app_nvs_save_* (see app_nvs.h). */
+static inline esp_err_t app_config_save_all(void)
+{
+    return app_nvs_save_all();
+}
+
+static inline esp_err_t app_config_save_network(void)
+{
+    return app_nvs_save_network();
+}
+
+static inline esp_err_t app_config_save_timeouts(void)
+{
+    return app_nvs_save_timeouts();
+}
+
+static inline esp_err_t app_config_save_theme(void)
+{
+    return app_nvs_save_theme();
+}
+
+static inline esp_err_t app_config_save_timer(void)
+{
+    return app_nvs_save_timer();
+}
+
+static inline esp_err_t app_config_save_schedule(void)
+{
+    return app_nvs_save_schedule();
+}
+
+static inline esp_err_t app_config_save_aa(void)
+{
+    return app_nvs_save_aa();
+}
+
+static inline esp_err_t app_config_erase_nvs(void)
+{
+    return app_nvs_erase_all();
+}
+
+static inline bool app_config_has_stored_nvs(void)
+{
+    return app_nvs_has_stored_config();
+}

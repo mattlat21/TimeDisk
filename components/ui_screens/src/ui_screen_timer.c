@@ -61,6 +61,7 @@ static void duration_next_cb(lv_event_t *e)
 {
     (void)e;
     app_config_get()->timer_duration_sec = s_duration_sec;
+    app_config_save_timer();
     ui_nav_go(UI_SCREEN_TIMER_STYLE);
 }
 
@@ -74,6 +75,7 @@ static void style_next_cb(lv_event_t *e)
 {
     (void)e;
     app_config_get()->timer_style_id = s_style_id;
+    app_config_save_timer();
     app_runtime_t *rt = app_runtime_get();
     rt->active_timer_remaining_sec = s_duration_sec;
     rt->timer_running = true;

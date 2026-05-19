@@ -86,6 +86,7 @@ static void finish_sleep_wizard(void)
     rt->current_mode = APP_MODE_WAKE;
     rt->cycle_active = true;
     rt->mode_remaining_sec = cfg->wind_down_sec > 0 ? cfg->wind_down_sec : cfg->sleep_sec;
+    app_config_save_schedule();
     ui_nav_go(UI_SCREEN_TOD_BRIGHT);
 }
 
@@ -99,6 +100,7 @@ static void finish_rest_wizard(void)
     rt->current_mode = APP_MODE_WAKE;
     rt->cycle_active = true;
     rt->mode_remaining_sec = cfg->wind_down_sec > 0 ? cfg->wind_down_sec : cfg->rest_sec;
+    app_config_save_schedule();
     ui_nav_go(UI_SCREEN_TOD_BRIGHT);
 }
 

@@ -11,7 +11,7 @@
  *   UI_SCREEN_STARTUP_SSID      — "Wi-Fi Setup", enter network name
  *   UI_SCREEN_STARTUP_PASSWORD  — "Wi-Fi Password", optional passphrase
  *
- * Boot flow (ui_nav.c, stubbed until NVS/WiFi stack):
+ * Boot flow (ui_nav.c): credentials saved to NVS via app_config_save_network().
  *   splash → [SSID if missing] → [password if unset] → loading → TOD
  *   See docs/screen_flow.md and docs/data_model.md.
  *
@@ -119,6 +119,7 @@ static void ssid_next_cb(lv_event_t *e)
     }
     app_config_t *cfg = app_config_get();
     snprintf(cfg->wifi_ssid, sizeof(cfg->wifi_ssid), "%s", s_ssid_buf);
+    app_config_save_network();
     if (app_config_wifi_password_unset()) {
         ui_nav_go(UI_SCREEN_STARTUP_PASSWORD);
     } else {
@@ -133,6 +134,7 @@ static void pw_next_cb(lv_event_t *e)
     app_config_t *cfg = app_config_get();
     snprintf(cfg->wifi_password, sizeof(cfg->wifi_password), "%s", s_pw_buf);
     cfg->wifi_password_set = true;
+    app_config_save_network();
     ui_nav_go(UI_SCREEN_LOADING);
 }
 
