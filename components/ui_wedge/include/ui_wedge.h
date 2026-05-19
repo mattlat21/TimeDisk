@@ -2,7 +2,7 @@
  * @file ui_wedge.h
  * @brief Bottom-corner wedge buttons (cancel / confirm) for Wi-Fi wizard.
  *
- * Shapes from docs/wireframes/startup_wizard_ssid.svg; drawn via LV_EVENT_DRAW_MAIN.
+ * Pre-rendered from docs/wireframes/startup_wizard_ssid.svg (see ui_assets).
  */
 
 #pragma once
@@ -14,6 +14,7 @@ typedef enum {
     UI_WEDGE_CONFIRM,
 } ui_wedge_type_t;
 
+/** Wireframe placement and size (startup_wizard_ssid.svg). */
 #define UI_WEDGE_W_WF 209
 #define UI_WEDGE_H_WF 106
 #define UI_WEDGE_CANCEL_X_WF 142

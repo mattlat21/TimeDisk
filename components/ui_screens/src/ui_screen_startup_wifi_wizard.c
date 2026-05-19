@@ -5,7 +5,7 @@
  *   - 720×720 circular panel, 14 px purple ring (#7D23BE)
  *   - Title, purple rounded SSID field (563×78 @ x=78 y=215, radius 30)
  *   - On-screen keyboard via ui_keyboard (three rows, four layouts)
- *   - Bottom-left orange wedge (X), bottom-right green wedge (check) via ui_wedge_create
+ *   - Bottom-left orange wedge (X), bottom-right green wedge (check) via ui_wedge_create (bitmap)
  *
  * Screens built here (registered in ui_screens_registry.c):
  *   UI_SCREEN_STARTUP_SSID      — "Wi-Fi Setup", enter network name
