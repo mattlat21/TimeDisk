@@ -1,0 +1,27 @@
+idf_component_register(
+    SRCS
+        "src/ui_screens_registry.c"
+        "src/ui_screen_splash.c"
+        "src/ui_screen_startup_wifi_wizard.c"
+        "src/ui_screen_loading.c"
+        "src/ui_screen_tod.c"
+        "src/ui_screen_aa.c"
+        "src/ui_screen_menu.c"
+        "src/ui_screen_timer.c"
+        "src/ui_screen_schedule.c"
+        "src/ui_screen_settings.c"
+    INCLUDE_DIRS "include"
+    REQUIRES
+        ui_core
+        app_config
+        ui_theme
+        ui_layout
+        ui_widgets
+        ui_wedge
+        ui_lines
+        ui_keyboard
+        ui_format
+        ui_assets
+        lvgl
+        waveshare__esp32_p4_wifi6_touch_lcd_xc
+)

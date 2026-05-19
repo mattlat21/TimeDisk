@@ -1,6 +1,0 @@
-dependencies:
-  lvgl/lvgl:
-    version: 9.2.0
-    public: true
-  idf:
-    version: '>=4.1.0'
