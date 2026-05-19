@@ -9,19 +9,35 @@
 #define UI_KB_KEY_DIAM     58
 #define UI_KB_KEY_RADIUS   (UI_KB_KEY_DIAM / 2)
 
+// Spacing between the keyboard keys
+#define UI_KB_KEY_SPACING  7
+#define UI_KB_ROW_PITCH    (UI_KB_KEY_DIAM + UI_KB_KEY_SPACING)
+
 #define UI_KB_ROW1_CY      362
 #define UI_KB_ROW2_CY      430
 #define UI_KB_ROW3_CY      497
-#define UI_KB_MODE_KEY_CX  73
 #define UI_KB_MODE_KEY_CY  UI_KB_ROW3_CY
-#define UI_KB_SPACE_KEY_CX 612
 #define UI_KB_SPACE_KEY_CY UI_KB_ROW3_CY
 
-static const int s_row10_cx[] = {20, 137, 201, 264, 328, 392, 456, 520, 583, 647};
-static const int s_row5a_cx[] = {73, 137, 201, 264, 328};
-static const int s_row5b_cx[] = {392, 456, 520, 583, 647};
-static const int s_row9_cx[] = {102, 166, 230, 293, 357, 421, 485, 549, 612};
-static const int s_row7_cx[] = {201, 264, 328, 392, 456, 520, 584};
+/* Max keys in any keyboard row */
+#define UI_KB_MAX_ROW_KEYS 10
+
+static void ui_keyboard_key_cx(int *cx, int count, int x_offset = 0)
+{
+    if (cx == NULL || count <= 0) {
+        return;
+    }
+    if (count > UI_KB_MAX_ROW_KEYS) {
+        count = UI_KB_MAX_ROW_KEYS;
+    }
+
+    const int center = UI_DISP / 2;
+    const int span = (count - 1) * UI_KB_ROW_PITCH;
+    const int first = center - span / 2 + x_offset;
+    for (int i = 0; i < count; i++) {
+        cx[i] = first + i * UI_KB_ROW_PITCH;
+    }
+}
 
 struct ui_keyboard {
     ui_keyboard_config_t config;
@@ -200,10 +216,14 @@ static lv_obj_t *ui_keyboard_create_layer(lv_obj_t *parent)
 
 static void ui_keyboard_build_number_layer(lv_obj_t *layer, ui_keyboard_t *kb)
 {
-    ui_keyboard_place_chars(layer, kb, "12345", s_row5a_cx, 5, UI_KB_ROW1_CY);
-    ui_keyboard_place_chars(layer, kb, "67890", s_row5b_cx, 5, UI_KB_ROW2_CY);
-    ui_keyboard_create_key_btn(layer, "spc", UI_KB_SPACE_KEY_CX, UI_KB_SPACE_KEY_CY, ui_keyboard_key_cb,
-                               kb, ui_keyboard_key_char_ptr(' '));
+    int cx10[UI_KB_MAX_ROW_KEYS];
+    int cx9[UI_KB_MAX_ROW_KEYS];
+    ui_keyboard_key_cx(cx10, 10);
+    ui_keyboard_key_cx(cx9, 9, UI_KB_ROW_PITCH / 2);
+    ui_keyboard_place_chars(layer, kb, "12345", cx10, 5, UI_KB_ROW1_CY);
+    ui_keyboard_place_chars(layer, kb, "67890", cx10 + 5, 5, UI_KB_ROW2_CY);
+    ui_keyboard_create_key_btn(layer, "spc", cx9[8], UI_KB_SPACE_KEY_CY, ui_keyboard_key_cb, kb,
+                               ui_keyboard_key_char_ptr(' '));
 }
 
 static void ui_keyboard_build_symbol_layer(lv_obj_t *layer, ui_keyboard_t *kb)
@@ -212,25 +232,38 @@ static void ui_keyboard_build_symbol_layer(lv_obj_t *layer, ui_keyboard_t *kb)
     static const char row2[] = "=<>[]()+/";
     static const char row3[] = ":;'\"|\\^";
 
-    ui_keyboard_place_chars(layer, kb, row1, s_row10_cx, 10, UI_KB_ROW1_CY);
-    ui_keyboard_place_chars(layer, kb, row2, s_row10_cx, 10, UI_KB_ROW2_CY);
-    ui_keyboard_place_chars(layer, kb, row3, s_row9_cx, 9, UI_KB_ROW3_CY);
-    ui_keyboard_create_key_btn(layer, "~", 647, UI_KB_ROW1_CY, ui_keyboard_key_cb, kb,
+    int cx10[UI_KB_MAX_ROW_KEYS];
+    int cx9[UI_KB_MAX_ROW_KEYS];
+    ui_keyboard_key_cx(cx10, 10);
+    ui_keyboard_key_cx(cx9, 9, UI_KB_ROW_PITCH / 2);
+
+    ui_keyboard_place_chars(layer, kb, row1, cx10, 10, UI_KB_ROW1_CY);
+    ui_keyboard_place_chars(layer, kb, row2, cx10, 10, UI_KB_ROW2_CY);
+    ui_keyboard_place_chars(layer, kb, row3, cx9, 9, UI_KB_ROW3_CY);
+    ui_keyboard_create_key_btn(layer, "~", cx10[9], UI_KB_ROW1_CY, ui_keyboard_key_cb, kb,
                                ui_keyboard_key_char_ptr('~'));
-    ui_keyboard_create_key_btn(layer, ",", 647, UI_KB_ROW2_CY, ui_keyboard_key_cb, kb,
+    ui_keyboard_create_key_btn(layer, ",", cx10[9], UI_KB_ROW2_CY, ui_keyboard_key_cb, kb,
                                ui_keyboard_key_char_ptr(','));
-    ui_keyboard_create_key_btn(layer, "`", 647, UI_KB_ROW3_CY, ui_keyboard_key_cb, kb,
+    ui_keyboard_create_key_btn(layer, "`", cx10[9], UI_KB_ROW3_CY, ui_keyboard_key_cb, kb,
                                ui_keyboard_key_char_ptr('`'));
-    ui_keyboard_create_key_btn(layer, "spc", UI_KB_SPACE_KEY_CX, UI_KB_SPACE_KEY_CY, ui_keyboard_key_cb,
-                               kb, ui_keyboard_key_char_ptr(' '));
+    ui_keyboard_create_key_btn(layer, "spc", cx9[8], UI_KB_SPACE_KEY_CY, ui_keyboard_key_cb, kb,
+                               ui_keyboard_key_char_ptr(' '));
 }
 
 static void ui_keyboard_build_letter_layer(lv_obj_t *layer, ui_keyboard_t *kb, const char *r1,
                                            const char *r2, const char *r3)
 {
-    ui_keyboard_place_chars(layer, kb, r1, s_row10_cx, 10, UI_KB_ROW1_CY);
-    ui_keyboard_place_chars(layer, kb, r2, s_row9_cx, 9, UI_KB_ROW2_CY);
-    ui_keyboard_place_chars(layer, kb, r3, s_row7_cx, 7, UI_KB_ROW3_CY);
+    int cx10[UI_KB_MAX_ROW_KEYS];
+    int cx9[UI_KB_MAX_ROW_KEYS];
+    int cx7[UI_KB_MAX_ROW_KEYS];
+    ui_keyboard_key_cx(cx10, 10);
+    // ui_keyboard_key_cx(cx9, 9, UI_KB_ROW_PITCH / 2);
+    ui_keyboard_key_cx(cx9, 9);
+    ui_keyboard_key_cx(cx7, 7, UI_KB_ROW_PITCH / 2);
+
+    ui_keyboard_place_chars(layer, kb, r1, cx10, 10, UI_KB_ROW1_CY);
+    ui_keyboard_place_chars(layer, kb, r2, cx9, 9, UI_KB_ROW2_CY);
+    ui_keyboard_place_chars(layer, kb, r3, cx7, 7, UI_KB_ROW3_CY);
 }
 
 ui_keyboard_t *ui_keyboard_create(lv_obj_t *parent, const ui_keyboard_config_t *config)
@@ -267,9 +300,10 @@ ui_keyboard_t *ui_keyboard_create(lv_obj_t *parent, const ui_keyboard_config_t *
     kb->layers[UI_KEYBOARD_MODE_SYMBOL] = ui_keyboard_create_layer(parent);
     ui_keyboard_build_symbol_layer(kb->layers[UI_KEYBOARD_MODE_SYMBOL], kb);
 
-    kb->mode_btn = ui_keyboard_create_key_btn(parent, ui_keyboard_mode_btn_label(kb->mode),
-                                              UI_KB_MODE_KEY_CX, UI_KB_MODE_KEY_CY, ui_keyboard_mode_cb,
-                                              kb, NULL);
+    int mode_cx[UI_KB_MAX_ROW_KEYS];
+    ui_keyboard_key_cx(mode_cx, 10);
+    kb->mode_btn = ui_keyboard_create_key_btn(parent, ui_keyboard_mode_btn_label(kb->mode), mode_cx[0],
+                                              UI_KB_MODE_KEY_CY, ui_keyboard_mode_cb, kb, NULL);
     lv_obj_t *mode_lab = lv_obj_get_child(kb->mode_btn, 0);
     if (mode_lab != NULL) {
         lv_obj_set_style_text_font(mode_lab, &lv_font_montserrat_20, 0);
