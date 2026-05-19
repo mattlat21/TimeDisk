@@ -12,6 +12,7 @@
 typedef enum {
     UI_WEDGE_CANCEL = 0,
     UI_WEDGE_CONFIRM,
+    UI_WEDGE_SETTINGS,
 } ui_wedge_type_t;
 
 /** Wireframe placement and size (startup_wizard_ssid.svg). */

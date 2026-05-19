@@ -12,7 +12,18 @@
 
 lv_obj_t *ui_wedge_create(lv_obj_t *parent, ui_wedge_type_t type, int x, int y)
 {
-    const lv_image_dsc_t *src = (type == UI_WEDGE_CANCEL) ? &wedge_cancel : &wedge_confirm;
+    const lv_image_dsc_t *src;
+    switch (type) {
+    case UI_WEDGE_CANCEL:
+        src = &wedge_cancel;
+        break;
+    case UI_WEDGE_SETTINGS:
+        src = &wedge_settings;
+        break;
+    default:
+        src = &wedge_confirm;
+        break;
+    }
 
     lv_obj_t *img = lv_image_create(parent);
     lv_image_set_src(img, src);

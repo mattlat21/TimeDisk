@@ -10,3 +10,4 @@
 extern const lv_image_dsc_t splash;
 extern const lv_image_dsc_t wedge_cancel;
 extern const lv_image_dsc_t wedge_confirm;
+extern const lv_image_dsc_t wedge_settings;
