@@ -36,11 +36,26 @@ extern "C" {
 
 typedef void (*ui_btn_cb_t)(lv_event_t *e);
 
+/** Bottom-corner wedges from docs/wireframes/startup_wizard_ssid.svg (mirror shapes). */
+typedef enum {
+    UI_CORNER_WEDGE_CANCEL = 0,  /* Orange, lower-left, X icon */
+    UI_CORNER_WEDGE_CONFIRM,     /* Green, lower-right, check icon */
+} ui_corner_wedge_type_t;
+
+/** Wireframe bounding box of one wedge (both sides share width/height). */
+#define UI_CORNER_WEDGE_W_WF 209
+#define UI_CORNER_WEDGE_H_WF 106
+#define UI_CORNER_WEDGE_CANCEL_X_WF 142
+#define UI_CORNER_WEDGE_CANCEL_Y_WF 589
+#define UI_CORNER_WEDGE_CONFIRM_X_WF 376
+#define UI_CORNER_WEDGE_CONFIRM_Y_WF 590
+
 void ui_common_style_circle_panel(lv_obj_t *obj);
 lv_obj_t *ui_common_create_screen(void);
 lv_obj_t *ui_common_create_title(lv_obj_t *parent, const char *text);
 lv_obj_t *ui_common_create_purple_box(lv_obj_t *parent, int w, int h, int x, int y, bool outline_only);
 lv_obj_t *ui_common_create_side_btn(lv_obj_t *parent, bool is_back, int x, int y, const char *label);
+lv_obj_t *ui_common_create_corner_wedge(lv_obj_t *parent, ui_corner_wedge_type_t type, int x, int y);
 lv_obj_t *ui_common_create_side_next(lv_obj_t *parent, int x, int y);
 lv_obj_t *ui_common_create_keypad_btn(lv_obj_t *parent, const char *txt, int x, int y, int size);
 void ui_common_add_numeric_keypad(lv_obj_t *parent, int start_y, lv_event_cb_t digit_cb, void *user_ctx);

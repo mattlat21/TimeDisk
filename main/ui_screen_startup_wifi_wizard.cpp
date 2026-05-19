@@ -5,7 +5,7 @@
  *   - 720×720 circular panel, 14 px purple ring (#7D23BE)
  *   - Title, purple rounded SSID field (563×78 @ x=78 y=215, radius 30)
  *   - On-screen keyboard via ui_keyboard (three rows, four layouts)
- *   - Bottom-left orange (backspace / back), bottom-right green (confirm)
+ *   - Bottom-left orange wedge (X), bottom-right green wedge (check) via ui_common_create_corner_wedge
  *
  * Screens built here (registered in ui_screens_registry.cpp):
  *   UI_SCREEN_STARTUP_SSID      — "Wi-Fi Setup", enter network name
@@ -38,10 +38,7 @@
 
 #define WIFI_TITLE_Y_OFFSET 28
 
-/* Corner wedge buttons — wireframe ~y 600 (UI_WF_* at placement) */
-#define WIFI_BTN_BACK_X_WF  108
-#define WIFI_BTN_NEXT_X_WF  (UI_SCREEN_W - 108 - 64)
-#define WIFI_BTN_Y_WF       600
+/* Corner wedges — docs/wireframes/startup_wizard_ssid.svg (UI_WF_* at placement) */
 
 static lv_obj_t *s_scr_ssid;
 static lv_obj_t *s_scr_pw;
@@ -89,13 +86,13 @@ static void wifi_add_layout_guides(lv_obj_t *scr)
     int32_t ch;
     ui_common_get_content_size(scr, &cw, &ch);
 
-    ui_common_add_vertical_line(scr, cw / 2);
-    ui_common_add_vertical_line(scr, cw - 20);
-    ui_common_add_vertical_line(scr, 20);
+    // ui_common_add_vertical_line(scr, cw / 2);
+    // ui_common_add_vertical_line(scr, cw - 20);
+    // ui_common_add_vertical_line(scr, 20);
 
-    ui_common_add_horizontal_line(scr, ch / 2);
-    ui_common_add_horizontal_line(scr, ch - 20);
-    ui_common_add_horizontal_line(scr, 20);
+    // ui_common_add_horizontal_line(scr, ch / 2);
+    // ui_common_add_horizontal_line(scr, ch - 20);
+    // ui_common_add_horizontal_line(scr, 20);
 }
 
 /* Black circular screen + 14 px ring (thicker than ui_common_create_screen's 6 px). */
@@ -176,13 +173,16 @@ static void build_ssid(lv_obj_t *screens[UI_SCREEN_COUNT])
     };
     s_ssid_kb = ui_keyboard_create(s_scr_ssid, &kb_cfg);
 
-    lv_obj_t *back = ui_common_create_side_btn(s_scr_ssid, true,
-                                               UI_WF_X(WIFI_BTN_BACK_X_WF, UI_RING_BORDER_WIFI),
-                                               UI_WF_Y(WIFI_BTN_Y_WF, UI_RING_BORDER_WIFI), NULL);
+    lv_obj_t *back = ui_common_create_corner_wedge(
+        s_scr_ssid, UI_CORNER_WEDGE_CANCEL,
+        UI_WF_X(UI_CORNER_WEDGE_CANCEL_X_WF, UI_RING_BORDER_WIFI),
+        UI_WF_Y(UI_CORNER_WEDGE_CANCEL_Y_WF, UI_RING_BORDER_WIFI));
     lv_obj_add_event_cb(back, ssid_back_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_t *next = ui_common_create_side_btn(s_scr_ssid, false,
-                                               UI_WF_X(WIFI_BTN_NEXT_X_WF, UI_RING_BORDER_WIFI),
-                                               UI_WF_Y(WIFI_BTN_Y_WF, UI_RING_BORDER_WIFI), NULL);
+    
+    lv_obj_t *next = ui_common_create_corner_wedge(
+        s_scr_ssid, UI_CORNER_WEDGE_CONFIRM,
+        UI_WF_X(UI_CORNER_WEDGE_CONFIRM_X_WF, UI_RING_BORDER_WIFI),
+        UI_WF_Y(UI_CORNER_WEDGE_CONFIRM_Y_WF, UI_RING_BORDER_WIFI));
     lv_obj_add_event_cb(next, ssid_next_cb, LV_EVENT_CLICKED, NULL);
 }
 
@@ -208,13 +208,15 @@ static void build_password(lv_obj_t *screens[UI_SCREEN_COUNT])
     };
     s_pw_kb = ui_keyboard_create(s_scr_pw, &kb_cfg);
 
-    lv_obj_t *back = ui_common_create_side_btn(s_scr_pw, true,
-                                               UI_WF_X(WIFI_BTN_BACK_X_WF, UI_RING_BORDER_WIFI),
-                                               UI_WF_Y(WIFI_BTN_Y_WF, UI_RING_BORDER_WIFI), NULL);
+    lv_obj_t *back = ui_common_create_corner_wedge(
+        s_scr_pw, UI_CORNER_WEDGE_CANCEL,
+        UI_WF_X(UI_CORNER_WEDGE_CANCEL_X_WF, UI_RING_BORDER_WIFI),
+        UI_WF_Y(UI_CORNER_WEDGE_CANCEL_Y_WF, UI_RING_BORDER_WIFI));
     lv_obj_add_event_cb(back, pw_back_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_t *next = ui_common_create_side_btn(s_scr_pw, false,
-                                               UI_WF_X(WIFI_BTN_NEXT_X_WF, UI_RING_BORDER_WIFI),
-                                               UI_WF_Y(WIFI_BTN_Y_WF, UI_RING_BORDER_WIFI), NULL);
+    lv_obj_t *next = ui_common_create_corner_wedge(
+        s_scr_pw, UI_CORNER_WEDGE_CONFIRM,
+        UI_WF_X(UI_CORNER_WEDGE_CONFIRM_X_WF, UI_RING_BORDER_WIFI),
+        UI_WF_Y(UI_CORNER_WEDGE_CONFIRM_Y_WF, UI_RING_BORDER_WIFI));
     lv_obj_add_event_cb(next, pw_next_cb, LV_EVENT_CLICKED, NULL);
 }
 
