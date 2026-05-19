@@ -9,6 +9,31 @@ extern "C" {
 
 #define UI_DISP BSP_LCD_H_RES
 
+/*
+ * Coordinate spaces (720×720 circular display):
+ *
+ * Wireframe / design (UI_SCREEN_*): docs/wireframes/ SVG viewBox — full LCD pixels.
+ * Content (LVGL child coords): inside the screen's border ring; origin is top-left of
+ * the drawable area. Use ui_common_wf_to_content_*() or UI_WF_*() when placing widgets.
+ */
+#define UI_SCREEN_W  UI_DISP
+#define UI_SCREEN_H  UI_DISP
+#define UI_SCREEN_CX (UI_SCREEN_W / 2)
+#define UI_SCREEN_CY (UI_SCREEN_H / 2)
+
+/** Ring border widths used by ui_common_create_screen() and wifi wizard screens. */
+#define UI_RING_BORDER_DEFAULT 6
+#define UI_RING_BORDER_WIFI    14
+
+#define UI_CONTENT_W(border)  (UI_SCREEN_W - 2 * (border))
+#define UI_CONTENT_H(border)  (UI_SCREEN_H - 2 * (border))
+#define UI_CONTENT_CX(border) (UI_CONTENT_W(border) / 2)
+#define UI_CONTENT_CY(border) (UI_CONTENT_H(border) / 2)
+
+/** Wireframe coordinate → LVGL child position on a screen with uniform border. */
+#define UI_WF_X(x, border) ((x) - (border))
+#define UI_WF_Y(y, border) ((y) - (border))
+
 typedef void (*ui_btn_cb_t)(lv_event_t *e);
 
 void ui_common_style_circle_panel(lv_obj_t *obj);
@@ -31,6 +56,10 @@ void ui_common_line_points_reset(void);
 lv_obj_t *ui_common_add_vertical_line(lv_obj_t *parent, int x);
 lv_obj_t *ui_common_add_horizontal_line(lv_obj_t *parent, int y);
 void ui_common_get_content_size(lv_obj_t *parent, int32_t *w_out, int32_t *h_out);
+void ui_common_get_content_center(lv_obj_t *parent, int32_t *cx_out, int32_t *cy_out);
+int32_t ui_common_screen_border(const lv_obj_t *screen);
+int ui_common_wf_to_content_x(lv_obj_t *screen, int x_wf);
+int ui_common_wf_to_content_y(lv_obj_t *screen, int y_wf);
 
 #ifdef __cplusplus
 }

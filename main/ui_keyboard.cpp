@@ -10,30 +10,39 @@
 #define UI_KB_KEY_RADIUS   (UI_KB_KEY_DIAM / 2)
 
 // Spacing between the keyboard keys
-#define UI_KB_KEY_SPACING  7
-#define UI_KB_ROW_PITCH    (UI_KB_KEY_DIAM + UI_KB_KEY_SPACING)
+#define UI_KB_KEY_X_SPACING  6
+#define UI_KB_ROW_PITCH      (UI_KB_KEY_DIAM + UI_KB_KEY_X_SPACING)
+#define UI_KB_ROW_PITCH_HALF (UI_KB_ROW_PITCH / 2)
 
-#define UI_KB_ROW1_CY      362
-#define UI_KB_ROW2_CY      430
-#define UI_KB_ROW3_CY      497
-#define UI_KB_MODE_KEY_CY  UI_KB_ROW3_CY
-#define UI_KB_SPACE_KEY_CY UI_KB_ROW3_CY
+#define UI_KB_KEY_Y_SPACING  8
+#define UI_KB_COL_PITCH      (UI_KB_KEY_DIAM + UI_KB_KEY_Y_SPACING)
+
+/* Row centers — wireframe Y (docs/wireframes/startup_wizard_ssid.svg); convert at placement. */
+#define UI_KB_ROW1_CY_WF 400
+#define UI_KB_ROW2_CY_WF UI_KB_ROW1_CY_WF + UI_KB_COL_PITCH
+#define UI_KB_ROW3_CY_WF UI_KB_ROW2_CY_WF + UI_KB_COL_PITCH
 
 /* Max keys in any keyboard row */
 #define UI_KB_MAX_ROW_KEYS 10
 
-static void ui_keyboard_key_cx(int *cx, int count, int x_offset = 0)
+static int ui_keyboard_row_cy(lv_obj_t *screen, int cy_wf)
 {
-    if (cx == NULL || count <= 0) {
+    return ui_common_wf_to_content_y(screen, cy_wf);
+}
+
+static void ui_keyboard_key_cx(lv_obj_t *screen, int *cx, int count, int x_offset = 0)
+{
+    if (screen == NULL || cx == NULL || count <= 0) {
         return;
     }
     if (count > UI_KB_MAX_ROW_KEYS) {
         count = UI_KB_MAX_ROW_KEYS;
     }
 
-    const int center = UI_DISP / 2;
+    int32_t center_x;
+    ui_common_get_content_center(screen, &center_x, NULL);
     const int span = (count - 1) * UI_KB_ROW_PITCH;
-    const int first = center - span / 2 + x_offset;
+    const int first = (int)center_x - span / 2 + x_offset;
     for (int i = 0; i < count; i++) {
         cx[i] = first + i * UI_KB_ROW_PITCH;
     }
@@ -147,6 +156,7 @@ static lv_obj_t *ui_keyboard_create_key_btn(lv_obj_t *parent, const char *txt, i
     lv_obj_set_style_bg_color(btn, t->menu_petal, 0);
     lv_obj_set_style_shadow_width(btn, 0, 0);
     lv_obj_set_style_border_width(btn, 0, 0);
+    lv_obj_set_style_pad_all(btn, 0, 0);
 
     lv_obj_t *lab = lv_label_create(btn);
     lv_label_set_text(lab, txt);
@@ -203,76 +213,89 @@ static void ui_keyboard_place_chars(lv_obj_t *layer, ui_keyboard_t *kb, const ch
     }
 }
 
-static lv_obj_t *ui_keyboard_create_layer(lv_obj_t *parent)
+static lv_obj_t *ui_keyboard_create_layer(lv_obj_t *screen)
 {
-    lv_obj_t *layer = lv_obj_create(parent);
-    lv_obj_set_size(layer, UI_DISP, UI_DISP);
+    int32_t cw;
+    int32_t ch;
+    ui_common_get_content_size(screen, &cw, &ch);
+
+    lv_obj_t *layer = lv_obj_create(screen);
+    lv_obj_set_size(layer, cw, ch);
     lv_obj_set_pos(layer, 0, 0);
     lv_obj_set_style_bg_opa(layer, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(layer, 0, 0);
+    lv_obj_set_style_pad_all(layer, 0, 0);
     lv_obj_remove_flag(layer, LV_OBJ_FLAG_SCROLLABLE);
     return layer;
 }
 
 static void ui_keyboard_build_number_layer(lv_obj_t *layer, ui_keyboard_t *kb)
 {
+    lv_obj_t *screen = lv_obj_get_parent(layer);
     int cx10[UI_KB_MAX_ROW_KEYS];
-    int cx9[UI_KB_MAX_ROW_KEYS];
-    ui_keyboard_key_cx(cx10, 10);
-    ui_keyboard_key_cx(cx9, 9, UI_KB_ROW_PITCH / 2);
-    ui_keyboard_place_chars(layer, kb, "12345", cx10, 5, UI_KB_ROW1_CY);
-    ui_keyboard_place_chars(layer, kb, "67890", cx10 + 5, 5, UI_KB_ROW2_CY);
-    ui_keyboard_create_key_btn(layer, "spc", cx9[8], UI_KB_SPACE_KEY_CY, ui_keyboard_key_cb, kb,
-                               ui_keyboard_key_char_ptr(' '));
+    int cx5[UI_KB_MAX_ROW_KEYS];
+    ui_keyboard_key_cx(screen, cx10, 10);
+    ui_keyboard_key_cx(screen, cx5, 5);
+    ui_keyboard_place_chars(layer, kb, "!@#$%^&*()", cx10, 10, ui_keyboard_row_cy(screen, UI_KB_ROW1_CY_WF));
+    ui_keyboard_place_chars(layer, kb, "1234567890", cx10, 10, ui_keyboard_row_cy(screen, UI_KB_ROW2_CY_WF));
+    ui_keyboard_create_key_btn(layer, "spc", cx5[2], ui_keyboard_row_cy(screen, UI_KB_ROW3_CY_WF),
+                               ui_keyboard_key_cb, kb, ui_keyboard_key_char_ptr(' '));
 }
 
 static void ui_keyboard_build_symbol_layer(lv_obj_t *layer, ui_keyboard_t *kb)
 {
-    static const char row1[] = "-_.@#$%{}&";
-    static const char row2[] = "=<>[]()+/";
-    static const char row3[] = ":;'\"|\\^";
+    static const char row1[] = "=+-_.{}[]/";
+    static const char row2[] = "<>:;'\"|\\";
+    static const char row3[] = "";
 
+    lv_obj_t *screen = lv_obj_get_parent(layer);
     int cx10[UI_KB_MAX_ROW_KEYS];
     int cx9[UI_KB_MAX_ROW_KEYS];
-    ui_keyboard_key_cx(cx10, 10);
-    ui_keyboard_key_cx(cx9, 9, UI_KB_ROW_PITCH / 2);
+    int cx5[UI_KB_MAX_ROW_KEYS];
+    ui_keyboard_key_cx(screen, cx10, 10);
+    ui_keyboard_key_cx(screen, cx9, 9);
+    ui_keyboard_key_cx(screen, cx5, 6);
 
-    ui_keyboard_place_chars(layer, kb, row1, cx10, 10, UI_KB_ROW1_CY);
-    ui_keyboard_place_chars(layer, kb, row2, cx10, 10, UI_KB_ROW2_CY);
-    ui_keyboard_place_chars(layer, kb, row3, cx9, 9, UI_KB_ROW3_CY);
-    ui_keyboard_create_key_btn(layer, "~", cx10[9], UI_KB_ROW1_CY, ui_keyboard_key_cb, kb,
-                               ui_keyboard_key_char_ptr('~'));
-    ui_keyboard_create_key_btn(layer, ",", cx10[9], UI_KB_ROW2_CY, ui_keyboard_key_cb, kb,
-                               ui_keyboard_key_char_ptr(','));
-    ui_keyboard_create_key_btn(layer, "`", cx10[9], UI_KB_ROW3_CY, ui_keyboard_key_cb, kb,
-                               ui_keyboard_key_char_ptr('`'));
-    ui_keyboard_create_key_btn(layer, "spc", cx9[8], UI_KB_SPACE_KEY_CY, ui_keyboard_key_cb, kb,
-                               ui_keyboard_key_char_ptr(' '));
+    ui_keyboard_place_chars(layer, kb, row1, cx10, 10, ui_keyboard_row_cy(screen, UI_KB_ROW1_CY_WF));
+    ui_keyboard_place_chars(layer, kb, row2, cx9, 9, ui_keyboard_row_cy(screen, UI_KB_ROW2_CY_WF));
+    ui_keyboard_place_chars(layer, kb, row3, cx5, 6, ui_keyboard_row_cy(screen, UI_KB_ROW3_CY_WF));
+
+    ui_keyboard_create_key_btn(layer, "~", cx5[1], ui_keyboard_row_cy(screen, UI_KB_ROW3_CY_WF),
+                               ui_keyboard_key_cb, kb, ui_keyboard_key_char_ptr('~'));
+    ui_keyboard_create_key_btn(layer, ",", cx5[2], ui_keyboard_row_cy(screen, UI_KB_ROW3_CY_WF),
+                               ui_keyboard_key_cb, kb, ui_keyboard_key_char_ptr(','));
+    ui_keyboard_create_key_btn(layer, "`", cx5[3], ui_keyboard_row_cy(screen, UI_KB_ROW3_CY_WF),
+                               ui_keyboard_key_cb, kb, ui_keyboard_key_char_ptr('`'));
+    ui_keyboard_create_key_btn(layer, "spc", cx5[4], ui_keyboard_row_cy(screen, UI_KB_ROW3_CY_WF),
+                               ui_keyboard_key_cb, kb, ui_keyboard_key_char_ptr(' '));
 }
 
 static void ui_keyboard_build_letter_layer(lv_obj_t *layer, ui_keyboard_t *kb, const char *r1,
                                            const char *r2, const char *r3)
 {
+    lv_obj_t *screen = lv_obj_get_parent(layer);
     int cx10[UI_KB_MAX_ROW_KEYS];
     int cx9[UI_KB_MAX_ROW_KEYS];
     int cx7[UI_KB_MAX_ROW_KEYS];
-    ui_keyboard_key_cx(cx10, 10);
-    // ui_keyboard_key_cx(cx9, 9, UI_KB_ROW_PITCH / 2);
-    ui_keyboard_key_cx(cx9, 9);
-    ui_keyboard_key_cx(cx7, 7, UI_KB_ROW_PITCH / 2);
+    ui_keyboard_key_cx(screen, cx10, 10);
+    ui_keyboard_key_cx(screen, cx9, 9);
+    ui_keyboard_key_cx(screen, cx7, 7, UI_KB_ROW_PITCH / 2);
 
-    ui_keyboard_place_chars(layer, kb, r1, cx10, 10, UI_KB_ROW1_CY);
-    ui_keyboard_place_chars(layer, kb, r2, cx9, 9, UI_KB_ROW2_CY);
-    ui_keyboard_place_chars(layer, kb, r3, cx7, 7, UI_KB_ROW3_CY);
+    ui_keyboard_place_chars(layer, kb, r1, cx10, 10, ui_keyboard_row_cy(screen, UI_KB_ROW1_CY_WF));
+    ui_keyboard_place_chars(layer, kb, r2, cx9, 9, ui_keyboard_row_cy(screen, UI_KB_ROW2_CY_WF));
+    ui_keyboard_place_chars(layer, kb, r3, cx7, 7, ui_keyboard_row_cy(screen, UI_KB_ROW3_CY_WF));
 }
 
 ui_keyboard_t *ui_keyboard_create(lv_obj_t *parent, const ui_keyboard_config_t *config)
 {
+
+    // Validate the input parameters
     if (parent == NULL || config == NULL || config->buf == NULL || config->label == NULL ||
         config->buf_len == 0) {
         return NULL;
     }
 
+    // Initialize the keyboard module
     ui_keyboard_module_init();
 
     ui_keyboard_t *kb = (ui_keyboard_t *)lv_malloc(sizeof(ui_keyboard_t));
@@ -287,12 +310,10 @@ ui_keyboard_t *ui_keyboard_create(lv_obj_t *parent, const ui_keyboard_config_t *
     }
 
     kb->layers[UI_KEYBOARD_MODE_LOWER] = ui_keyboard_create_layer(parent);
-    ui_keyboard_build_letter_layer(kb->layers[UI_KEYBOARD_MODE_LOWER], kb, "qwertyuiop", "asdfghjkl",
-                                   "zxcvbnm");
+    ui_keyboard_build_letter_layer(kb->layers[UI_KEYBOARD_MODE_LOWER], kb, "qwertyuiop", "asdfghjkl", "zxcvbnm");
 
     kb->layers[UI_KEYBOARD_MODE_UPPER] = ui_keyboard_create_layer(parent);
-    ui_keyboard_build_letter_layer(kb->layers[UI_KEYBOARD_MODE_UPPER], kb, "QWERTYUIOP", "ASDFGHJKL",
-                                   "ZXCVBNM");
+    ui_keyboard_build_letter_layer(kb->layers[UI_KEYBOARD_MODE_UPPER], kb, "QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM");
 
     kb->layers[UI_KEYBOARD_MODE_NUMBER] = ui_keyboard_create_layer(parent);
     ui_keyboard_build_number_layer(kb->layers[UI_KEYBOARD_MODE_NUMBER], kb);
@@ -301,9 +322,10 @@ ui_keyboard_t *ui_keyboard_create(lv_obj_t *parent, const ui_keyboard_config_t *
     ui_keyboard_build_symbol_layer(kb->layers[UI_KEYBOARD_MODE_SYMBOL], kb);
 
     int mode_cx[UI_KB_MAX_ROW_KEYS];
-    ui_keyboard_key_cx(mode_cx, 10);
+    ui_keyboard_key_cx(parent, mode_cx, 8);
     kb->mode_btn = ui_keyboard_create_key_btn(parent, ui_keyboard_mode_btn_label(kb->mode), mode_cx[0],
-                                              UI_KB_MODE_KEY_CY, ui_keyboard_mode_cb, kb, NULL);
+                                              ui_keyboard_row_cy(parent, UI_KB_ROW3_CY_WF),
+                                              ui_keyboard_mode_cb, kb, NULL);
     lv_obj_t *mode_lab = lv_obj_get_child(kb->mode_btn, 0);
     if (mode_lab != NULL) {
         lv_obj_set_style_text_font(mode_lab, &lv_font_montserrat_20, 0);

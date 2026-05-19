@@ -29,19 +29,19 @@
 #include <stdio.h>
 #include <string.h>
 
-/* Purple text field — wireframe rect x=78 y=215 w=563 h=78 rx=30 */
-#define WIFI_FIELD_X        78
-#define WIFI_FIELD_Y        215
+/* Purple text field — wireframe rect x=78 y=215 w=563 h=78 rx=30 (UI_WF_* at placement) */
+#define WIFI_FIELD_X_WF     78
+#define WIFI_FIELD_Y_WF     215
 #define WIFI_FIELD_W        563
 #define WIFI_FIELD_H        78
 #define WIFI_FIELD_RADIUS   30
 
 #define WIFI_TITLE_Y_OFFSET 28
 
-/* Corner wedge buttons — lower than y≈330 used on other screens (wireframe ~y 589) */
-#define WIFI_BTN_BACK_X     108
-#define WIFI_BTN_NEXT_X     (UI_DISP - 108 - 64)
-#define WIFI_BTN_Y          600
+/* Corner wedge buttons — wireframe ~y 600 (UI_WF_* at placement) */
+#define WIFI_BTN_BACK_X_WF  108
+#define WIFI_BTN_NEXT_X_WF  (UI_SCREEN_W - 108 - 64)
+#define WIFI_BTN_Y_WF       600
 
 static lv_obj_t *s_scr_ssid;
 static lv_obj_t *s_scr_pw;
@@ -64,7 +64,8 @@ static lv_obj_t *wifi_create_ssid_field(lv_obj_t *parent, lv_obj_t **label_out)
     const ui_theme_t *t = ui_theme_get();
     lv_obj_t *box = lv_obj_create(parent);
     lv_obj_set_size(box, WIFI_FIELD_W, WIFI_FIELD_H);
-    lv_obj_set_pos(box, WIFI_FIELD_X, WIFI_FIELD_Y);
+    lv_obj_set_pos(box, UI_WF_X(WIFI_FIELD_X_WF, UI_RING_BORDER_WIFI),
+                   UI_WF_Y(WIFI_FIELD_Y_WF, UI_RING_BORDER_WIFI));
     lv_obj_set_style_bg_color(box, t->ring, 0);
     lv_obj_set_style_bg_opa(box, LV_OPA_COVER, 0);
     lv_obj_set_style_border_width(box, 0, 0);
@@ -175,9 +176,13 @@ static void build_ssid(lv_obj_t *screens[UI_SCREEN_COUNT])
     };
     s_ssid_kb = ui_keyboard_create(s_scr_ssid, &kb_cfg);
 
-    lv_obj_t *back = ui_common_create_side_btn(s_scr_ssid, true, WIFI_BTN_BACK_X, WIFI_BTN_Y, NULL);
+    lv_obj_t *back = ui_common_create_side_btn(s_scr_ssid, true,
+                                               UI_WF_X(WIFI_BTN_BACK_X_WF, UI_RING_BORDER_WIFI),
+                                               UI_WF_Y(WIFI_BTN_Y_WF, UI_RING_BORDER_WIFI), NULL);
     lv_obj_add_event_cb(back, ssid_back_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_t *next = ui_common_create_side_btn(s_scr_ssid, false, WIFI_BTN_NEXT_X, WIFI_BTN_Y, NULL);
+    lv_obj_t *next = ui_common_create_side_btn(s_scr_ssid, false,
+                                               UI_WF_X(WIFI_BTN_NEXT_X_WF, UI_RING_BORDER_WIFI),
+                                               UI_WF_Y(WIFI_BTN_Y_WF, UI_RING_BORDER_WIFI), NULL);
     lv_obj_add_event_cb(next, ssid_next_cb, LV_EVENT_CLICKED, NULL);
 }
 
@@ -203,9 +208,13 @@ static void build_password(lv_obj_t *screens[UI_SCREEN_COUNT])
     };
     s_pw_kb = ui_keyboard_create(s_scr_pw, &kb_cfg);
 
-    lv_obj_t *back = ui_common_create_side_btn(s_scr_pw, true, WIFI_BTN_BACK_X, WIFI_BTN_Y, NULL);
+    lv_obj_t *back = ui_common_create_side_btn(s_scr_pw, true,
+                                               UI_WF_X(WIFI_BTN_BACK_X_WF, UI_RING_BORDER_WIFI),
+                                               UI_WF_Y(WIFI_BTN_Y_WF, UI_RING_BORDER_WIFI), NULL);
     lv_obj_add_event_cb(back, pw_back_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_t *next = ui_common_create_side_btn(s_scr_pw, false, WIFI_BTN_NEXT_X, WIFI_BTN_Y, NULL);
+    lv_obj_t *next = ui_common_create_side_btn(s_scr_pw, false,
+                                               UI_WF_X(WIFI_BTN_NEXT_X_WF, UI_RING_BORDER_WIFI),
+                                               UI_WF_Y(WIFI_BTN_Y_WF, UI_RING_BORDER_WIFI), NULL);
     lv_obj_add_event_cb(next, pw_next_cb, LV_EVENT_CLICKED, NULL);
 }
 
