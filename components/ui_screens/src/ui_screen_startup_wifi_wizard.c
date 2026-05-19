@@ -5,7 +5,7 @@
  *   - 720×720 circular panel, 14 px purple ring (#7D23BE)
  *   - Title, purple rounded SSID field (563×78 @ x=78 y=215, radius 30)
  *   - On-screen keyboard via ui_keyboard (four rows, four layouts)
- *   - Bottom-left orange wedge (X), bottom-right green wedge (check) via ui_wedge_create (bitmap)
+ *   - Green confirm wedge on SSID screen; cancel + confirm on password screen
  *
  * Screens built here (registered in ui_screens_registry.c):
  *   UI_SCREEN_STARTUP_SSID      — "Wi-Fi Setup", enter network name
@@ -110,19 +110,7 @@ static lv_obj_t *wifi_create_screen(void)
     return scr;
 }
 
-/* Orange corner on SSID screen: delete last character (not navigate back). */
-static void ssid_back_cb(lv_event_t *e)
-{
-    (void)e;
-    size_t len = strlen(s_ssid_buf);
-    if (len > 0) {
-        s_ssid_buf[len - 1] = '\0';
-        lv_label_set_text(lbl_ssid, s_ssid_buf);
-    }
-    ui_nav_reset_idle_timer();
-}
-
-/* Green corner: require non-empty SSID, save to app_config, advance boot flow. */
+/* Green corner: require non-empty SSID, copy into app_config (RAM), advance boot flow. */
 static void ssid_next_cb(lv_event_t *e)
 {
     (void)e;
@@ -138,7 +126,7 @@ static void ssid_next_cb(lv_event_t *e)
     }
 }
 
-/* Green corner: save password (may be empty for open network), go to loading. */
+/* Green corner: copy password into app_config (RAM; may be empty), go to loading. */
 static void pw_next_cb(lv_event_t *e)
 {
     (void)e;
@@ -161,7 +149,7 @@ static void build_ssid(lv_obj_t *screens[UI_SCREEN_COUNT])
     screens[UI_SCREEN_STARTUP_SSID] = s_scr_ssid;
     s_ssid_buf[0] = '\0';
 
-    lv_obj_t *title = ui_widgets_create_title(s_scr_ssid, "Wi-Fi Setup");
+    lv_obj_t *title = ui_widgets_create_title(s_scr_ssid, "Wi-Fi Name");
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, WIFI_TITLE_Y_OFFSET);
 
     wifi_create_ssid_field(s_scr_ssid, &lbl_ssid);
@@ -176,12 +164,6 @@ static void build_ssid(lv_obj_t *screens[UI_SCREEN_COUNT])
     };
     s_ssid_kb = ui_keyboard_create(s_scr_ssid, &kb_cfg);
 
-    lv_obj_t *back = ui_wedge_create(
-        s_scr_ssid, UI_WEDGE_CANCEL,
-        UI_WF_X(UI_WEDGE_CANCEL_X_WF, UI_RING_BORDER_WIFI),
-        UI_WF_Y(UI_WEDGE_CANCEL_Y_WF, UI_RING_BORDER_WIFI));
-    lv_obj_add_event_cb(back, ssid_back_cb, LV_EVENT_CLICKED, NULL);
-    
     lv_obj_t *next = ui_wedge_create(
         s_scr_ssid, UI_WEDGE_CONFIRM,
         UI_WF_X(UI_WEDGE_CONFIRM_X_WF, UI_RING_BORDER_WIFI),
@@ -199,7 +181,6 @@ static void build_password(lv_obj_t *screens[UI_SCREEN_COUNT])
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, WIFI_TITLE_Y_OFFSET);
 
     wifi_create_ssid_field(s_scr_pw, &lbl_pw);
-    lv_obj_set_style_text_font(lbl_pw, &lv_font_montserrat_20, 0);
 
     ui_keyboard_config_t kb_cfg = {
         .buf = s_pw_buf,
