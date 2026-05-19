@@ -147,9 +147,22 @@ void ui_common_format_hh_mm(char *buf, size_t len, int hour, int min)
 static lv_point_precise_t s_line_pt_pool[UI_COMMON_LINE_PT_SLOTS][2];
 static int s_line_pt_pool_next;
 
+static void ui_common_parent_content_size(lv_obj_t *parent, int32_t *w_out, int32_t *h_out)
+{
+    lv_area_t content;
+    lv_obj_get_content_coords(parent, &content);
+    *w_out = lv_area_get_width(&content);
+    *h_out = lv_area_get_height(&content);
+}
+
 void ui_common_line_points_reset(void)
 {
     s_line_pt_pool_next = 0;
+}
+
+void ui_common_get_content_size(lv_obj_t *parent, int32_t *w_out, int32_t *h_out)
+{
+    ui_common_parent_content_size(parent, w_out, h_out);
 }
 
 static lv_point_precise_t *ui_common_line_points_alloc(void)
@@ -176,6 +189,10 @@ static lv_obj_t *ui_common_add_line_internal(lv_obj_t *parent, lv_point_precise_
     return line;
 }
 
+/*
+ * x / y are in parent *content* coordinates (inside border/pad), not raw UI_DISP.
+ * lv_line points are relative to the line widget; the widget is a child of content (0,0).
+ */
 lv_obj_t *ui_common_add_vertical_line(lv_obj_t *parent, int x)
 {
     lv_point_precise_t *pts = ui_common_line_points_alloc();
@@ -183,10 +200,14 @@ lv_obj_t *ui_common_add_vertical_line(lv_obj_t *parent, int x)
         return NULL;
     }
 
+    int32_t cw;
+    int32_t ch;
+    ui_common_parent_content_size(parent, &cw, &ch);
+
     pts[0].x = x;
     pts[0].y = 0;
     pts[1].x = x;
-    pts[1].y = UI_DISP;
+    pts[1].y = ch;
     return ui_common_add_line_internal(parent, pts);
 }
 
@@ -197,9 +218,13 @@ lv_obj_t *ui_common_add_horizontal_line(lv_obj_t *parent, int y)
         return NULL;
     }
 
+    int32_t cw;
+    int32_t ch;
+    ui_common_parent_content_size(parent, &cw, &ch);
+
     pts[0].x = 0;
     pts[0].y = y;
-    pts[1].x = UI_DISP;
+    pts[1].x = cw;
     pts[1].y = y;
     return ui_common_add_line_internal(parent, pts);
 }

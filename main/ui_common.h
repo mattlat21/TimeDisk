@@ -25,10 +25,12 @@ void ui_common_format_hh_mm(char *buf, size_t len, int hour, int min);
 /*
  * Guide lines (LVGL lv_line). lv_line_set_points() keeps a pointer — each line needs
  * its own point pair. Call ui_common_line_points_reset() once before adding lines on a screen.
+ * x / y are in the parent's content area (inside border), not full UI_DISP pixels.
  */
 void ui_common_line_points_reset(void);
 lv_obj_t *ui_common_add_vertical_line(lv_obj_t *parent, int x);
 lv_obj_t *ui_common_add_horizontal_line(lv_obj_t *parent, int y);
+void ui_common_get_content_size(lv_obj_t *parent, int32_t *w_out, int32_t *h_out);
 
 #ifdef __cplusplus
 }

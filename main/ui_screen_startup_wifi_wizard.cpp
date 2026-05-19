@@ -368,15 +368,19 @@ static lv_obj_t *wifi_create_ssid_field(lv_obj_t *parent, lv_obj_t **label_out)
     return box;
 }
 
-/* Layout guides — see ui_common_add_vertical_line / ui_common_add_horizontal_line */
+/* Layout guides — coordinates relative to screen content area (inside 14 px ring). */
 static void wifi_add_layout_guides(lv_obj_t *scr)
 {
-    ui_common_add_vertical_line(scr, UI_DISP / 2);
-    ui_common_add_vertical_line(scr, UI_DISP - 20);
+    int32_t cw;
+    int32_t ch;
+    ui_common_get_content_size(scr, &cw, &ch);
+
+    ui_common_add_vertical_line(scr, cw / 2);
+    ui_common_add_vertical_line(scr, cw - 20);
     ui_common_add_vertical_line(scr, 20);
 
-    ui_common_add_horizontal_line(scr, UI_DISP / 2);
-    ui_common_add_horizontal_line(scr, UI_DISP - 20);
+    ui_common_add_horizontal_line(scr, ch / 2);
+    ui_common_add_horizontal_line(scr, ch - 20);
     ui_common_add_horizontal_line(scr, 20);
 }
 
