@@ -72,12 +72,14 @@ static void build_one(lv_obj_t **scr, lv_obj_t **lbl_time, lv_obj_t **lbl_mode, 
     lv_obj_align(*lbl_mode, LV_ALIGN_CENTER, 0, 40);
 
     lv_obj_t *menu_btn = lv_button_create(*scr);
-    lv_obj_set_size(menu_btn, 80, 40);
+    lv_obj_set_size(menu_btn, 160, 80);
     lv_obj_align(menu_btn, LV_ALIGN_BOTTOM_MID, 0, -80);
     lv_obj_set_style_bg_color(menu_btn, t->ring, 0);
+    lv_obj_set_style_radius(menu_btn, 16, 0);
     lv_obj_t *ml = lv_label_create(menu_btn);
     lv_label_set_text(ml, "Menu");
     lv_obj_set_style_text_color(ml, t->white, 0);
+    lv_obj_set_style_text_font(ml, &lv_font_montserrat_26, 0);
     lv_obj_center(ml);
     lv_obj_add_event_cb(menu_btn, menu_btn_cb, LV_EVENT_CLICKED, NULL);
 
