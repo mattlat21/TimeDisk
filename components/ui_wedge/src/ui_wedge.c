@@ -23,6 +23,8 @@ static const lv_image_dsc_t *icon_for_id(ui_wedge_icon_t icon)
         return &icon_wedge_cancel;
     case UI_WEDGE_ICON_CONFIRM_CHECK:
         return &icon_wedge_confirm;
+    case UI_WEDGE_ICON_NEXT_ARROW:
+        return &icon_wedge_next;
     case UI_WEDGE_ICON_SETTINGS_SPANNER:
         return &icon_wedge_settings;
     default:
@@ -92,6 +94,12 @@ ui_wedge_config_t ui_wedge_config_from_type(ui_wedge_type_t type)
             .side = UI_WEDGE_SIDE_LEFT,
             .color = t->orange,
             .icon = UI_WEDGE_ICON_CANCEL_X,
+        };
+    case UI_WEDGE_NEXT:
+        return (ui_wedge_config_t){
+            .side = UI_WEDGE_SIDE_RIGHT,
+            .color = t->green,
+            .icon = UI_WEDGE_ICON_NEXT_ARROW,
         };
     case UI_WEDGE_SETTINGS:
         return (ui_wedge_config_t){

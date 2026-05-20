@@ -5,6 +5,7 @@ idf_component_register(
         "src/wedge_shape_right.c"
         "src/icon_wedge_cancel.c"
         "src/icon_wedge_confirm.c"
+        "src/icon_wedge_next.c"
         "src/icon_wedge_settings.c"
     INCLUDE_DIRS "include"
     REQUIRES lvgl

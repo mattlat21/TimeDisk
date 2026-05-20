@@ -16,4 +16,5 @@ extern const lv_image_dsc_t wedge_shape_right;
 /** White icon overlays (209×106), composed on top of a wedge button. */
 extern const lv_image_dsc_t icon_wedge_cancel;
 extern const lv_image_dsc_t icon_wedge_confirm;
+extern const lv_image_dsc_t icon_wedge_next;
 extern const lv_image_dsc_t icon_wedge_settings;

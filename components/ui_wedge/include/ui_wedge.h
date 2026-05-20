@@ -21,6 +21,7 @@ typedef enum {
     UI_WEDGE_ICON_NONE = 0,
     UI_WEDGE_ICON_CANCEL_X,
     UI_WEDGE_ICON_CONFIRM_CHECK,
+    UI_WEDGE_ICON_NEXT_ARROW,
     UI_WEDGE_ICON_SETTINGS_SPANNER,
 } ui_wedge_icon_t;
 
@@ -28,6 +29,7 @@ typedef enum {
 typedef enum {
     UI_WEDGE_CANCEL = 0,
     UI_WEDGE_CONFIRM,
+    UI_WEDGE_NEXT,
     UI_WEDGE_SETTINGS,
 } ui_wedge_type_t;
 
