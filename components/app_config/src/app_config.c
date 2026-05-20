@@ -39,6 +39,8 @@ void app_config_apply_defaults(void)
     snprintf(s_cfg.aa_pin, sizeof(s_cfg.aa_pin), "%s", "0000");
 
     s_cfg.wifi_password_set = false;
+    s_cfg.timezone_set = false;
+    s_cfg.timezone_id[0] = '\0';
 }
 
 void app_runtime_reset(void)
@@ -90,4 +92,9 @@ bool app_config_wifi_ssid_missing(void)
 bool app_config_wifi_password_unset(void)
 {
     return !s_cfg.wifi_password_set;
+}
+
+bool app_config_timezone_unset(void)
+{
+    return !s_cfg.timezone_set;
 }

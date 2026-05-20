@@ -46,6 +46,36 @@ SSID wizard runs before password wizard. Settings can change these later without
 
 ---
 
+## Timezone
+
+Wall-clock display uses UTC from SNTP plus a configured local timezone. Catalog: [timezone_catalog.md](timezone_catalog.md).
+
+| Field | Type | Max length | Default (unset) | Notes |
+| ----- | ---- | ---------- | --------------- | ----- |
+| `timezone_set` | bool | — | `false` | `false` = null / never configured; show [startup_wizard_timezone](screen_flow.md) |
+| `timezone_id` | string | 48 | *(empty)* | IANA ID from the location dropdown, e.g. `Europe/London` |
+
+### Unset vs configured
+
+| State | NVS | Boot behaviour |
+| ----- | --- | -------------- |
+| **Unset (null)** | `timezone_set == false` | After Loading and `time_valid`, show timezone startup wizard |
+| **Configured** | `timezone_set == true` and non-empty `timezone_id` | Apply timezone on boot; skip wizard |
+
+On **Next**, firmware writes `timezone_id`, sets `timezone_set = true`, applies TZ to libc, and saves NVS. An empty `timezone_id` alone does **not** count as configured.
+
+The **country** dropdown is UI-only; only `timezone_id` is persisted.
+
+### Startup wizard (boot only)
+
+After [Loading](screen_flow.md) when `time_valid == true` — see [screen_flow.md](screen_flow.md) Boot subgraph:
+
+3. **`startup_wizard_timezone`** — if `timezone_set` is false; user picks **Country** then **Location**; preview clock updates in real time; **Next** saves `timezone_id` and continues to Time of Day.
+
+Skipped when timezone was previously set. Erasing NVS clears `timezone_set` and shows the wizard again after the next successful time sync.
+
+---
+
 ## Timeouts
 
 All values are **`uint32`**, unit **seconds**, stored in NVS.
@@ -167,6 +197,8 @@ Full behaviour: [adult_authentication.md](adult_authentication.md).
 | `wifi_ssid` | string | — | yes | empty | Boot, WiFi |
 | `wifi_password` | string | — | yes | empty | Boot, WiFi |
 | `ntp_server` | string | — | yes | `pool.ntp.org` | Boot, SNTP |
+| `timezone_set` | bool | — | yes | `false` | Boot, local time |
+| `timezone_id` | string | — | yes | empty | Boot, local time |
 | `timeout_splash_sec` | uint32 | s | yes | `3` | Boot UI |
 | `timeout_tod_dim_sec` | uint32 | s | yes | `600` | Time of Day |
 | `timeout_aa_sec` | uint32 | s | yes | `60` | Adult Authentication |

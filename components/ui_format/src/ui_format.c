@@ -23,3 +23,40 @@ void ui_format_hh_mm_now(char *buf, size_t len)
     localtime_r(&now, &tm_info);
     ui_format_hh_mm(buf, len, tm_info.tm_hour, tm_info.tm_min);
 }
+
+static void format_12h_parts(const struct tm *tm_info, int *h12_out, int *min_out, const char **ampm_out)
+{
+    int h24 = tm_info->tm_hour;
+    int h12 = h24 % 12;
+    if (h12 == 0) {
+        h12 = 12;
+    }
+    *h12_out = h12;
+    *min_out = tm_info->tm_min;
+    *ampm_out = (h24 >= 12) ? "PM" : "AM";
+}
+
+void ui_format_hh_mm_ampm_now(char *buf, size_t len)
+{
+    time_t now = time(NULL);
+    struct tm tm_info;
+    localtime_r(&now, &tm_info);
+    int h12;
+    int min;
+    const char *ampm;
+    format_12h_parts(&tm_info, &h12, &min, &ampm);
+    snprintf(buf, len, "%d:%02d %s", h12, min, ampm);
+}
+
+void ui_format_hh_mm_ampm_parts_now(char *time_buf, size_t time_len, char *ampm_buf, size_t ampm_len)
+{
+    time_t now = time(NULL);
+    struct tm tm_info;
+    localtime_r(&now, &tm_info);
+    int h12;
+    int min;
+    const char *ampm;
+    format_12h_parts(&tm_info, &h12, &min, &ampm);
+    snprintf(time_buf, time_len, "%d:%02d", h12, min);
+    snprintf(ampm_buf, ampm_len, "%s", ampm);
+}

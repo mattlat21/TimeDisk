@@ -7,6 +7,7 @@
 #include "ui_screens_registry.h"
 #include "ui_theme.h"
 #include "app_config.h"
+#include "app_time.h"
 #include "app_network.h"
 #include "bsp/esp-bsp.h"
 #include <esp_err.h>
@@ -138,6 +139,9 @@ static void on_enter(ui_screen_id_t screen)
         ui_screen_loading_on_show();
         app_network_start_boot_sync();
         break;
+    case UI_SCREEN_STARTUP_TIMEZONE:
+        ui_screen_startup_timezone_wizard_on_show();
+        break;
     case UI_SCREEN_TOD_BRIGHT:
         ui_screen_tod_on_show(false);
         arm_idle_timer(cfg->timeout_tod_dim_sec);
@@ -177,6 +181,10 @@ void ui_nav_go(ui_screen_id_t screen)
 
     if (s_current == UI_SCREEN_LOADING && screen != UI_SCREEN_LOADING) {
         app_network_cancel_boot_sync();
+    }
+
+    if (s_current == UI_SCREEN_STARTUP_TIMEZONE && screen != UI_SCREEN_STARTUP_TIMEZONE) {
+        ui_screen_startup_timezone_wizard_on_hide();
     }
 
     if (s_aa.active && screen != UI_SCREEN_ADULT_AUTH) {
@@ -381,7 +389,12 @@ static void loading_boot_async_cb(void *user_data)
     }
 
     if (arg->time_ok) {
-        ui_nav_go(UI_SCREEN_TOD_BRIGHT);
+        if (app_config_timezone_unset()) {
+            ui_nav_go(UI_SCREEN_STARTUP_TIMEZONE);
+        } else {
+            app_time_apply_from_config();
+            ui_nav_go(UI_SCREEN_TOD_BRIGHT);
+        }
     } else {
         s_loading_retry_at_ms = now_ms() + LOADING_RETRY_MS;
         ui_screen_loading_set_status(app_network_get_status_text());
@@ -452,6 +465,7 @@ void ui_nav_init(void)
     if (cfg_err != ESP_OK) {
         ESP_LOGW(TAG, "app_config_init: %s", esp_err_to_name(cfg_err));
     }
+    app_time_apply_from_config();
 
     esp_err_t net_err = app_network_init();
     if (net_err != ESP_OK) {

@@ -22,6 +22,8 @@ static const char *TAG = "app_nvs";
 #define KEY_WIFI_PASSWORD       "wifi_pass"    /* string wifi_password */
 #define KEY_WIFI_PW_SET         "wifi_pw_set"  /* uint8  wifi_password_set flag */
 #define KEY_NTP_SERVER          "ntp_server"   /* string ntp_server */
+#define KEY_TZ_SET              "tz_set"       /* uint8  timezone_set */
+#define KEY_TZ_ID               "tz_id"        /* string timezone_id */
 #define KEY_TO_SPLASH           "to_splash"    /* uint32 timeout_splash_sec */
 #define KEY_TO_TOD_DIM          "to_tod_dim"   /* uint32 timeout_tod_dim_sec */
 #define KEY_TO_AA               "to_aa"        /* uint32 timeout_aa_sec */
@@ -121,6 +123,11 @@ static void sanitize_loaded_config(app_config_t *cfg)
 
     cfg->aa_methods &= 0x03;
 
+    if (cfg->timezone_set && cfg->timezone_id[0] == '\0') {
+        ESP_LOGW(TAG, "timezone_set without id, clearing flag");
+        cfg->timezone_set = false;
+    }
+
     if (strlen(cfg->aa_pin) != 4) {
         ESP_LOGW(TAG, "invalid aa_pin length, resetting to 0000");
         snprintf(cfg->aa_pin, sizeof(cfg->aa_pin), "%s", "0000");
@@ -211,6 +218,18 @@ esp_err_t app_nvs_load(void)
     }
 
     err = get_str(h, KEY_NTP_SERVER, cfg->ntp_server, sizeof(cfg->ntp_server), "pool.ntp.org");
+    if (err != ESP_OK) {
+        goto out;
+    }
+
+    uint8_t tz_set = 0;
+    err = get_u8(h, KEY_TZ_SET, &tz_set, 0);
+    if (err != ESP_OK) {
+        goto out;
+    }
+    cfg->timezone_set = (tz_set != 0);
+
+    err = get_str(h, KEY_TZ_ID, cfg->timezone_id, sizeof(cfg->timezone_id), "");
     if (err != ESP_OK) {
         goto out;
     }
@@ -307,6 +326,39 @@ static esp_err_t save_network_keys_and_ntp(nvs_handle_t h, const app_config_t *c
         return err;
     }
     return set_str(h, KEY_NTP_SERVER, cfg->ntp_server);
+}
+
+static esp_err_t save_timezone_keys(nvs_handle_t h, const app_config_t *cfg)
+{
+    esp_err_t err = set_u8(h, KEY_TZ_SET, cfg->timezone_set ? 1 : 0);
+    if (err != ESP_OK) {
+        return err;
+    }
+    return set_str(h, KEY_TZ_ID, cfg->timezone_id);
+}
+
+esp_err_t app_nvs_save_timezone(void)
+{
+    const app_config_t *cfg = app_config_get();
+    nvs_handle_t h;
+    esp_err_t err = open_rw(&h);
+    if (err != ESP_OK) {
+        return err;
+    }
+    err = save_timezone_keys(h, cfg);
+    if (err == ESP_OK) {
+        err = touch_cfg_ver(h);
+    }
+    if (err == ESP_OK) {
+        err = commit(h);
+    }
+    nvs_close(h);
+    if (err == ESP_OK) {
+        ESP_LOGI(TAG, "saved timezone");
+    } else {
+        ESP_LOGE(TAG, "save timezone failed: %s", esp_err_to_name(err));
+    }
+    return err;
 }
 
 esp_err_t app_nvs_save_network(void)
@@ -458,6 +510,11 @@ esp_err_t app_nvs_save_all(void)
     }
 
     err = save_network_keys_and_ntp(h, cfg);
+    if (err != ESP_OK) {
+        goto out;
+    }
+
+    err = save_timezone_keys(h, cfg);
     if (err != ESP_OK) {
         goto out;
     }

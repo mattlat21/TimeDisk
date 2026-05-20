@@ -12,3 +12,7 @@ void ui_format_mm_ss(char *buf, size_t len, uint32_t sec);
 void ui_format_hh_mm(char *buf, size_t len, int hour, int min);
 /** Format local wall-clock time from the system RTC (after SNTP). */
 void ui_format_hh_mm_now(char *buf, size_t len);
+/** 12-hour local time with AM/PM, e.g. "3:45 PM". */
+void ui_format_hh_mm_ampm_now(char *buf, size_t len);
+/** 12-hour parts: @p time_buf e.g. "3:45", @p ampm_buf "AM" or "PM". */
+void ui_format_hh_mm_ampm_parts_now(char *time_buf, size_t time_len, char *ampm_buf, size_t ampm_len);

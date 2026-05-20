@@ -20,7 +20,9 @@ flowchart LR
     loading[Loading UI]
     wifi[WiFi connect]
     ntp[NTP sync]
-    rtc[System clock]
+    rtc[System clock UTC]
+    wizardTz[startup_wizard_timezone]
+    applyTz[Apply TZ]
     todUI[Time of Day Wake UI]
 
     powerUp --> nvsLoad
@@ -31,7 +33,10 @@ flowchart LR
     loading --> wifi
     wifi -->|"wifi_ssid wifi_password"| ntp
     ntp -->|"ntp_server"| rtc
-    rtc -->|"time_valid"| todUI
+    rtc -->|"time_valid"| wizardTz
+    wizardTz -->|"timezone_set false"| applyTz
+    rtc -->|"timezone_set true"| applyTz
+    applyTz --> todUI
 ```
 
 | From | To | Data | Trigger |
@@ -42,12 +47,19 @@ flowchart LR
 | NVS | WiFi stack | `wifi_ssid`, `wifi_password` | After startup wizard / loading |
 | NVS | SNTP client | `ntp_server` | WiFi connected |
 | NTP server | System clock | UTC timestamp | SNTP success |
-| System clock | UI | local time, `time_valid=true` | Time accepted |
+| System clock | Runtime | `time_valid=true` | SNTP success |
+| NVS | libc TZ | `timezone_id` → POSIX `TZ` | Boot (if `timezone_set`) |
+| User | NVS | `timezone_id`, `timezone_set=true` | startup_wizard_timezone Next |
+| User | libc TZ | selected `timezone_id` (preview) | Dropdown change on wizard |
+| Catalog | UI | country / location lists | Timezone wizard |
+| System clock + TZ | UI | local HH:MM | Time accepted and TZ applied |
 | NVS | UI | `timeout_splash_sec` | Boot |
 
 `startup_wizard_ssid` and `startup_wizard_password` are **skipped** when `wifi_ssid` is already set and `wifi_password` is not null — see [data_model.md](data_model.md#startup-wizard-boot-only).
 
-If time is not valid, screen flow may route to Settings / Loading loop — see [screen_flow.md](screen_flow.md) Boot subgraph.
+`startup_wizard_timezone` is **skipped** when `timezone_set` is true — see [data_model.md](data_model.md#timezone).
+
+If time is not valid, screen flow stays on Loading (retry) — timezone wizard is not shown until `time_valid`. See [screen_flow.md](screen_flow.md) Boot subgraph.
 
 ---
 

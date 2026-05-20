@@ -11,6 +11,7 @@ flowchart TB
     splash("Splash Screen")
     startup_wizard_ssid("Startup Wizard: WiFi SSID")
     startup_wizard_password("Startup Wizard: WiFi Password")
+    startup_wizard_timezone("Startup Wizard: Timezone")
     loading("Loading / Startup")
 
     %% Screens (green)
@@ -46,6 +47,7 @@ flowchart TB
     timer_done_ok("OK")
     startup_wizard_ssid_ok("Next Button")
     startup_wizard_password_ok("Next Button")
+    startup_wizard_timezone_ok("Next Button")
 
     %% User Back Buttons
     back_btn_settings("Back Button")
@@ -87,6 +89,7 @@ flowchart TB
     is_timer_triggered_dim{{"Timer Triggered"}}
     wifi_ssid_missing{{"wifi_ssid blank or null?"}}
     wifi_password_null{{"wifi_password null?"}}
+    timezone_unset{{"timezone_set false?"}}
 
     %% Helpful Labels
     timer_done([Back to T.o.D.])
@@ -106,7 +109,10 @@ flowchart TB
         loading --> time_obtained --> |No| loading
         loading --> loading_settings
     end
-    time_obtained --> |Yes| tod_bright
+    time_obtained --> |Yes| timezone_unset
+    timezone_unset --> |Yes| startup_wizard_timezone
+    timezone_unset --> |No| tod_bright
+    startup_wizard_timezone --> startup_wizard_timezone_ok --> tod_bright
     loading_settings --> settings
 
     %% Idle and authentication
@@ -216,15 +222,15 @@ flowchart TB
     classDef decision fill:#ffe0b2,stroke:#e65100,color:#bf360c
     classDef helpful_label fill:#b2ebf2,stroke:#00838f,color:#006064
 
-    class splash,startup_wizard_ssid,startup_wizard_password,loading,tod_dim,tod_bright,aa_start,menu,settings,timer_duration,timer_style,timer_bright,timer_dim,aa_end,confirm,sleep_set_wake_up_time,sleep_rest_rest_end_time,sleep_set_wind_down_time,rest_set_rest_end_time,rest_set_wind_down_time,timer_triggered screen
+    class splash,startup_wizard_ssid,startup_wizard_password,startup_wizard_timezone,loading,tod_dim,tod_bright,aa_start,menu,settings,timer_duration,timer_style,timer_bright,timer_dim,aa_end,confirm,sleep_set_wake_up_time,sleep_rest_rest_end_time,sleep_set_wind_down_time,rest_set_rest_end_time,rest_set_wind_down_time,timer_triggered screen
 
-    class tap1,btn_press,cancel_start,ok_duration,back_btn_settings,back_duration,ok_style,back_style,tap2,end_btn,cancel_end,confirm_no,selected_main_menu_item,confirm_yes,sleep_set_wake_up_time_back_button,sleep_rest_rest_end_time_back_button,sleep_set_wind_down_time_back_button,sleep_set_wake_up_time_next_button,sleep_rest_rest_end_time_next_button,sleep_set_wind_down_time_next_button,rest_set_rest_end_time_back_button,rest_set_wind_down_time_back_button,rest_set_rest_end_time_next_button,rest_set_wind_down_time_next_button,loading_settings,timer_done_ok,startup_wizard_ssid_ok,startup_wizard_password_ok action
+    class tap1,btn_press,cancel_start,ok_duration,back_btn_settings,back_duration,ok_style,back_style,tap2,end_btn,cancel_end,confirm_no,selected_main_menu_item,confirm_yes,sleep_set_wake_up_time_back_button,sleep_rest_rest_end_time_back_button,sleep_set_wind_down_time_back_button,sleep_set_wake_up_time_next_button,sleep_rest_rest_end_time_next_button,sleep_set_wind_down_time_next_button,rest_set_rest_end_time_back_button,rest_set_wind_down_time_back_button,rest_set_rest_end_time_next_button,rest_set_wind_down_time_next_button,loading_settings,timer_done_ok,startup_wizard_ssid_ok,startup_wizard_password_ok,startup_wizard_timezone_ok action
 
     class splash_timeout,timeout_tod,fail_start,pass_start,timeout_aa_start,dim_timeout,fail_end,timeout_aa_end,pass_end,main_menu_timeout,timer_done_timeout event
 
     class power_up,timer_done,timer_back_to_menu,startToD helpful_label
 
-    class which_main_menu_item_selected,time_obtained,settings_is_time_loaded,is_timer_triggered_dim,is_timer_triggered_bright,wifi_ssid_missing,wifi_password_null decision
+    class which_main_menu_item_selected,time_obtained,settings_is_time_loaded,is_timer_triggered_dim,is_timer_triggered_bright,wifi_ssid_missing,wifi_password_null,timezone_unset decision
 ```
 
 ## Legend
@@ -240,11 +246,14 @@ flowchart TB
 ## Notes
 
 - **Timeout config fields** (see [data_model.md](data_model.md)): `timeout_splash_sec`, `timeout_tod_dim_sec`, `timeout_aa_sec`, `timeout_main_menu_sec`, `timeout_timer_dim_sec`.
-- **Boot** — Power Up → Splash (`timeout_splash_sec`) → optional **Startup Wizard** screens → **Loading / Startup** → time sync → Time of Day (Bright).
-- **Startup Wizard** — shown only when credentials are missing in NVS (see [data_model.md](data_model.md#network)):
+- **Boot** — Power Up → Splash (`timeout_splash_sec`) → optional WiFi **Startup Wizard** screens → **Loading / Startup** (WiFi + SNTP) → optional timezone wizard → Time of Day (Bright).
+- **Startup Wizard (WiFi)** — shown only when credentials are missing in NVS (see [data_model.md](data_model.md#network)):
   - `startup_wizard_ssid` — if `wifi_ssid` is blank or null; user enters SSID, **Next** writes `wifi_ssid`.
   - `startup_wizard_password` — if `wifi_password` is **null** (never configured); user may enter a passphrase or leave it blank (open network); **Next** writes `wifi_password` (may be empty string). Skipped when password was previously set.
-- Wizard order is always SSID check first, then password check, then Loading.
+- WiFi wizard order: SSID check first, then password check, then Loading.
+- **Startup Wizard (timezone)** — after Loading when `time_valid` (see [data_model.md](data_model.md#timezone)):
+  - `startup_wizard_timezone` — if `timezone_set` is false; **Country** and **Location** dropdowns; preview clock (HH:MM) updates in real time as selections change; **Next** writes `timezone_id`, sets `timezone_set`, applies TZ, then navigates to Time of Day (Bright).
+  - Not shown until UTC is known (stay on Loading if SNTP fails).
 - **T.o.D.** — time-of-day display (idle).
 - **A.A.** — adult authentication (PIN / challenge); used when entering the menu from idle and when ending an active timer.
 - **menu** ↔ **settings** — settings is reachable from the menu and returns to it.

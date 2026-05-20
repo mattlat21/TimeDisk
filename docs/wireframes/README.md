@@ -46,6 +46,7 @@ Low-fi **SVG** wireframes for the circular Waveshare 4″ display (`720×720`). 
 | ---- | --------- | ----- |
 | [splash.svg](splash.svg) | `splash` | Boot branding |
 | [startup_wizard_ssid.svg](startup_wizard_ssid.svg) | `startup_wizard_ssid` | WiFi SSID entry + keypad |
+| *(TBD)* | `startup_wizard_timezone` | Country + location dropdowns, live HH:MM preview, Next wedge |
 | [aa_pin.svg](aa_pin.svg) | `aa_start` / `aa_end` | 4-digit PIN |
 | [aa_maths.svg](aa_maths.svg) | `aa_start` / `aa_end` | Maths challenge |
 | [main_menu.svg](main_menu.svg) | `menu` | Four quadrant wedges, orange Back circle in center, black cross separators |
@@ -73,4 +74,4 @@ Low-fi **SVG** wireframes for the circular Waveshare 4″ display (`720×720`). 
 
 ## Not yet wireframed
 
-`startup_wizard_password`, `loading`, Time of Day modes, Settings, Sleep/Rest wizards.
+`startup_wizard_password`, `startup_wizard_timezone` (layout: title ~y=72, country dropdown ~y=200, location ~y=300, preview clock ~y=420, green Next wedge), `loading`, Time of Day modes, Settings, Sleep/Rest wizards.

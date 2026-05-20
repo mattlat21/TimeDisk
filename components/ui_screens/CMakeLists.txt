@@ -3,6 +3,7 @@ idf_component_register(
         "src/ui_screens_registry.c"
         "src/ui_screen_splash.c"
         "src/ui_screen_startup_wifi_wizard.c"
+        "src/ui_screen_startup_timezone_wizard.c"
         "src/ui_screen_loading.c"
         "src/ui_screen_tod.c"
         "src/ui_screen_aa.c"
@@ -14,6 +15,7 @@ idf_component_register(
     REQUIRES
         ui_core
         app_config
+        app_time
         ui_theme
         ui_layout
         ui_widgets
