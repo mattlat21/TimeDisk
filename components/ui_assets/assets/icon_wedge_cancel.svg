@@ -1,0 +1,5 @@
+<!-- Cancel (X) icon overlay; white on transparent. -->
+<svg width="209" height="106" viewBox="142 589 209 106" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <line x1="257.364" y1="616" x2="286.231" y2="644.867" stroke="white" stroke-width="9" stroke-linecap="round"/>
+  <line x1="4.5" y1="-4.5" x2="45.3239" y2="-4.5" transform="matrix(-0.707107 0.707107 0.707107 0.707107 291.592 616)" stroke="white" stroke-width="9" stroke-linecap="round"/>
+</svg>

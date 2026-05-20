@@ -1,6 +1,0 @@
-<!-- Cropped from docs/wireframes/startup_wizard_ssid.svg (orange cancel + X). -->
-<svg width="209" height="106" viewBox="142 589 209 106" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M172.936 589H316.908C335.818 589 350 596.017 350 611.103V663.729C350 693.901 304.874 688.287 269.633 676.71C234.393 665.132 169.068 630.048 155.315 613.208C141.563 596.368 157.034 589 172.936 589Z" fill="#FC6700"/>
-  <line x1="257.364" y1="616" x2="286.231" y2="644.867" stroke="white" stroke-width="9" stroke-linecap="round"/>
-  <line x1="4.5" y1="-4.5" x2="45.3239" y2="-4.5" transform="matrix(-0.707107 0.707107 0.707107 0.707107 291.592 616)" stroke="white" stroke-width="9" stroke-linecap="round"/>
-</svg>

@@ -1,0 +1,4 @@
+<!-- Left corner wedge shape only (white fill for runtime recolor). From startup_wizard_ssid.svg -->
+<svg width="209" height="106" viewBox="142 589 209 106" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M172.936 589H316.908C335.818 589 350 596.017 350 611.103V663.729C350 693.901 304.874 688.287 269.633 676.71C234.393 665.132 169.068 630.048 155.315 613.208C141.563 596.368 157.034 589 172.936 589Z" fill="#FFFFFF"/>
+</svg>
