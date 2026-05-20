@@ -21,9 +21,14 @@ void ui_screen_aa_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
 void ui_screen_menu_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
 void ui_screen_timer_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
 void ui_screen_schedule_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
+void ui_screen_schedule_on_show(ui_screen_id_t id);
 void ui_screen_settings_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
+void ui_screen_settings_on_show(void);
 
 void ui_screens_build_all(lv_obj_t *screens[UI_SCREEN_COUNT]);
+
+/** Reload theme from app_config and push primary/secondary colours to all built screens. */
+void ui_theme_apply(void);
 
 void ui_screen_splash_on_show(void);
 void ui_screen_loading_on_show(void);

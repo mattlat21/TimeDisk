@@ -158,11 +158,35 @@ flowchart TB
     pass_start --> menu
     timer_back_to_menu --> menu
 
-    %% Settings
+    %% Settings (hub + six sub-panels; Cancel wedge on hub, Save/Cancel wedges on each panel)
     subgraph Settings
         settings --> back_btn_settings --> settings_is_time_loaded
     end
     settings_is_time_loaded --> |No| loading
+
+    Firmware (`ui_screen_settings.c`): single `UI_SCREEN_SETTINGS` with hidden sub-panels (Colours, **Networking**, Timezone, Schedule, Timeouts, Adult Authentication). Hub **Cancel wedge** returns to menu when time is known, else loading. Sub-panels **Save** persist via `app_nvs_save_*` and return to hub; **Cancel** restores that section from the snapshot taken on `ui_screen_settings_on_show()`.
+
+    **Networking** sub-panel: list of **Wi‑Fi Name**, **Wi‑Fi Password**, and **NTP** → per-field edit (wizard-style keyboard, purple field bar, **Cancel** / **Save** wedges). Field **Save** writes that value to NVS via `app_config_save_network()` and returns to the list; list **Save** returns to the settings hub (draft already persisted per field).
+
+### Settings: Networking (sub-panel pages)
+
+All states live on `UI_SCREEN_SETTINGS` (hidden LVGL sub-panels in `ui_screen_settings.c`).
+
+```mermaid
+flowchart TB
+    settings_hub("Settings hub")
+    settings_networking("Networking — submenu")
+    settings_net_edit("Network field edit")
+    settings_hub -->|"Networking button"| settings_networking
+    settings_networking -->|"Wi‑Fi Name / Wi‑Fi Password / NTP"| settings_net_edit
+    settings_net_edit -->|"Cancel or Save wedge"| settings_networking
+    settings_networking -->|"Cancel or Save wedge"| settings_hub
+```
+
+| Page | User actions | Persistence |
+| ---- | ------------ | ------------- |
+| Networking list | Pick a field; **Cancel** / **Save** wedges → settings hub | **Save** on list is optional (draft already saved per field); **Cancel** reverts all network fields from snapshot |
+| Field edit | On-screen keyboard; **Cancel** discards edits for that field; **Save** writes field → NVS (`app_config_save_network`) → list | Same fields as [startup Wi‑Fi wizard](data_model.md#startup-wizard-boot-only) plus `ntp_server` |
 
     %% Time of Day Setup
     subgraph Set Sleep Time

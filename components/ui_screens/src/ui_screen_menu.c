@@ -104,3 +104,10 @@ void ui_screen_menu_build(lv_obj_t *screens[UI_SCREEN_COUNT])
     lv_obj_move_foreground(back);
     lv_obj_move_foreground(settings);
 }
+
+void ui_screen_menu_apply_theme(void)
+{
+    if (s_scr != NULL) {
+        ui_widgets_style_circle_panel(s_scr);
+    }
+}

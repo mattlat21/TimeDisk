@@ -89,7 +89,7 @@ flowchart TB
 
 | From | To | Data | Trigger |
 | ---- | -- | ---- | ------- |
-| Settings UI | NVS | `ui_primary_color`, `ui_secondary_color`, timeouts, `aa_*`, WiFi, NTP | User saves |
+| Settings UI | NVS | `ui_primary_color`, `ui_secondary_color`, timeouts, `aa_*`, WiFi, NTP | User saves (Networking: per-field **Save** on edit, or list **Save** on return to hub) |
 | Sleep wizard | NVS | `wind_down_sec`, `sleep_sec`, `rest_sec` | Wizard complete |
 | Rest wizard | NVS | `wind_down_sec`, `rest_sec`, `sleep_sec=0` | Wizard complete |
 | Timer setup | NVS | `timer_duration_sec`, `timer_style_id` | User confirms style |

@@ -233,3 +233,8 @@ void ui_screen_startup_theme_wizard_on_show(void)
     s_active_slot = THEME_SLOT_PRIMARY;
     theme_refresh_all();
 }
+
+void ui_screen_startup_theme_wizard_apply_theme(void)
+{
+    theme_refresh_all();
+}

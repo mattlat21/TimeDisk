@@ -206,3 +206,17 @@ void ui_screen_startup_timezone_wizard_on_hide(void)
         s_preview_timer = NULL;
     }
 }
+
+void ui_screen_startup_timezone_wizard_apply_theme(void)
+{
+    const ui_theme_t *t = ui_theme_get();
+    if (s_scr != NULL) {
+        lv_obj_set_style_border_color(s_scr, t->ring, 0);
+    }
+    if (s_dd_country != NULL) {
+        lv_obj_set_style_bg_color(s_dd_country, t->ring, 0);
+    }
+    if (s_dd_location != NULL) {
+        lv_obj_set_style_bg_color(s_dd_location, t->ring, 0);
+    }
+}

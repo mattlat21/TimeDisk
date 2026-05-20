@@ -1,18 +1,25 @@
 #include "ui_screens_registry.h"
 #include "ui_layout.h"
 #include "ui_widgets.h"
-#include "ui_format.h"
+#include "ui_duration_editor.h"
 #include "ui_wedge.h"
-#include "ui_lines.h"
 #include "ui_theme.h"
 #include "ui_nav.h"
 #include "app_config.h"
-#include <stdio.h>
 
-static lv_obj_t *s_screens[5];
-static lv_obj_t *lbl_values[5];
+#define SCHEDULE_EDITOR_BOX_W  400
+#define SCHEDULE_EDITOR_BOX_H  100
+#define SCHEDULE_EDITOR_BOX_X  160
+#define SCHEDULE_EDITOR_BOX_Y  220
+
+typedef struct {
+    lv_obj_t *scr;
+    ui_screen_id_t id;
+    ui_duration_editor_bundle_t bundle;
+} schedule_screen_t;
+
+static schedule_screen_t s_screens[5];
 static uint32_t s_wizard_vals[5];
-static bool s_is_rest_flow;
 
 static ui_screen_id_t s_sleep_ids[3] = {
     UI_SCREEN_SLEEP_WAKE,
@@ -28,12 +35,12 @@ static ui_screen_id_t s_rest_ids[2] = {
 static const char *s_sleep_titles[3] = {
     "Sleep: Wake up Time",
     "Sleep: Rest End Time",
-    "Sleep: Wind Down Time",
+    "Sleep: Set Wind Down Time",
 };
 
 static const char *s_rest_titles[2] = {
     "Rest: Rest End Time",
-    "Rest: Wind Down Time",
+    "Rest: Set Wind Down Time",
 };
 
 static int screen_index(ui_screen_id_t id)
@@ -51,28 +58,9 @@ static int screen_index(ui_screen_id_t id)
     return 0;
 }
 
-static void value_refresh(int idx)
+static void schedule_idle_cb(void *user_data)
 {
-    char buf[32];
-    snprintf(buf, sizeof(buf), "%u s", (unsigned)s_wizard_vals[idx]);
-    lv_label_set_text(lbl_values[idx], buf);
-}
-
-static void minus_cb(lv_event_t *e)
-{
-    int idx = (int)(uintptr_t)lv_event_get_user_data(e);
-    if (s_wizard_vals[idx] >= 60) {
-        s_wizard_vals[idx] -= 60;
-    }
-    value_refresh(idx);
-    ui_nav_reset_idle_timer();
-}
-
-static void plus_cb(lv_event_t *e)
-{
-    int idx = (int)(uintptr_t)lv_event_get_user_data(e);
-    s_wizard_vals[idx] += 60;
-    value_refresh(idx);
+    (void)user_data;
     ui_nav_reset_idle_timer();
 }
 
@@ -101,7 +89,6 @@ static void finish_rest_wizard(void)
 static void next_cb(lv_event_t *e)
 {
     ui_screen_id_t id = (ui_screen_id_t)(uintptr_t)lv_event_get_user_data(e);
-    int idx = screen_index(id);
 
     if (id == UI_SCREEN_SLEEP_WAKE) {
         ui_nav_go(UI_SCREEN_SLEEP_REST_END);
@@ -114,7 +101,6 @@ static void next_cb(lv_event_t *e)
     } else if (id == UI_SCREEN_REST_WIND_DOWN) {
         finish_rest_wizard();
     }
-    (void)idx;
 }
 
 static void back_cb(lv_event_t *e)
@@ -133,50 +119,48 @@ static void back_cb(lv_event_t *e)
     }
 }
 
+static void attach_wedges(lv_obj_t *scr, ui_screen_id_t id)
+{
+    const int border = UI_RING_BORDER_DEFAULT;
+
+    lv_obj_t *cancel = ui_wedge_create(
+        scr, UI_WEDGE_CANCEL,
+        UI_WF_X(UI_WEDGE_CANCEL_X_WF, border),
+        UI_WF_Y(UI_WEDGE_CANCEL_Y_WF, border));
+    lv_obj_add_event_cb(cancel, back_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)id);
+
+    lv_obj_t *next = ui_wedge_create(
+        scr, UI_WEDGE_NEXT,
+        UI_WF_X(UI_WEDGE_CONFIRM_X_WF, border),
+        UI_WF_Y(UI_WEDGE_CONFIRM_Y_WF, border));
+    lv_obj_add_event_cb(next, next_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)id);
+
+    lv_obj_move_foreground(cancel);
+    lv_obj_move_foreground(next);
+}
+
 static void build_wizard_screen(lv_obj_t *screens[UI_SCREEN_COUNT], ui_screen_id_t id,
                                 const char *title, int idx)
 {
-    const ui_theme_t *t = ui_theme_get();
-    lv_obj_t *scr = ui_widgets_create_screen();
-    screens[id] = scr;
-    s_screens[idx] = scr;
+    schedule_screen_t *ss = &s_screens[idx];
 
-    ui_widgets_create_title(scr, title);
+    ss->id = id;
+    ss->scr = ui_widgets_create_screen();
+    screens[id] = ss->scr;
 
-    lv_obj_t *box = ui_widgets_create_purple_box(scr, 400, 100, 160, 220, false);
-    lbl_values[idx] = lv_label_create(box);
-    lv_obj_set_style_text_color(lbl_values[idx], t->white, 0);
-    lv_obj_set_style_text_font(lbl_values[idx], &lv_font_montserrat_26, 0);
-    lv_obj_center(lbl_values[idx]);
-    s_wizard_vals[idx] = 300;
-    value_refresh(idx);
+    ui_widgets_create_title(ss->scr, title);
 
-    lv_obj_t *minus = lv_button_create(scr);
-    lv_obj_set_size(minus, 80, 80);
-    lv_obj_set_pos(minus, 200, 380);
-    lv_obj_set_style_radius(minus, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_color(minus, t->keypad, 0);
-    lv_obj_t *ml = lv_label_create(minus);
-    lv_label_set_text(ml, "-");
-    lv_obj_set_style_text_color(ml, t->white, 0);
-    lv_obj_center(ml);
-    lv_obj_add_event_cb(minus, minus_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)idx);
-
-    lv_obj_t *plus = lv_button_create(scr);
-    lv_obj_set_size(plus, 80, 80);
-    lv_obj_set_pos(plus, 520, 380);
-    lv_obj_set_style_radius(plus, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_color(plus, t->keypad, 0);
-    lv_obj_t *pl = lv_label_create(plus);
-    lv_label_set_text(pl, "+");
-    lv_obj_set_style_text_color(pl, t->white, 0);
-    lv_obj_center(pl);
-    lv_obj_add_event_cb(plus, plus_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)idx);
-
-    lv_obj_t *back = ui_widgets_create_side_btn(scr, true, 36, 330, NULL);
-    lv_obj_add_event_cb(back, back_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)id);
-    lv_obj_t *next = ui_widgets_create_side_next(scr, UI_DISP - 36 - 64, 330);
-    lv_obj_add_event_cb(next, next_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)id);
+    ss->bundle.cfg = (ui_duration_editor_cfg_t){
+        .value_sec = &s_wizard_vals[idx],
+        .box_x = SCHEDULE_EDITOR_BOX_X,
+        .box_y = SCHEDULE_EDITOR_BOX_Y,
+        .box_w = SCHEDULE_EDITOR_BOX_W,
+        .box_h = SCHEDULE_EDITOR_BOX_H,
+        .show_end_time = true,
+        .on_change = schedule_idle_cb,
+    };
+    ui_duration_editor_create(ss->scr, &ss->bundle);
+    attach_wedges(ss->scr, id);
 }
 
 void ui_screen_schedule_build(lv_obj_t *screens[UI_SCREEN_COUNT])
@@ -186,7 +170,22 @@ void ui_screen_schedule_build(lv_obj_t *screens[UI_SCREEN_COUNT])
     build_wizard_screen(screens, UI_SCREEN_SLEEP_WIND_DOWN, s_sleep_titles[2], 2);
     build_wizard_screen(screens, UI_SCREEN_REST_REST_END, s_rest_titles[0], 3);
     build_wizard_screen(screens, UI_SCREEN_REST_WIND_DOWN, s_rest_titles[1], 4);
-    (void)s_is_rest_flow;
+}
+
+void ui_screen_schedule_on_show(ui_screen_id_t id)
+{
+    app_config_t *cfg = app_config_get();
+    int idx = screen_index(id);
+
+    s_wizard_vals[0] = cfg->sleep_sec;
+    s_wizard_vals[1] = cfg->rest_sec;
+    s_wizard_vals[2] = cfg->wind_down_sec;
+    s_wizard_vals[3] = cfg->rest_sec;
+    s_wizard_vals[4] = cfg->wind_down_sec;
+
+    if (idx >= 0 && idx < 5) {
+        ui_duration_editor_refresh(&s_screens[idx].bundle.editor, &s_screens[idx].bundle.cfg);
+    }
 }
 
 uint32_t ui_screen_schedule_get_sec(void)
@@ -197,4 +196,13 @@ uint32_t ui_screen_schedule_get_sec(void)
 void ui_screen_schedule_set_sec(uint32_t sec)
 {
     s_wizard_vals[0] = sec;
+}
+
+void ui_screen_schedule_apply_theme(void)
+{
+    for (int i = 0; i < 5; i++) {
+        if (s_screens[i].scr != NULL) {
+            ui_widgets_style_circle_panel(s_screens[i].scr);
+        }
+    }
 }

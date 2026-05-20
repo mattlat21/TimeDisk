@@ -75,4 +75,6 @@ Low-fi **SVG** wireframes for the circular Waveshare 4″ display (`720×720`). 
 
 ## Not yet wireframed
 
-`startup_wizard_password`, `startup_wizard_timezone` (layout: title ~y=72, country dropdown ~y=200, location ~y=300, preview clock ~y=420, green Next wedge), `loading`, Time of Day modes, Settings, Sleep/Rest wizards. Theme wizard implemented in firmware (`ui_screen_startup_theme_wizard.c`).
+`startup_wizard_password`, `startup_wizard_timezone` (layout: title ~y=72, country dropdown ~y=200, location ~y=300, preview clock ~y=420, green Next wedge), `loading`, Time of Day modes. Theme wizard implemented in firmware (`ui_screen_startup_theme_wizard.c`).
+
+**Settings** (`ui_screen_settings.c`): hub with six vertical menu buttons; **Cancel wedge** (bottom-left) → menu. Each sub-panel uses **Cancel** / **Save** wedges (same positions as timer duration). **Networking**: submenu (Wi‑Fi Name, Wi‑Fi Password, NTP) then per-field edit screens matching the startup Wi‑Fi wizard (keyboard, field bar, **Cancel** / **Save** wedges on the edit view; list view keeps panel **Cancel** / **Save** → hub). Schedule sub-panel: three compact duration editors (wind down, sleep, rest). Sleep/Rest menu wizards reuse the shared duration editor (`ui_duration_editor.c`) with **Cancel** / **Next** wedges and optional “ends at” subtitle.

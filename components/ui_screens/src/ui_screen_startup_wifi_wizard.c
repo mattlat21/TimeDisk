@@ -44,6 +44,8 @@
 /* Corner wedges — docs/wireframes/startup_wizard_ssid.svg (UI_WF_* at placement) */
 
 static lv_obj_t *s_scr_ssid;
+static lv_obj_t *s_ssid_field_box;
+static lv_obj_t *s_pw_field_box;
 static lv_obj_t *s_scr_pw;
 static lv_obj_t *lbl_ssid;
 static lv_obj_t *lbl_pw;
@@ -154,7 +156,7 @@ static void build_ssid(lv_obj_t *screens[UI_SCREEN_COUNT])
     lv_obj_t *title = ui_widgets_create_title(s_scr_ssid, "Wi-Fi Name");
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, WIFI_TITLE_Y_OFFSET);
 
-    wifi_create_ssid_field(s_scr_ssid, &lbl_ssid);
+    s_ssid_field_box = wifi_create_ssid_field(s_scr_ssid, &lbl_ssid);
 
     ui_keyboard_config_t kb_cfg = {
         .buf = s_ssid_buf,
@@ -182,7 +184,7 @@ static void build_password(lv_obj_t *screens[UI_SCREEN_COUNT])
     lv_obj_t *title = ui_widgets_create_title(s_scr_pw, "Wi-Fi Password");
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, WIFI_TITLE_Y_OFFSET);
 
-    wifi_create_ssid_field(s_scr_pw, &lbl_pw);
+    s_pw_field_box = wifi_create_ssid_field(s_scr_pw, &lbl_pw);
 
     ui_keyboard_config_t kb_cfg = {
         .buf = s_pw_buf,
@@ -216,6 +218,24 @@ void ui_screen_startup_wifi_wizard_build(lv_obj_t *screens[UI_SCREEN_COUNT])
 void ui_screen_startup_wifi_wizard_ssid_get_text(char *out, size_t len)
 {
     snprintf(out, len, "%s", s_ssid_buf);
+}
+
+void ui_screen_startup_wifi_wizard_apply_theme(void)
+{
+    const ui_theme_t *t = ui_theme_get();
+    lv_obj_t *scrs[] = {s_scr_ssid, s_scr_pw};
+    lv_obj_t *boxes[] = {s_ssid_field_box, s_pw_field_box};
+
+    for (size_t i = 0; i < sizeof(scrs) / sizeof(scrs[0]); i++) {
+        if (scrs[i] != NULL) {
+            lv_obj_set_style_border_color(scrs[i], t->ring, 0);
+        }
+    }
+    for (size_t i = 0; i < sizeof(boxes) / sizeof(boxes[0]); i++) {
+        if (boxes[i] != NULL) {
+            lv_obj_set_style_bg_color(boxes[i], t->ring, 0);
+        }
+    }
 }
 
 void ui_screen_startup_wifi_wizard_password_get_text(char *out, size_t len)

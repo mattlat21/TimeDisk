@@ -1,6 +1,7 @@
 #include "ui_screens_registry.h"
 #include "ui_layout.h"
 #include "ui_widgets.h"
+#include "ui_duration_editor.h"
 #include "ui_format.h"
 #include "ui_wedge.h"
 #include "ui_lines.h"
@@ -15,50 +16,15 @@ static lv_obj_t *s_scr_bright;
 static lv_obj_t *s_scr_dim;
 static lv_obj_t *s_scr_triggered;
 static lv_obj_t *s_scr_confirm;
-static lv_obj_t *lbl_duration;
-static lv_obj_t *lbl_end_time;
 static lv_obj_t *lbl_countdown_bright;
 static lv_obj_t *lbl_countdown_dim;
 static uint32_t s_duration_sec;
 static uint8_t s_style_id;
+static ui_duration_editor_bundle_t s_duration_bundle;
 
-#define DURATION_BOX_W   400
-#define DURATION_BOX_H   120
-#define DURATION_BOX_X   160
-#define DURATION_BOX_Y   200
-#define DURATION_STEPPER 80
-#define DURATION_GAP     20
-
-static void duration_refresh(void)
+static void duration_idle_cb(void *user_data)
 {
-    char dur[32];
-    char end[32];
-    ui_format_duration_minutes(dur, sizeof(dur), s_duration_sec);
-    ui_format_hh_mm_ampm_after_sec(end, sizeof(end), s_duration_sec);
-    lv_label_set_text(lbl_duration, dur);
-    lv_label_set_text(lbl_end_time, end);
-}
-
-static void duration_minus_cb(lv_event_t *e)
-{
-    (void)e;
-    if (s_duration_sec > 60) {
-        s_duration_sec -= 60;
-    } else if (s_duration_sec > 0) {
-        s_duration_sec = 0;
-    }
-    duration_refresh();
-    ui_nav_reset_idle_timer();
-}
-
-static void duration_plus_cb(lv_event_t *e)
-{
-    (void)e;
-    s_duration_sec += 60;
-    if (s_duration_sec > 3600) {
-        s_duration_sec = 3600;
-    }
-    duration_refresh();
+    (void)user_data;
     ui_nav_reset_idle_timer();
 }
 
@@ -137,30 +103,9 @@ static void triggered_ok_cb(lv_event_t *e)
     ui_nav_go(UI_SCREEN_TOD_BRIGHT);
 }
 
-static lv_obj_t *make_stepper_btn(lv_obj_t *parent, const char *txt, int x, int y, lv_event_cb_t cb)
-{
-    const ui_theme_t *t = ui_theme_get();
-    lv_obj_t *btn = lv_button_create(parent);
-    lv_obj_set_size(btn, 80, 80);
-    lv_obj_set_pos(btn, x, y);
-    lv_obj_set_style_radius(btn, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_color(btn, t->keypad, 0);
-    lv_obj_t *l = lv_label_create(btn);
-    lv_label_set_text(l, txt);
-    lv_obj_set_style_text_color(l, t->white, 0);
-    lv_obj_set_style_text_font(l, &lv_font_montserrat_26, 0);
-    lv_obj_center(l);
-    lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, NULL);
-    return btn;
-}
-
 static void build_duration(lv_obj_t *screens[UI_SCREEN_COUNT])
 {
-    const ui_theme_t *t = ui_theme_get();
     const int border = UI_RING_BORDER_DEFAULT;
-    const int stepper_y = DURATION_BOX_Y + (DURATION_BOX_H - DURATION_STEPPER) / 2;
-    const int minus_x = DURATION_BOX_X - DURATION_GAP - DURATION_STEPPER;
-    const int plus_x = DURATION_BOX_X + DURATION_BOX_W + DURATION_GAP;
 
     s_scr_duration = ui_widgets_create_screen();
     screens[UI_SCREEN_TIMER_DURATION] = s_scr_duration;
@@ -168,24 +113,16 @@ static void build_duration(lv_obj_t *screens[UI_SCREEN_COUNT])
 
     ui_widgets_create_title(s_scr_duration, "Set Duration");
 
-    lv_obj_t *box = ui_widgets_create_purple_box(
-        s_scr_duration, DURATION_BOX_W, DURATION_BOX_H, DURATION_BOX_X, DURATION_BOX_Y, false);
-    lbl_duration = lv_label_create(box);
-    lv_obj_set_style_text_color(lbl_duration, t->white, 0);
-    lv_obj_set_style_text_font(lbl_duration, &lv_font_montserrat_26, 0);
-    lv_obj_center(lbl_duration);
-
-    lbl_end_time = lv_label_create(s_scr_duration);
-    lv_obj_set_style_text_color(lbl_end_time, t->secondary, 0);
-    lv_obj_set_style_text_font(lbl_end_time, &lv_font_montserrat_20, 0);
-    lv_obj_set_pos(lbl_end_time, DURATION_BOX_X, DURATION_BOX_Y + DURATION_BOX_H + 12);
-    lv_obj_set_width(lbl_end_time, DURATION_BOX_W);
-    lv_obj_set_style_text_align(lbl_end_time, LV_TEXT_ALIGN_CENTER, 0);
-
-    duration_refresh();
-
-    make_stepper_btn(s_scr_duration, "-", minus_x, stepper_y, duration_minus_cb);
-    make_stepper_btn(s_scr_duration, "+", plus_x, stepper_y, duration_plus_cb);
+    s_duration_bundle.cfg = (ui_duration_editor_cfg_t){
+        .value_sec = &s_duration_sec,
+        .box_x = UI_DURATION_EDITOR_BOX_X,
+        .box_y = UI_DURATION_EDITOR_BOX_Y,
+        .box_w = UI_DURATION_EDITOR_BOX_W,
+        .box_h = UI_DURATION_EDITOR_BOX_H,
+        .show_end_time = true,
+        .on_change = duration_idle_cb,
+    };
+    ui_duration_editor_create(s_scr_duration, &s_duration_bundle);
 
     lv_obj_t *cancel = ui_wedge_create(
         s_scr_duration, UI_WEDGE_CANCEL,
@@ -300,7 +237,7 @@ void ui_screen_timer_on_show(ui_screen_id_t id)
     app_runtime_t *rt = app_runtime_get();
 
     if (id == UI_SCREEN_TIMER_DURATION) {
-        duration_refresh();
+        ui_duration_editor_refresh(&s_duration_bundle.editor, &s_duration_bundle.cfg);
     }
 
     ui_format_mm_ss(buf, sizeof(buf), rt->active_timer_remaining_sec);
@@ -338,4 +275,17 @@ uint32_t ui_screen_duration_get_sec(void)
 uint8_t ui_screen_style_get_id(void)
 {
     return s_style_id;
+}
+
+void ui_screen_timer_apply_theme(void)
+{
+    lv_obj_t *scrs[] = {
+        s_scr_duration, s_scr_style, s_scr_bright, s_scr_dim, s_scr_triggered, s_scr_confirm,
+    };
+    for (size_t i = 0; i < sizeof(scrs) / sizeof(scrs[0]); i++) {
+        if (scrs[i] != NULL) {
+            ui_widgets_style_circle_panel(scrs[i]);
+        }
+    }
+    ui_duration_editor_apply_theme(&s_duration_bundle.editor);
 }

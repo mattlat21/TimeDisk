@@ -295,3 +295,46 @@ void ui_screen_tod_tick(void)
     refresh_panel_time(p);
     refresh_panel_remaining(p, mode);
 }
+
+static void apply_theme_to_panel(tod_mode_panel_t *p, app_mode_t mode)
+{
+    const ui_theme_t *t = ui_theme_get();
+
+    if (p->menu_btn != NULL) {
+        lv_obj_set_style_bg_color(p->menu_btn, t->ring, 0);
+    }
+    switch (mode) {
+    case APP_MODE_WIND_DOWN:
+        if (p->lbl_subtitle != NULL) {
+            lv_obj_set_style_text_color(p->lbl_subtitle, t->secondary, 0);
+        }
+        break;
+    case APP_MODE_REST:
+        if (p->root != NULL) {
+            lv_obj_t *box = lv_obj_get_child(p->root, 0);
+            if (box != NULL) {
+                lv_obj_set_style_bg_color(box, t->ring, 0);
+            }
+        }
+        if (p->lbl_remaining != NULL) {
+            lv_obj_set_style_text_color(p->lbl_remaining, t->secondary, 0);
+        }
+        break;
+    default:
+        break;
+    }
+}
+
+void ui_screen_tod_apply_theme(void)
+{
+    if (s_scr_bright != NULL) {
+        ui_widgets_style_circle_panel(s_scr_bright);
+    }
+    if (s_scr_dim != NULL) {
+        ui_widgets_style_circle_panel(s_scr_dim);
+    }
+    for (int i = 0; i < TOD_MODE_COUNT; i++) {
+        apply_theme_to_panel(&s_panels_bright[i], (app_mode_t)i);
+        apply_theme_to_panel(&s_panels_dim[i], (app_mode_t)i);
+    }
+}

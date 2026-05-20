@@ -43,7 +43,7 @@ After splash, before Loading — see [screen_flow.md](screen_flow.md) Boot subgr
 1. **`startup_wizard_ssid`** — if `wifi_ssid` is blank or null; **Next** saves non-blank SSID to NVS.
 2. **`startup_wizard_password`** — if `wifi_password` is null only; **Next** saves to NVS (password may be left blank → store `""`).
 
-Theme wizard runs before WiFi SSID. SSID wizard runs before password wizard. Settings can change these later without using the startup screens.
+Theme wizard runs before WiFi SSID. SSID wizard runs before password wizard. Settings can change these later from **Settings → Networking** (submenu: Wi‑Fi Name, Wi‑Fi Password, NTP) without using the startup screens.
 
 ---
 
@@ -108,7 +108,9 @@ All values are **`uint32`**, unit **seconds**, stored in NVS.
 
 On **Next**, firmware writes both colour fields, sets `theme_set = true`, and saves NVS. Completing the wizard with factory-default hex values still counts as configured.
 
-The UI layer reads these when building LVGL styles (`ui_theme.c`). Both colours are persisted in NVS; changing them from Settings is future work.
+The UI layer reads these when building LVGL styles (`ui_theme.c`). Both colours are persisted in NVS and can be changed from **Settings → Colours** (`ui_screen_settings.c`); Save calls `app_nvs_save_theme()` and `ui_theme_init()`.
+
+Wi‑Fi and NTP strings are edited from **Settings → Networking** in `ui_screen_settings.c` (per-field Save → `app_config_save_network()`).
 
 ---
 

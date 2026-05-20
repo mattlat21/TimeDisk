@@ -172,6 +172,18 @@ static void on_enter(ui_screen_id_t screen)
     case UI_SCREEN_TIMER_TRIGGERED:
         arm_idle_timer(30);
         break;
+    case UI_SCREEN_SETTINGS:
+        ui_screen_settings_on_show();
+        arm_idle_timer(cfg->timeout_main_menu_sec);
+        break;
+    case UI_SCREEN_SLEEP_WAKE:
+    case UI_SCREEN_SLEEP_REST_END:
+    case UI_SCREEN_SLEEP_WIND_DOWN:
+    case UI_SCREEN_REST_REST_END:
+    case UI_SCREEN_REST_WIND_DOWN:
+        ui_screen_schedule_on_show(screen);
+        arm_idle_timer(cfg->timeout_main_menu_sec);
+        break;
     default:
         break;
     }

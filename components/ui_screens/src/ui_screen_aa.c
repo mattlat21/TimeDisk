@@ -234,6 +234,13 @@ void ui_screen_aa_build(lv_obj_t *screens[UI_SCREEN_COUNT])
     build_maths_panel(s_scr);
 }
 
+void ui_screen_aa_apply_theme(void)
+{
+    if (s_scr != NULL) {
+        ui_widgets_style_circle_panel(s_scr);
+    }
+}
+
 void ui_screen_aa_on_show(void)
 {
     aa_session_t *s = ui_nav_aa_session();

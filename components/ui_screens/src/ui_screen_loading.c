@@ -37,3 +37,15 @@ void ui_screen_loading_set_status(const char *text)
     }
     lv_label_set_text(s_lbl_status, text);
 }
+
+void ui_screen_loading_apply_theme(void)
+{
+    const ui_theme_t *t = ui_theme_get();
+    if (s_scr == NULL) {
+        return;
+    }
+    ui_widgets_style_circle_panel(s_scr);
+    if (s_lbl_status != NULL) {
+        lv_obj_set_style_text_color(s_lbl_status, t->secondary, 0);
+    }
+}
