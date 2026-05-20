@@ -2,6 +2,7 @@ idf_component_register(
     SRCS
         "src/ui_screens_registry.c"
         "src/ui_screen_splash.c"
+        "src/ui_screen_startup_theme_wizard.c"
         "src/ui_screen_startup_wifi_wizard.c"
         "src/ui_screen_startup_timezone_wizard.c"
         "src/ui_screen_loading.c"

@@ -39,10 +39,11 @@ Canonical schema for persisted settings and runtime state. Firmware: `components
 
 After splash, before Loading — see [screen_flow.md](screen_flow.md) Boot subgraph:
 
+0. **`startup_wizard_theme`** — if `theme_set` is false; user picks primary and secondary from preset swatches; **Next** saves `ui_primary_color`, `ui_secondary_color`, sets `theme_set = true`.
 1. **`startup_wizard_ssid`** — if `wifi_ssid` is blank or null; **Next** saves non-blank SSID to NVS.
 2. **`startup_wizard_password`** — if `wifi_password` is null only; **Next** saves to NVS (password may be left blank → store `""`).
 
-SSID wizard runs before password wizard. Settings can change these later without using the startup screens.
+Theme wizard runs before WiFi SSID. SSID wizard runs before password wizard. Settings can change these later without using the startup screens.
 
 ---
 
@@ -94,10 +95,20 @@ All values are **`uint32`**, unit **seconds**, stored in NVS.
 
 | Field | Type | Format | Notes |
 | ----- | ---- | ------ | ----- |
-| `ui_primary_color` | `uint32` | RGB888 `0xRRGGBB` | Main UI accent; default `#7A24BC` (`0x7A24BC`) |
+| `theme_set` | bool | — | `false` = never completed theme startup wizard; show [startup_wizard_theme](screen_flow.md) |
+| `ui_primary_color` | `uint32` | RGB888 `0xRRGGBB` | Main UI accent (maps to screen ring); default `#7A24BC` (`0x7A24BC`) |
 | `ui_secondary_color` | `uint32` | RGB888 `0xRRGGBB` | Supporting accent; default `#6BCA24` (`0x6BCA24`) |
 
-The UI layer reads these when building LVGL styles. Both are persisted in NVS and editable from Settings (future).
+### Unset vs configured
+
+| State | NVS | Boot behaviour |
+| ----- | --- | -------------- |
+| **Unset** | `theme_set == false` | After splash, show theme startup wizard (before WiFi) |
+| **Configured** | `theme_set == true` | Skip theme wizard; apply colours via `ui_theme_init()` |
+
+On **Next**, firmware writes both colour fields, sets `theme_set = true`, and saves NVS. Completing the wizard with factory-default hex values still counts as configured.
+
+The UI layer reads these when building LVGL styles (`ui_theme.c`). Both colours are persisted in NVS; changing them from Settings is future work.
 
 ---
 
@@ -204,6 +215,7 @@ Full behaviour: [adult_authentication.md](adult_authentication.md).
 | `timeout_aa_sec` | uint32 | s | yes | `60` | Adult Authentication |
 | `timeout_main_menu_sec` | uint32 | s | yes | `60` | Main Menu |
 | `timeout_timer_dim_sec` | uint32 | s | yes | `900` | Standalone timer |
+| `theme_set` | bool | — | yes | `false` | Boot theme wizard |
 | `ui_primary_color` | uint32 | RGB888 | yes | `0x7A24BC` | All UI |
 | `ui_secondary_color` | uint32 | RGB888 | yes | `0x6BCA24` | All UI |
 | `timer_duration_sec` | uint32 | s | yes | `300` | Standalone timer |

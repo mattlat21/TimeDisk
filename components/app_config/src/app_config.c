@@ -41,6 +41,7 @@ void app_config_apply_defaults(void)
     s_cfg.wifi_password_set = false;
     s_cfg.timezone_set = false;
     s_cfg.timezone_id[0] = '\0';
+    s_cfg.theme_set = false;
 }
 
 void app_runtime_reset(void)
@@ -97,4 +98,9 @@ bool app_config_wifi_password_unset(void)
 bool app_config_timezone_unset(void)
 {
     return !s_cfg.timezone_set;
+}
+
+bool app_config_theme_unset(void)
+{
+    return !s_cfg.theme_set;
 }

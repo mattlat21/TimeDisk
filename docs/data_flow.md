@@ -15,6 +15,7 @@ flowchart LR
     powerUp([Power Up])
     nvsLoad[NVS load config]
     splash[Splash UI]
+    wizardTheme[startup_wizard_theme]
     wizardSsid[startup_wizard_ssid]
     wizardPw[startup_wizard_password]
     loading[Loading UI]
@@ -27,7 +28,8 @@ flowchart LR
 
     powerUp --> nvsLoad
     nvsLoad --> splash
-    splash -->|"timeout_splash_sec"| wizardSsid
+    splash -->|"timeout_splash_sec"| wizardTheme
+    wizardTheme --> wizardSsid
     wizardSsid --> wizardPw
     wizardPw --> loading
     loading --> wifi
@@ -41,7 +43,8 @@ flowchart LR
 
 | From | To | Data | Trigger |
 | ---- | -- | ---- | ------- |
-| NVS | Boot logic | `wifi_ssid`, `wifi_password` | After splash |
+| NVS | Boot logic | `wifi_ssid`, `wifi_password`, theme colours | After splash |
+| User | NVS | `ui_primary_color`, `ui_secondary_color`, `theme_set=true` | startup_wizard_theme Next |
 | User | NVS | `wifi_ssid` | startup_wizard_ssid Next |
 | User | NVS | `wifi_password` (may be `""`) | startup_wizard_password Next |
 | NVS | WiFi stack | `wifi_ssid`, `wifi_password` | After startup wizard / loading |

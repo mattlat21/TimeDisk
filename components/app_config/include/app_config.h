@@ -43,6 +43,8 @@ typedef struct {
     /** false until user completes timezone startup wizard. */
     bool timezone_set;
     char timezone_id[APP_TIMEZONE_ID_MAX];
+    /** false until user completes theme (favourite colours) startup wizard. */
+    bool theme_set;
 
     uint32_t timeout_splash_sec;
     uint32_t timeout_tod_dim_sec;
@@ -93,6 +95,7 @@ app_runtime_t *app_runtime_get(void);
 bool app_config_wifi_ssid_missing(void);
 bool app_config_wifi_password_unset(void);
 bool app_config_timezone_unset(void);
+bool app_config_theme_unset(void);
 
 /** Convenience wrappers around app_nvs_save_* (see app_nvs.h). */
 static inline esp_err_t app_config_save_all(void)

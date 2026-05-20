@@ -45,6 +45,7 @@ Low-fi **SVG** wireframes for the circular Waveshare 4″ display (`720×720`). 
 | File | Screen ID | Notes |
 | ---- | --------- | ----- |
 | [splash.svg](splash.svg) | `splash` | Boot branding |
+| *(TBD)* | `startup_wizard_theme` | Title "What's your favourite colours?"; Primary/Secondary swatch rows centred ~y=292/372; preview labels; green Next wedge |
 | [startup_wizard_ssid.svg](startup_wizard_ssid.svg) | `startup_wizard_ssid` | WiFi SSID entry + keypad |
 | *(TBD)* | `startup_wizard_timezone` | Country + location dropdowns, live HH:MM preview, Next wedge |
 | [aa_pin.svg](aa_pin.svg) | `aa_start` / `aa_end` | 4-digit PIN |
@@ -74,4 +75,4 @@ Low-fi **SVG** wireframes for the circular Waveshare 4″ display (`720×720`). 
 
 ## Not yet wireframed
 
-`startup_wizard_password`, `startup_wizard_timezone` (layout: title ~y=72, country dropdown ~y=200, location ~y=300, preview clock ~y=420, green Next wedge), `loading`, Time of Day modes, Settings, Sleep/Rest wizards.
+`startup_wizard_password`, `startup_wizard_timezone` (layout: title ~y=72, country dropdown ~y=200, location ~y=300, preview clock ~y=420, green Next wedge), `loading`, Time of Day modes, Settings, Sleep/Rest wizards. Theme wizard implemented in firmware (`ui_screen_startup_theme_wizard.c`).

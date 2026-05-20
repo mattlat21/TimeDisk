@@ -14,6 +14,7 @@
 
 typedef enum {
     UI_SCREEN_SPLASH = 0,
+    UI_SCREEN_STARTUP_THEME,
     UI_SCREEN_STARTUP_SSID,
     UI_SCREEN_STARTUP_PASSWORD,
     UI_SCREEN_STARTUP_TIMEZONE,
@@ -71,3 +72,6 @@ void ui_nav_aa_new_maths(void);
 
 void ui_nav_set_brightness(uint8_t pct);
 void ui_nav_apply_dim(bool dim);
+
+/** Begin automatic Wake→… mode cycle after Sleep/Rest schedule wizard. */
+void mode_engine_start_cycle(void);

@@ -79,28 +79,22 @@ static void plus_cb(lv_event_t *e)
 static void finish_sleep_wizard(void)
 {
     app_config_t *cfg = app_config_get();
-    app_runtime_t *rt = app_runtime_get();
     cfg->sleep_sec = s_wizard_vals[0];
     cfg->rest_sec = s_wizard_vals[1];
     cfg->wind_down_sec = s_wizard_vals[2];
-    rt->current_mode = APP_MODE_WAKE;
-    rt->cycle_active = true;
-    rt->mode_remaining_sec = cfg->wind_down_sec > 0 ? cfg->wind_down_sec : cfg->sleep_sec;
     app_config_save_schedule();
+    mode_engine_start_cycle();
     ui_nav_go(UI_SCREEN_TOD_BRIGHT);
 }
 
 static void finish_rest_wizard(void)
 {
     app_config_t *cfg = app_config_get();
-    app_runtime_t *rt = app_runtime_get();
     cfg->rest_sec = s_wizard_vals[3];
     cfg->wind_down_sec = s_wizard_vals[4];
     cfg->sleep_sec = 0;
-    rt->current_mode = APP_MODE_WAKE;
-    rt->cycle_active = true;
-    rt->mode_remaining_sec = cfg->wind_down_sec > 0 ? cfg->wind_down_sec : cfg->rest_sec;
     app_config_save_schedule();
+    mode_engine_start_cycle();
     ui_nav_go(UI_SCREEN_TOD_BRIGHT);
 }
 

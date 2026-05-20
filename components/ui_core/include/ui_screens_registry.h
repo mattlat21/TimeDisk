@@ -9,6 +9,8 @@
 #include "ui_nav.h"
 
 void ui_screen_splash_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
+void ui_screen_startup_theme_wizard_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
+void ui_screen_startup_theme_wizard_on_show(void);
 void ui_screen_startup_wifi_wizard_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
 void ui_screen_startup_timezone_wizard_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
 void ui_screen_startup_timezone_wizard_on_show(void);
@@ -27,6 +29,7 @@ void ui_screen_splash_on_show(void);
 void ui_screen_loading_on_show(void);
 void ui_screen_loading_set_status(const char *text);
 void ui_screen_tod_on_show(bool dim);
+void ui_screen_tod_tick(void);
 void ui_screen_aa_on_show(void);
 void ui_screen_aa_show_pin(void);
 void ui_screen_aa_show_maths(void);

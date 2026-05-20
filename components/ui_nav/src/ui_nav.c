@@ -90,7 +90,9 @@ static void idle_timer_cb(lv_timer_t *t)
 
     switch (s_current) {
     case UI_SCREEN_SPLASH:
-        if (app_config_wifi_ssid_missing()) {
+        if (app_config_theme_unset()) {
+            ui_nav_go(UI_SCREEN_STARTUP_THEME);
+        } else if (app_config_wifi_ssid_missing()) {
             ui_nav_go(UI_SCREEN_STARTUP_SSID);
         } else if (app_config_wifi_password_unset()) {
             ui_nav_go(UI_SCREEN_STARTUP_PASSWORD);
@@ -138,6 +140,9 @@ static void on_enter(ui_screen_id_t screen)
         s_loading_retry_at_ms = 0;
         ui_screen_loading_on_show();
         app_network_start_boot_sync();
+        break;
+    case UI_SCREEN_STARTUP_THEME:
+        ui_screen_startup_theme_wizard_on_show();
         break;
     case UI_SCREEN_STARTUP_TIMEZONE:
         ui_screen_startup_timezone_wizard_on_show();
@@ -306,21 +311,29 @@ void ui_nav_aa_cancel(void)
     ui_nav_go(dest);
 }
 
+void mode_engine_start_cycle(void)
+{
+    app_runtime_t *rt = app_runtime_get();
+
+    rt->cycle_active = true;
+    rt->current_mode = APP_MODE_WAKE;
+    rt->mode_remaining_sec = 0;
+}
+
 static void mode_engine_tick(void)
 {
     app_runtime_t *rt = app_runtime_get();
     app_config_t *cfg = app_config_get();
 
-    if (!rt->cycle_active || rt->mode_remaining_sec == 0) {
+    if (!rt->cycle_active) {
         return;
     }
 
     if (rt->mode_remaining_sec > 0) {
         rt->mode_remaining_sec--;
-    }
-
-    if (rt->mode_remaining_sec > 0) {
-        return;
+        if (rt->mode_remaining_sec > 0) {
+            return;
+        }
     }
 
     switch (rt->current_mode) {
@@ -441,6 +454,10 @@ static void tick_timer_cb(lv_timer_t *t)
     }
 
     mode_engine_tick();
+
+    if (s_current == UI_SCREEN_TOD_BRIGHT || s_current == UI_SCREEN_TOD_DIM) {
+        ui_screen_tod_tick();
+    }
 
     if (!rt->timer_running) {
         return;

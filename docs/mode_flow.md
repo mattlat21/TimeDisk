@@ -92,3 +92,5 @@ A device can run a standalone timer while `current_mode` is **Wake** (or policy 
 ## UI requirement
 
 Each mode (`Wake`, `WindDown`, `Sleep`, `Rest`) must render a **different** full-screen UI. Theme colours (`ui_primary_color`, `ui_secondary_color`) apply across modes unless a mode overrides them in a future design.
+
+Firmware implements distinct placeholder layouts in `ui_screen_tod.c` (bright/dim share two screen IDs; four mode panels per screen) until wireframes exist.
