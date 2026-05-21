@@ -81,8 +81,7 @@ typedef enum {
 #define TZ_OPTIONS_BUF_LEN  512
 
 /* --- Network (list + per-field edit, wizard-style keyboard) --- */
-#define NET_FIELD_X_WF      78
-#define NET_FIELD_Y_WF      210
+#define NET_FIELD_Y_WF      165
 #define NET_FIELD_W         563
 #define NET_FIELD_H         78
 #define NET_FIELD_RADIUS    20
@@ -850,14 +849,10 @@ static void network_save_cb(lv_event_t *e)
 static lv_obj_t *net_create_edit_field(lv_obj_t *parent, lv_obj_t **lbl_out)
 {
     const ui_theme_t *t = ui_theme_get();
-    int fx = 0;
-    int fy = 0;
-
-    ui_layout_parent_pos_from_wf(parent, NET_FIELD_X_WF, NET_FIELD_Y_WF, &fx, &fy);
 
     lv_obj_t *box = lv_obj_create(parent);
     lv_obj_set_size(box, NET_FIELD_W, NET_FIELD_H);
-    lv_obj_set_pos(box, fx, fy);
+    lv_obj_align(box, LV_ALIGN_TOP_MID, 0, settings_wf_y(parent, NET_FIELD_Y_WF));
     lv_obj_set_style_bg_color(box, t->ring, 0);
     lv_obj_set_style_bg_opa(box, LV_OPA_COVER, 0);
     lv_obj_set_style_border_width(box, 0, 0);
