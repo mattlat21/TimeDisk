@@ -7,6 +7,16 @@
 #include "ui_layout.h"
 #include "ui_theme.h"
 
+void ui_widgets_apply_screen_ring(lv_obj_t *screen)
+{
+    const ui_theme_t *t = ui_theme_get();
+
+    lv_obj_set_style_border_color(screen, t->ring, 0);
+    lv_obj_set_style_border_width(screen, UI_RING_BORDER, 0);
+    lv_obj_set_style_radius(screen, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_clip_corner(screen, true, 0);
+}
+
 void ui_widgets_style_circle_panel(lv_obj_t *obj)
 {
     const ui_theme_t *t = ui_theme_get();
@@ -14,12 +24,9 @@ void ui_widgets_style_circle_panel(lv_obj_t *obj)
     lv_obj_set_size(obj, UI_DISP, UI_DISP);
     lv_obj_set_style_bg_color(obj, t->bg, 0);
     lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_color(obj, t->ring, 0);
-    lv_obj_set_style_border_width(obj, UI_RING_BORDER_DEFAULT, 0);
-    lv_obj_set_style_radius(obj, LV_RADIUS_CIRCLE, 0);
+    ui_widgets_apply_screen_ring(obj);
     lv_obj_set_style_pad_all(obj, 0, 0);
     lv_obj_remove_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_style_clip_corner(obj, true, 0);
 }
 
 lv_obj_t *ui_widgets_create_screen(void)

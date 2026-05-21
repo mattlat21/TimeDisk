@@ -5,7 +5,7 @@
  *   - 720×720 circular display, white fill, black "TimeDisk" wordmark + clock hands.
  *
  * We do NOT use ui_widgets_create_screen() here. That helper builds the standard
- * TimeDisk chrome: black background + 6 px purple ring. The splash wireframe is
+ * TimeDisk chrome: black background + 14 px purple ring. The splash wireframe is
  * intentionally plain white with no accent border.
  *
  * Graphics are baked into firmware as an LVGL image descriptor (RGB565):

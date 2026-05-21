@@ -105,8 +105,6 @@ static void triggered_ok_cb(lv_event_t *e)
 
 static void build_duration(lv_obj_t *screens[UI_SCREEN_COUNT])
 {
-    const int border = UI_RING_BORDER_DEFAULT;
-
     s_scr_duration = ui_widgets_create_screen();
     screens[UI_SCREEN_TIMER_DURATION] = s_scr_duration;
     s_duration_sec = app_config_get()->timer_duration_sec;
@@ -124,16 +122,10 @@ static void build_duration(lv_obj_t *screens[UI_SCREEN_COUNT])
     };
     ui_duration_editor_create(s_scr_duration, &s_duration_bundle);
 
-    lv_obj_t *cancel = ui_wedge_create(
-        s_scr_duration, UI_WEDGE_CANCEL,
-        UI_WF_X(UI_WEDGE_CANCEL_X_WF, border),
-        UI_WF_Y(UI_WEDGE_CANCEL_Y_WF, border));
+    lv_obj_t *cancel = ui_wedge_create(s_scr_duration, UI_WEDGE_CANCEL);
     lv_obj_add_event_cb(cancel, duration_back_cb, LV_EVENT_CLICKED, NULL);
 
-    lv_obj_t *next = ui_wedge_create(
-        s_scr_duration, UI_WEDGE_NEXT,
-        UI_WF_X(UI_WEDGE_CONFIRM_X_WF, border),
-        UI_WF_Y(UI_WEDGE_CONFIRM_Y_WF, border));
+    lv_obj_t *next = ui_wedge_create(s_scr_duration, UI_WEDGE_NEXT);
     lv_obj_add_event_cb(next, duration_next_cb, LV_EVENT_CLICKED, NULL);
 
     lv_obj_move_foreground(cancel);

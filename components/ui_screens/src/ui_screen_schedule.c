@@ -121,18 +121,10 @@ static void back_cb(lv_event_t *e)
 
 static void attach_wedges(lv_obj_t *scr, ui_screen_id_t id)
 {
-    const int border = UI_RING_BORDER_DEFAULT;
-
-    lv_obj_t *cancel = ui_wedge_create(
-        scr, UI_WEDGE_CANCEL,
-        UI_WF_X(UI_WEDGE_CANCEL_X_WF, border),
-        UI_WF_Y(UI_WEDGE_CANCEL_Y_WF, border));
+    lv_obj_t *cancel = ui_wedge_create(scr, UI_WEDGE_CANCEL);
     lv_obj_add_event_cb(cancel, back_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)id);
 
-    lv_obj_t *next = ui_wedge_create(
-        scr, UI_WEDGE_NEXT,
-        UI_WF_X(UI_WEDGE_CONFIRM_X_WF, border),
-        UI_WF_Y(UI_WEDGE_CONFIRM_Y_WF, border));
+    lv_obj_t *next = ui_wedge_create(scr, UI_WEDGE_NEXT);
     lv_obj_add_event_cb(next, next_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)id);
 
     lv_obj_move_foreground(cancel);

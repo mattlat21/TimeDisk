@@ -72,8 +72,6 @@ static void settings_cb(lv_event_t *e)
 
 void ui_screen_menu_build(lv_obj_t *screens[UI_SCREEN_COUNT])
 {
-    const int border = UI_RING_BORDER_DEFAULT;
-
     s_scr = ui_widgets_create_screen();
     screens[UI_SCREEN_MENU] = s_scr;
 
@@ -89,16 +87,10 @@ void ui_screen_menu_build(lv_obj_t *screens[UI_SCREEN_COUNT])
     menu_create_action_btn(s_scr, "Start Sleep", x0, y0 + MENU_BTN_H + MENU_BTN_GAP, sleep_cb);
     menu_create_action_btn(s_scr, "Start Timer", x0, y0 + 2 * (MENU_BTN_H + MENU_BTN_GAP), timer_cb);
 
-    lv_obj_t *back = ui_wedge_create(
-        s_scr, UI_WEDGE_CANCEL,
-        UI_WF_X(UI_WEDGE_CANCEL_X_WF, border),
-        UI_WF_Y(UI_WEDGE_CANCEL_Y_WF, border));
+    lv_obj_t *back = ui_wedge_create(s_scr, UI_WEDGE_CANCEL);
     lv_obj_add_event_cb(back, back_cb, LV_EVENT_CLICKED, NULL);
 
-    lv_obj_t *settings = ui_wedge_create(
-        s_scr, UI_WEDGE_SETTINGS,
-        UI_WF_X(UI_WEDGE_CONFIRM_X_WF, border),
-        UI_WF_Y(UI_WEDGE_CONFIRM_Y_WF, border));
+    lv_obj_t *settings = ui_wedge_create(s_scr, UI_WEDGE_SETTINGS);
     lv_obj_add_event_cb(settings, settings_cb, LV_EVENT_CLICKED, NULL);
 
     lv_obj_move_foreground(back);

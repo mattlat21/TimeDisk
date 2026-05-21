@@ -33,6 +33,7 @@
 
 struct ui_keyboard {
     ui_keyboard_config_t config;
+    lv_obj_t *screen;
     lv_obj_t *layers[UI_KEYBOARD_MODE_COUNT];
     lv_obj_t *mode_btn;
     ui_keyboard_mode_t mode;
@@ -370,6 +371,11 @@ ui_keyboard_t *ui_keyboard_create(lv_obj_t *parent, const ui_keyboard_config_t *
         return NULL;
     }
 
+    lv_obj_t *screen = ui_layout_find_screen(parent);
+    if (screen == NULL) {
+        return NULL;
+    }
+
     ui_keyboard_module_init();
 
     ui_keyboard_t *kb = lv_malloc(sizeof(ui_keyboard_t));
@@ -378,29 +384,30 @@ ui_keyboard_t *ui_keyboard_create(lv_obj_t *parent, const ui_keyboard_config_t *
     }
     memset(kb, 0, sizeof(*kb));
     kb->config = *config;
+    kb->screen = screen;
     kb->mode = config->initial_mode;
     if (kb->mode >= UI_KEYBOARD_MODE_COUNT) {
         kb->mode = UI_KEYBOARD_MODE_LOWER;
     }
 
-    kb->layers[UI_KEYBOARD_MODE_LOWER] = create_layer(parent);
+    kb->layers[UI_KEYBOARD_MODE_LOWER] = create_layer(screen);
     build_letter_layer(kb->layers[UI_KEYBOARD_MODE_LOWER], kb, "qwertyuiop", "asdfghjkl", "zxcvbnm");
 
-    kb->layers[UI_KEYBOARD_MODE_UPPER] = create_layer(parent);
+    kb->layers[UI_KEYBOARD_MODE_UPPER] = create_layer(screen);
     build_letter_layer(kb->layers[UI_KEYBOARD_MODE_UPPER], kb, "QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM");
 
-    kb->layers[UI_KEYBOARD_MODE_NUMBER] = create_layer(parent);
+    kb->layers[UI_KEYBOARD_MODE_NUMBER] = create_layer(screen);
     build_number_layer(kb->layers[UI_KEYBOARD_MODE_NUMBER], kb);
 
-    kb->layers[UI_KEYBOARD_MODE_SYMBOL] = create_layer(parent);
+    kb->layers[UI_KEYBOARD_MODE_SYMBOL] = create_layer(screen);
     build_symbol_layer(kb->layers[UI_KEYBOARD_MODE_SYMBOL], kb);
 
     int mode_cx = 0;
     int space_cx = 0;
     int bs_cx = 0;
-    keyboard_bottom_centers(parent, &mode_cx, &space_cx, &bs_cx);
-    kb->mode_btn = create_key_btn(parent, mode_btn_label(kb->mode), mode_cx,
-                                  keyboard_row_cy(parent, UI_KB_ROW4_CY_WF),
+    keyboard_bottom_centers(screen, &mode_cx, &space_cx, &bs_cx);
+    kb->mode_btn = create_key_btn(screen, mode_btn_label(kb->mode), mode_cx,
+                                  keyboard_row_cy(screen, UI_KB_ROW4_CY_WF),
                                   mode_cb, kb, NULL);
     (void)space_cx;
     (void)bs_cx;
@@ -410,9 +417,32 @@ ui_keyboard_t *ui_keyboard_create(lv_obj_t *parent, const ui_keyboard_config_t *
     }
 
     show_layer(kb);
+    for (int i = 0; i < UI_KEYBOARD_MODE_COUNT; i++) {
+        if (kb->layers[i] != NULL) {
+            lv_obj_move_foreground(kb->layers[i]);
+        }
+    }
     lv_obj_move_foreground(kb->mode_btn);
 
     return kb;
+}
+
+void ui_keyboard_destroy(ui_keyboard_t *kb)
+{
+    if (kb == NULL) {
+        return;
+    }
+    for (int i = 0; i < UI_KEYBOARD_MODE_COUNT; i++) {
+        if (kb->layers[i] != NULL) {
+            lv_obj_delete(kb->layers[i]);
+            kb->layers[i] = NULL;
+        }
+    }
+    if (kb->mode_btn != NULL) {
+        lv_obj_delete(kb->mode_btn);
+        kb->mode_btn = NULL;
+    }
+    lv_free(kb);
 }
 
 ui_keyboard_mode_t ui_keyboard_get_mode(const ui_keyboard_t *kb)

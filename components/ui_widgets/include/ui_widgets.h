@@ -10,7 +10,10 @@
 /** Apply standard TimeDisk circular panel styling (black fill + purple ring). */
 void ui_widgets_style_circle_panel(lv_obj_t *obj);
 
-/** Create a loadable LVGL screen with default 6 px ring border. */
+/** Apply the standard 14 px purple circular edge ring (theme ring colour). */
+void ui_widgets_apply_screen_ring(lv_obj_t *screen);
+
+/** Create a loadable LVGL screen with standard 14 px ring border. */
 lv_obj_t *ui_widgets_create_screen(void);
 
 lv_obj_t *ui_widgets_create_title(lv_obj_t *parent, const char *text);

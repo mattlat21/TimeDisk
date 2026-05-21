@@ -16,7 +16,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#define TZ_RING_BORDER      UI_RING_BORDER_WIFI
 #define TZ_DROPDOWN_W       480
 #define TZ_DROPDOWN_H       52
 #define TZ_COUNTRY_Y_WF     132
@@ -115,8 +114,8 @@ static lv_obj_t *create_dropdown(lv_obj_t *parent, int y_wf)
     lv_obj_t *dd = lv_dropdown_create(parent);
     lv_obj_set_size(dd, TZ_DROPDOWN_W, TZ_DROPDOWN_H);
     lv_obj_set_pos(dd,
-                   UI_WF_X((UI_SCREEN_W - TZ_DROPDOWN_W) / 2, TZ_RING_BORDER),
-                   UI_WF_Y(y_wf, TZ_RING_BORDER));
+                   UI_WF_X((UI_SCREEN_W - TZ_DROPDOWN_W) / 2, UI_RING_BORDER),
+                   UI_WF_Y(y_wf, UI_RING_BORDER));
     lv_obj_set_style_bg_color(dd, th->ring, 0);
     lv_obj_set_style_text_color(dd, th->white, 0);
     lv_obj_set_style_border_width(dd, 0, 0);
@@ -141,20 +140,11 @@ static void next_cb(lv_event_t *e)
     ui_nav_go(UI_SCREEN_TOD_BRIGHT);
 }
 
-static lv_obj_t *tz_create_screen(void)
-{
-    const ui_theme_t *t = ui_theme_get();
-    lv_obj_t *scr = ui_widgets_create_screen();
-    lv_obj_set_style_border_width(scr, TZ_RING_BORDER, 0);
-    lv_obj_set_style_border_color(scr, t->ring, 0);
-    return scr;
-}
-
 void ui_screen_startup_timezone_wizard_build(lv_obj_t *screens[UI_SCREEN_COUNT])
 {
     const ui_theme_t *th = ui_theme_get();
 
-    s_scr = tz_create_screen();
+    s_scr = ui_widgets_create_screen();
     screens[UI_SCREEN_STARTUP_TIMEZONE] = s_scr;
 
     lv_obj_t *title = ui_widgets_create_title(s_scr, "Set Time Zone");
@@ -175,15 +165,12 @@ void ui_screen_startup_timezone_wizard_build(lv_obj_t *screens[UI_SCREEN_COUNT])
     lv_obj_set_style_text_color(s_lbl_preview, th->white, 0);
     lv_obj_set_style_text_font(s_lbl_preview, &lv_font_montserrat_48, 0);
     lv_obj_set_style_text_align(s_lbl_preview, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_width(s_lbl_preview, UI_CONTENT_W(TZ_RING_BORDER));
+    lv_obj_set_width(s_lbl_preview, UI_CONTENT_W(UI_RING_BORDER));
     lv_obj_align(s_lbl_preview, LV_ALIGN_CENTER, 0, 24);
 
     select_default_dropdowns();
 
-    lv_obj_t *next = ui_wedge_create(
-        s_scr, UI_WEDGE_CONFIRM,
-        UI_WF_X(UI_WEDGE_CONFIRM_X_WF, TZ_RING_BORDER),
-        UI_WF_Y(UI_WEDGE_CONFIRM_Y_WF, TZ_RING_BORDER));
+    lv_obj_t *next = ui_wedge_create(s_scr, UI_WEDGE_CONFIRM);
     lv_obj_add_event_cb(next, next_cb, LV_EVENT_CLICKED, NULL);
 }
 
@@ -211,7 +198,7 @@ void ui_screen_startup_timezone_wizard_apply_theme(void)
 {
     const ui_theme_t *t = ui_theme_get();
     if (s_scr != NULL) {
-        lv_obj_set_style_border_color(s_scr, t->ring, 0);
+        ui_widgets_apply_screen_ring(s_scr);
     }
     if (s_dd_country != NULL) {
         lv_obj_set_style_bg_color(s_dd_country, t->ring, 0);

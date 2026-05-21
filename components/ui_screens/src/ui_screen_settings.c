@@ -18,7 +18,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#define SETTINGS_BORDER     UI_RING_BORDER_DEFAULT
 #define HUB_BTN_W           560
 #define HUB_BTN_H           80
 #define HUB_BTN_GAP         12
@@ -83,6 +82,9 @@ typedef enum {
 
 static lv_obj_t *s_scr;
 static lv_obj_t *s_panels[PANEL_COUNT];
+static lv_obj_t *s_hub_cancel_wedge;
+static lv_obj_t *s_panel_cancel_wedge[PANEL_COUNT];
+static lv_obj_t *s_panel_save_wedge[PANEL_COUNT];
 static app_config_t s_saved;
 static app_config_t s_draft;
 
@@ -99,7 +101,6 @@ static lv_obj_t *s_net_edit;
 static lv_obj_t *s_net_edit_title;
 static lv_obj_t *s_net_edit_field_box;
 static lv_obj_t *s_net_edit_lbl;
-static lv_obj_t *s_net_kb_host;
 static lv_obj_t *s_net_panel_cancel;
 static lv_obj_t *s_net_panel_save;
 static lv_obj_t *s_net_edit_cancel;
@@ -148,6 +149,9 @@ static lv_obj_t *s_lbl_aa_pin;
 static char s_aa_pin_buf[APP_AA_PIN_LEN];
 
 static void show_panel(settings_panel_t panel);
+static void settings_panel_layout(lv_obj_t *panel);
+static void settings_wedges_hide_all(void);
+static void settings_wedges_show_for_panel(settings_panel_t panel);
 static void settings_idle_cb(void *user_data);
 static void colours_sync_from_draft(void);
 static void colours_apply_preview(void);
@@ -256,24 +260,84 @@ static void panel_cancel_cb(lv_event_t *e)
     show_panel(PANEL_HUB);
 }
 
+static void settings_panel_layout(lv_obj_t *panel)
+{
+    int32_t cw = 0;
+    int32_t ch = 0;
+
+    ui_layout_get_content_size(s_scr, &cw, &ch);
+    lv_obj_set_size(panel, cw, ch);
+    lv_obj_align(panel, LV_ALIGN_TOP_LEFT, 0, 0);
+}
+
+static void settings_wedges_hide_all(void)
+{
+    if (s_hub_cancel_wedge != NULL) {
+        lv_obj_add_flag(s_hub_cancel_wedge, LV_OBJ_FLAG_HIDDEN);
+    }
+    for (int i = 0; i < PANEL_COUNT; i++) {
+        if (s_panel_cancel_wedge[i] != NULL) {
+            lv_obj_add_flag(s_panel_cancel_wedge[i], LV_OBJ_FLAG_HIDDEN);
+        }
+        if (s_panel_save_wedge[i] != NULL) {
+            lv_obj_add_flag(s_panel_save_wedge[i], LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+    if (s_net_panel_cancel != NULL) {
+        lv_obj_add_flag(s_net_panel_cancel, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (s_net_panel_save != NULL) {
+        lv_obj_add_flag(s_net_panel_save, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (s_net_edit_cancel != NULL) {
+        lv_obj_add_flag(s_net_edit_cancel, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (s_net_edit_save != NULL) {
+        lv_obj_add_flag(s_net_edit_save, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+static void settings_wedges_show_for_panel(settings_panel_t panel)
+{
+    settings_wedges_hide_all();
+
+    if (panel == PANEL_HUB) {
+        if (s_hub_cancel_wedge != NULL) {
+            lv_obj_clear_flag(s_hub_cancel_wedge, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_move_foreground(s_hub_cancel_wedge);
+        }
+        return;
+    }
+
+    if (panel == PANEL_NETWORK) {
+        return;
+    }
+
+    if (s_panel_cancel_wedge[panel] != NULL) {
+        lv_obj_clear_flag(s_panel_cancel_wedge[panel], LV_OBJ_FLAG_HIDDEN);
+        lv_obj_move_foreground(s_panel_cancel_wedge[panel]);
+    }
+    if (s_panel_save_wedge[panel] != NULL) {
+        lv_obj_clear_flag(s_panel_save_wedge[panel], LV_OBJ_FLAG_HIDDEN);
+        lv_obj_move_foreground(s_panel_save_wedge[panel]);
+    }
+}
+
 static void attach_panel_wedges(lv_obj_t *panel, settings_panel_t panel_id,
                                 lv_event_cb_t save_cb)
 {
-    lv_obj_t *cancel = ui_wedge_create(
-        panel, UI_WEDGE_CANCEL,
-        UI_WF_X(UI_WEDGE_CANCEL_X_WF, SETTINGS_BORDER),
-        UI_WF_Y(UI_WEDGE_CANCEL_Y_WF, SETTINGS_BORDER));
+    (void)panel;
+    lv_obj_t *cancel = ui_wedge_create(s_scr, UI_WEDGE_CANCEL);
     lv_obj_add_event_cb(cancel, panel_cancel_cb, LV_EVENT_CLICKED,
                         (void *)(uintptr_t)panel_id);
 
-    lv_obj_t *save = ui_wedge_create(
-        panel, UI_WEDGE_CONFIRM,
-        UI_WF_X(UI_WEDGE_CONFIRM_X_WF, SETTINGS_BORDER),
-        UI_WF_Y(UI_WEDGE_CONFIRM_Y_WF, SETTINGS_BORDER));
+    lv_obj_t *save = ui_wedge_create(s_scr, UI_WEDGE_CONFIRM);
     lv_obj_add_event_cb(save, save_cb, LV_EVENT_CLICKED, NULL);
 
-    lv_obj_move_foreground(cancel);
-    lv_obj_move_foreground(save);
+    s_panel_cancel_wedge[panel_id] = cancel;
+    s_panel_save_wedge[panel_id] = save;
+    lv_obj_add_flag(cancel, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(save, LV_OBJ_FLAG_HIDDEN);
 }
 
 static void show_panel(settings_panel_t panel)
@@ -286,6 +350,8 @@ static void show_panel(settings_panel_t panel)
     if (s_panels[panel] != NULL) {
         lv_obj_clear_flag(s_panels[panel], LV_OBJ_FLAG_HIDDEN);
     }
+
+    settings_wedges_show_for_panel(panel);
 
     switch (panel) {
     case PANEL_COLOURS:
@@ -315,11 +381,10 @@ static void show_panel(settings_panel_t panel)
 static lv_obj_t *create_sub_panel(const char *title)
 {
     lv_obj_t *panel = lv_obj_create(s_scr);
-    lv_obj_set_size(panel, UI_DISP, UI_DISP);
     lv_obj_set_style_bg_opa(panel, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(panel, 0, 0);
     lv_obj_remove_flag(panel, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_center(panel);
+    settings_panel_layout(panel);
     lv_obj_add_flag(panel, LV_OBJ_FLAG_HIDDEN);
 
     ui_widgets_create_title(panel, title);
@@ -489,10 +554,9 @@ static void net_bind_keyboard(void)
         buf_len = sizeof(s_ntp_buf);
     }
 
-    if (s_net_kb_host != NULL) {
-        lv_obj_clean(s_net_kb_host);
+    if (s_net_kb != NULL) {
+        ui_keyboard_destroy(s_net_kb);
     }
-    s_net_kb = NULL;
 
     ui_keyboard_config_t kb_cfg = {
         .buf = buf,
@@ -502,7 +566,7 @@ static void net_bind_keyboard(void)
         .on_activity = settings_idle_cb,
         .user_data = NULL,
     };
-    s_net_kb = ui_keyboard_create(s_net_kb_host, &kb_cfg);
+    s_net_kb = ui_keyboard_create(s_scr, &kb_cfg);
 }
 
 static void network_show_list(void)
@@ -530,10 +594,10 @@ static void network_show_list(void)
     if (s_net_panel_title != NULL) {
         lv_obj_clear_flag(s_net_panel_title, LV_OBJ_FLAG_HIDDEN);
     }
-    if (s_net_kb_host != NULL) {
-        lv_obj_clean(s_net_kb_host);
+    if (s_net_kb != NULL) {
+        ui_keyboard_destroy(s_net_kb);
+        s_net_kb = NULL;
     }
-    s_net_kb = NULL;
 }
 
 static void network_load_field_buf(net_field_t field)
@@ -589,9 +653,6 @@ static void network_show_edit(net_field_t field)
     }
     if (s_net_edit_save != NULL) {
         lv_obj_clear_flag(s_net_edit_save, LV_OBJ_FLAG_HIDDEN);
-    }
-    if (s_net_kb_host != NULL) {
-        lv_obj_move_foreground(s_net_kb_host);
     }
     if (s_net_edit_field_box != NULL) {
         lv_obj_move_foreground(s_net_edit_field_box);
@@ -681,8 +742,8 @@ static lv_obj_t *net_create_edit_field(lv_obj_t *parent, lv_obj_t **lbl_out)
     const ui_theme_t *t = ui_theme_get();
     lv_obj_t *box = lv_obj_create(parent);
     lv_obj_set_size(box, NET_FIELD_W, NET_FIELD_H);
-    lv_obj_set_pos(box, UI_WF_X(NET_FIELD_X_WF, SETTINGS_BORDER),
-                   UI_WF_Y(NET_FIELD_Y_WF, SETTINGS_BORDER));
+    lv_obj_set_pos(box, UI_WF_X(NET_FIELD_X_WF, UI_RING_BORDER),
+                   UI_WF_Y(NET_FIELD_Y_WF, UI_RING_BORDER));
     lv_obj_set_style_bg_color(box, t->ring, 0);
     lv_obj_set_style_bg_opa(box, LV_OPA_COVER, 0);
     lv_obj_set_style_border_width(box, 0, 0);
@@ -705,11 +766,10 @@ static void build_network_panel(void)
     static const char *row_labels[] = {"Wi-Fi Name", "Wi-Fi Password", "NTP"};
 
     s_panels[PANEL_NETWORK] = lv_obj_create(s_scr);
-    lv_obj_set_size(s_panels[PANEL_NETWORK], UI_DISP, UI_DISP);
     lv_obj_set_style_bg_opa(s_panels[PANEL_NETWORK], LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(s_panels[PANEL_NETWORK], 0, 0);
     lv_obj_remove_flag(s_panels[PANEL_NETWORK], LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_center(s_panels[PANEL_NETWORK]);
+    settings_panel_layout(s_panels[PANEL_NETWORK]);
     lv_obj_add_flag(s_panels[PANEL_NETWORK], LV_OBJ_FLAG_HIDDEN);
     s_net_panel_title = ui_widgets_create_title(s_panels[PANEL_NETWORK], "Networking");
 
@@ -736,18 +796,14 @@ static void build_network_panel(void)
         lv_obj_add_event_cb(btn, net_row_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)i);
     }
 
-    s_net_panel_cancel = ui_wedge_create(
-        s_panels[PANEL_NETWORK], UI_WEDGE_CANCEL,
-        UI_WF_X(UI_WEDGE_CANCEL_X_WF, SETTINGS_BORDER),
-        UI_WF_Y(UI_WEDGE_CANCEL_Y_WF, SETTINGS_BORDER));
+    s_net_panel_cancel = ui_wedge_create(s_scr, UI_WEDGE_CANCEL);
     lv_obj_add_event_cb(s_net_panel_cancel, panel_cancel_cb, LV_EVENT_CLICKED,
                         (void *)(uintptr_t)PANEL_NETWORK);
+    lv_obj_add_flag(s_net_panel_cancel, LV_OBJ_FLAG_HIDDEN);
 
-    s_net_panel_save = ui_wedge_create(
-        s_panels[PANEL_NETWORK], UI_WEDGE_CONFIRM,
-        UI_WF_X(UI_WEDGE_CONFIRM_X_WF, SETTINGS_BORDER),
-        UI_WF_Y(UI_WEDGE_CONFIRM_Y_WF, SETTINGS_BORDER));
+    s_net_panel_save = ui_wedge_create(s_scr, UI_WEDGE_CONFIRM);
     lv_obj_add_event_cb(s_net_panel_save, network_save_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_add_flag(s_net_panel_save, LV_OBJ_FLAG_HIDDEN);
 
     s_net_edit = lv_obj_create(s_panels[PANEL_NETWORK]);
     lv_obj_set_size(s_net_edit, UI_DISP, UI_DISP);
@@ -762,27 +818,12 @@ static void build_network_panel(void)
 
     s_net_edit_field_box = net_create_edit_field(s_net_edit, &s_net_edit_lbl);
 
-    /* Full-screen host: ui_keyboard uses wireframe Y (~340–538); wizard attaches to the screen. */
-    s_net_kb_host = lv_obj_create(s_net_edit);
-    lv_obj_set_size(s_net_kb_host, UI_DISP, UI_DISP);
-    lv_obj_set_pos(s_net_kb_host, 0, 0);
-    lv_obj_set_style_bg_opa(s_net_kb_host, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(s_net_kb_host, 0, 0);
-    lv_obj_remove_flag(s_net_kb_host, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_remove_flag(s_net_kb_host, LV_OBJ_FLAG_CLICKABLE);
-
-    s_net_edit_cancel = ui_wedge_create(
-        s_net_edit, UI_WEDGE_CANCEL,
-        UI_WF_X(UI_WEDGE_CANCEL_X_WF, SETTINGS_BORDER),
-        UI_WF_Y(UI_WEDGE_CANCEL_Y_WF, SETTINGS_BORDER));
+    s_net_edit_cancel = ui_wedge_create(s_scr, UI_WEDGE_CANCEL);
     lv_obj_add_event_cb(s_net_edit_cancel, net_edit_cancel_cb, LV_EVENT_CLICKED, NULL);
-
-    s_net_edit_save = ui_wedge_create(
-        s_net_edit, UI_WEDGE_CONFIRM,
-        UI_WF_X(UI_WEDGE_CONFIRM_X_WF, SETTINGS_BORDER),
-        UI_WF_Y(UI_WEDGE_CONFIRM_Y_WF, SETTINGS_BORDER));
-    lv_obj_add_event_cb(s_net_edit_save, net_edit_save_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_add_flag(s_net_edit_cancel, LV_OBJ_FLAG_HIDDEN);
+
+    s_net_edit_save = ui_wedge_create(s_scr, UI_WEDGE_CONFIRM);
+    lv_obj_add_event_cb(s_net_edit_save, net_edit_save_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_add_flag(s_net_edit_save, LV_OBJ_FLAG_HIDDEN);
 }
 
@@ -1244,11 +1285,10 @@ static void build_hub_panel(void)
     int32_t ch = 0;
 
     s_panels[PANEL_HUB] = lv_obj_create(s_scr);
-    lv_obj_set_size(s_panels[PANEL_HUB], UI_DISP, UI_DISP);
     lv_obj_set_style_bg_opa(s_panels[PANEL_HUB], LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(s_panels[PANEL_HUB], 0, 0);
     lv_obj_remove_flag(s_panels[PANEL_HUB], LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_center(s_panels[PANEL_HUB]);
+    settings_panel_layout(s_panels[PANEL_HUB]);
 
     ui_widgets_create_title(s_panels[PANEL_HUB], "Settings");
 
@@ -1272,12 +1312,9 @@ static void build_hub_panel(void)
                        (settings_panel_t)(PANEL_COLOURS + i));
     }
 
-    lv_obj_t *cancel = ui_wedge_create(
-        s_panels[PANEL_HUB], UI_WEDGE_CANCEL,
-        UI_WF_X(UI_WEDGE_CANCEL_X_WF, SETTINGS_BORDER),
-        UI_WF_Y(UI_WEDGE_CANCEL_Y_WF, SETTINGS_BORDER));
-    lv_obj_add_event_cb(cancel, hub_cancel_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_move_foreground(cancel);
+    s_hub_cancel_wedge = ui_wedge_create(s_scr, UI_WEDGE_CANCEL);
+    lv_obj_add_event_cb(s_hub_cancel_wedge, hub_cancel_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_add_flag(s_hub_cancel_wedge, LV_OBJ_FLAG_HIDDEN);
 }
 
 void ui_screen_settings_build(lv_obj_t *screens[UI_SCREEN_COUNT])

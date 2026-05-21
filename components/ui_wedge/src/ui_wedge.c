@@ -8,6 +8,7 @@
  */
 
 #include "ui_wedge.h"
+#include "ui_layout.h"
 #include "ui_assets.h"
 #include "ui_theme.h"
 
@@ -116,7 +117,22 @@ ui_wedge_config_t ui_wedge_config_from_type(ui_wedge_type_t type)
     }
 }
 
-ui_wedge_button_t *ui_wedge_button_create(lv_obj_t *parent, const ui_wedge_config_t *cfg, int x, int y)
+void ui_wedge_default_pos_for_type(ui_wedge_type_t type, int *x_wf_out, int *y_wf_out)
+{
+    if (x_wf_out == NULL || y_wf_out == NULL) {
+        return;
+    }
+    if (type == UI_WEDGE_CANCEL) {
+        *x_wf_out = UI_WEDGE_CANCEL_X_WF;
+        *y_wf_out = UI_WEDGE_CANCEL_Y_WF;
+    } else {
+        *x_wf_out = UI_WEDGE_CONFIRM_X_WF;
+        *y_wf_out = UI_WEDGE_CONFIRM_Y_WF;
+    }
+}
+
+static ui_wedge_button_t *wedge_button_create_impl(lv_obj_t *parent, const ui_wedge_config_t *cfg,
+                                                   int x, int y)
 {
     lv_obj_t *btn = lv_obj_create(parent);
     lv_obj_set_size(btn, UI_WEDGE_W_WF, UI_WEDGE_H_WF);
@@ -139,6 +155,38 @@ ui_wedge_button_t *ui_wedge_button_create(lv_obj_t *parent, const ui_wedge_confi
     return btn;
 }
 
+ui_wedge_button_t *ui_wedge_button_create(lv_obj_t *parent, const ui_wedge_config_t *cfg)
+{
+    if (parent == NULL || cfg == NULL) {
+        return NULL;
+    }
+
+    lv_obj_t *screen = ui_layout_find_screen(parent);
+    if (screen == NULL) {
+        return NULL;
+    }
+
+    int x_wf = UI_WEDGE_CONFIRM_X_WF;
+    int y_wf = UI_WEDGE_CONFIRM_Y_WF;
+    if (cfg->side == UI_WEDGE_SIDE_LEFT) {
+        x_wf = UI_WEDGE_CANCEL_X_WF;
+        y_wf = UI_WEDGE_CANCEL_Y_WF;
+    }
+    int x = 0;
+    int y = 0;
+    ui_layout_screen_pos_from_wf(screen, x_wf, y_wf, &x, &y);
+    return wedge_button_create_impl(screen, cfg, x, y);
+}
+
+ui_wedge_button_t *ui_wedge_button_create_at(lv_obj_t *parent, const ui_wedge_config_t *cfg, int x,
+                                             int y)
+{
+    if (parent == NULL || cfg == NULL) {
+        return NULL;
+    }
+    return wedge_button_create_impl(parent, cfg, x, y);
+}
+
 void ui_wedge_button_set_color(ui_wedge_button_t *btn, lv_color_t color)
 {
     lv_obj_t *shape = wedge_shape_obj(btn);
@@ -152,8 +200,8 @@ void ui_wedge_button_set_icon(ui_wedge_button_t *btn, ui_wedge_icon_t icon)
     icon_apply(btn, icon);
 }
 
-lv_obj_t *ui_wedge_create(lv_obj_t *parent, ui_wedge_type_t type, int x, int y)
+lv_obj_t *ui_wedge_create(lv_obj_t *parent, ui_wedge_type_t type)
 {
     ui_wedge_config_t cfg = ui_wedge_config_from_type(type);
-    return ui_wedge_button_create(parent, &cfg, x, y);
+    return ui_wedge_button_create(parent, &cfg);
 }

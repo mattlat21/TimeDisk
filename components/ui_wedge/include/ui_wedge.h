@@ -4,6 +4,9 @@
  *
  * Shape masks: components/ui_assets/assets/wedge_shape_{left,right}.svg (A8)
  * Icons:       components/ui_assets/assets/icon_wedge_*.svg (RGB565A8)
+ *
+ * Default placement: startup_wizard_ssid.svg / Wi-Fi password screen (LCD wireframe coords).
+ * Wedges are always children of the root screen at the same absolute content position.
  */
 
 #pragma once
@@ -53,9 +56,12 @@ typedef lv_obj_t ui_wedge_button_t;
 ui_wedge_config_t ui_wedge_config_default(ui_wedge_side_t side, ui_wedge_icon_t icon);
 ui_wedge_config_t ui_wedge_config_from_type(ui_wedge_type_t type);
 
-ui_wedge_button_t *ui_wedge_button_create(lv_obj_t *parent, const ui_wedge_config_t *cfg, int x, int y);
+/** Default LCD position for the wedge side (Wi-Fi password wireframe). */
+void ui_wedge_default_pos_for_type(ui_wedge_type_t type, int *x_wf_out, int *y_wf_out);
+
+ui_wedge_button_t *ui_wedge_button_create(lv_obj_t *parent, const ui_wedge_config_t *cfg);
+ui_wedge_button_t *ui_wedge_button_create_at(lv_obj_t *parent, const ui_wedge_config_t *cfg, int x, int y);
 void ui_wedge_button_set_color(ui_wedge_button_t *btn, lv_color_t color);
 void ui_wedge_button_set_icon(ui_wedge_button_t *btn, ui_wedge_icon_t icon);
 
-/** @deprecated Use ui_wedge_button_create() with ui_wedge_config_from_type(). */
-lv_obj_t *ui_wedge_create(lv_obj_t *parent, ui_wedge_type_t type, int x, int y);
+lv_obj_t *ui_wedge_create(lv_obj_t *parent, ui_wedge_type_t type);

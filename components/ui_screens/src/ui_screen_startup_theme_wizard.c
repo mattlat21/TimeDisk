@@ -13,7 +13,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define THEME_RING_BORDER     UI_RING_BORDER_DEFAULT
 #define THEME_SWATCH_SIZE     56
 #define THEME_SWATCH_GAP      12
 #define THEME_SWATCH_COUNT    8
@@ -169,8 +168,8 @@ static void build_swatch_row(lv_obj_t *parent, theme_slot_t slot, int y_wf)
     for (int i = 0; i < THEME_SWATCH_COUNT; i++) {
         lv_obj_t *btn = lv_button_create(parent);
         lv_obj_set_size(btn, THEME_SWATCH_SIZE, THEME_SWATCH_SIZE);
-        lv_obj_set_pos(btn, UI_WF_X((int)x, THEME_RING_BORDER),
-                       UI_WF_Y(y_wf, THEME_RING_BORDER));
+        lv_obj_set_pos(btn, UI_WF_X((int)x, UI_RING_BORDER),
+                       UI_WF_Y(y_wf, UI_RING_BORDER));
         lv_obj_set_style_bg_color(btn, ui_theme_from_rgb(s_palette[i]), 0);
         lv_obj_set_style_bg_opa(btn, LV_OPA_COVER, 0);
         lv_obj_set_style_radius(btn, 12, 0);
@@ -190,13 +189,12 @@ static lv_obj_t *create_preview_label_paired(lv_obj_t *parent, const char *text,
     lv_obj_set_style_text_font(lbl, &lv_font_montserrat_20, 0);
     lv_obj_align(
         lbl, LV_ALIGN_TOP_MID, x_offset,
-        UI_WF_Y(THEME_PREVIEW_LABELS_Y_WF, THEME_RING_BORDER));
+        UI_WF_Y(THEME_PREVIEW_LABELS_Y_WF, UI_RING_BORDER));
     return lbl;
 }
 
 void ui_screen_startup_theme_wizard_build(lv_obj_t *screens[UI_SCREEN_COUNT])
 {
-    const ui_theme_t *t = ui_theme_get();
     app_config_t *cfg = app_config_get();
 
     s_primary_rgb = cfg->ui_primary_color;
@@ -204,11 +202,9 @@ void ui_screen_startup_theme_wizard_build(lv_obj_t *screens[UI_SCREEN_COUNT])
 
     s_scr = ui_widgets_create_screen();
     screens[UI_SCREEN_STARTUP_THEME] = s_scr;
-    lv_obj_set_style_border_width(s_scr, THEME_RING_BORDER, 0);
-    lv_obj_set_style_border_color(s_scr, t->ring, 0);
 
     lv_obj_t *title = ui_widgets_create_title(s_scr, "What's your favourite colours?");
-    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, UI_WF_Y(THEME_TITLE_Y_WF, THEME_RING_BORDER));
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, UI_WF_Y(THEME_TITLE_Y_WF, UI_RING_BORDER));
 
     build_swatch_row(s_scr, THEME_SLOT_PRIMARY, THEME_ROW_PRIMARY_Y);
     build_swatch_row(s_scr, THEME_SLOT_SECONDARY, THEME_ROW_SECONDARY_Y);
@@ -216,10 +212,7 @@ void ui_screen_startup_theme_wizard_build(lv_obj_t *screens[UI_SCREEN_COUNT])
     s_lbl_preview_primary = create_preview_label_paired(s_scr, "Primary", -THEME_PREVIEW_LABEL_GAP_X);
     s_lbl_preview_secondary = create_preview_label_paired(s_scr, "Secondary", THEME_PREVIEW_LABEL_GAP_X);
 
-    lv_obj_t *next = ui_wedge_create(
-        s_scr, UI_WEDGE_CONFIRM,
-        UI_WF_X(UI_WEDGE_CONFIRM_X_WF, THEME_RING_BORDER),
-        UI_WF_Y(UI_WEDGE_CONFIRM_Y_WF, THEME_RING_BORDER));
+    lv_obj_t *next = ui_wedge_create(s_scr, UI_WEDGE_CONFIRM);
     lv_obj_add_event_cb(next, next_cb, LV_EVENT_CLICKED, NULL);
 
     theme_refresh_all();

@@ -11,7 +11,7 @@ Low-fi **SVG** wireframes for the circular Waveshare 4″ display (`720×720`). 
 | Property | Value |
 | -------- | ----- |
 | Size | 720 × 720 px |
-| Shape | Circle (clip + 6 px accent ring) |
+| Shape | Circle (clip + 14 px accent ring) |
 | Background | `#000000` |
 
 ---
@@ -77,4 +77,10 @@ Low-fi **SVG** wireframes for the circular Waveshare 4″ display (`720×720`). 
 
 `startup_wizard_password`, `startup_wizard_timezone` (layout: title ~y=72, country dropdown ~y=200, location ~y=300, preview clock ~y=420, green Next wedge), `loading`, Time of Day modes. Theme wizard implemented in firmware (`ui_screen_startup_theme_wizard.c`).
 
-**Settings** (`ui_screen_settings.c`): hub with six vertical menu buttons; **Cancel wedge** (bottom-left) → menu. Each sub-panel uses **Cancel** / **Save** wedges (same positions as timer duration). **Networking**: submenu (Wi‑Fi Name, Wi‑Fi Password, NTP) then per-field edit screens matching the startup Wi‑Fi wizard (keyboard, field bar, **Cancel** / **Save** wedges on the edit view; list view keeps panel **Cancel** / **Save** → hub). Schedule sub-panel: three compact duration editors (wind down, sleep, rest). Sleep/Rest menu wizards reuse the shared duration editor (`ui_duration_editor.c`) with **Cancel** / **Next** wedges and optional “ends at” subtitle.
+**Screen ring:** ringed screens use a uniform **14 px** purple border via `ui_widgets_apply_screen_ring()` / `ui_widgets_create_screen()`. Splash is intentionally ringless (white fill).
+
+**Corner wedges:** `ui_wedge_create(parent, type)` always attaches to the root screen at the Wi‑Fi password LCD content positions (`startup_wizard_ssid.svg`: cancel 142×589, confirm 376×590). `parent` is only used to find that screen. No per-screen coordinates unless using `ui_wedge_button_create_at()` (unused).
+
+**On-screen keyboard:** `ui_keyboard_create()` lays out four rows at wireframe Y 340–538 on the root screen (same reference as Wi‑Fi password). Parent may be any widget on that screen.
+
+**Settings** (`ui_screen_settings.c`): hub with six vertical menu buttons; **Cancel wedge** (bottom-left) → menu. Each sub-panel uses **Cancel** / **Save** wedges. **Networking**: submenu (Wi‑Fi Name, Wi‑Fi Password, NTP) then per-field edit with keyboard + **Cancel** / **Save** wedges. Schedule sub-panel: three compact duration editors (wind down, sleep, rest). Sleep/Rest menu wizards reuse the shared duration editor (`ui_duration_editor.c`) with **Cancel** / **Next** wedges and optional “ends at” subtitle.

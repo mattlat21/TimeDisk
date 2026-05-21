@@ -41,8 +41,6 @@
 
 #define WIFI_TITLE_Y_OFFSET 28
 
-/* Corner wedges — docs/wireframes/startup_wizard_ssid.svg (UI_WF_* at placement) */
-
 static lv_obj_t *s_scr_ssid;
 static lv_obj_t *s_ssid_field_box;
 static lv_obj_t *s_pw_field_box;
@@ -66,8 +64,8 @@ static lv_obj_t *wifi_create_ssid_field(lv_obj_t *parent, lv_obj_t **label_out)
     const ui_theme_t *t = ui_theme_get();
     lv_obj_t *box = lv_obj_create(parent);
     lv_obj_set_size(box, WIFI_FIELD_W, WIFI_FIELD_H);
-    lv_obj_set_pos(box, UI_WF_X(WIFI_FIELD_X_WF, UI_RING_BORDER_WIFI),
-                   UI_WF_Y(WIFI_FIELD_Y_WF, UI_RING_BORDER_WIFI));
+    lv_obj_set_pos(box, UI_WF_X(WIFI_FIELD_X_WF, UI_RING_BORDER),
+                   UI_WF_Y(WIFI_FIELD_Y_WF, UI_RING_BORDER));
     lv_obj_set_style_bg_color(box, t->ring, 0);
     lv_obj_set_style_bg_opa(box, LV_OPA_COVER, 0);
     lv_obj_set_style_border_width(box, 0, 0);
@@ -84,35 +82,13 @@ static lv_obj_t *wifi_create_ssid_field(lv_obj_t *parent, lv_obj_t **label_out)
     return box;
 }
 
-/* Layout guides — coordinates relative to screen content area (inside 14 px ring). */
-static void wifi_add_layout_guides(lv_obj_t *scr)
-{
-    int32_t cw;
-    int32_t ch;
-    ui_layout_get_content_size(scr, &cw, &ch);
-
-    // ui_common_add_vertical_line(scr, cw / 2);
-    // ui_common_add_vertical_line(scr, cw - 20);
-    // ui_common_add_vertical_line(scr, 20);
-
-    // ui_common_add_horizontal_line(scr, ch / 2);
-    // ui_common_add_horizontal_line(scr, ch - 20);
-    // ui_common_add_horizontal_line(scr, 20);
-}
-
-/* Black circular screen + 14 px ring (thicker than ui_widgets_create_screen's 6 px). */
 static lv_obj_t *wifi_create_screen(void)
 {
-    const ui_theme_t *t = ui_theme_get();
     lv_obj_t *scr = ui_widgets_create_screen();
-    lv_obj_set_style_border_width(scr, 14, 0);
-    lv_obj_set_style_border_color(scr, t->ring, 0);
     ui_lines_reset();
-    wifi_add_layout_guides(scr);
     return scr;
 }
 
-/* Green corner: require non-empty SSID, copy into app_config (RAM), advance boot flow. */
 static void ssid_next_cb(lv_event_t *e)
 {
     (void)e;
@@ -129,7 +105,6 @@ static void ssid_next_cb(lv_event_t *e)
     }
 }
 
-/* Green corner: copy password into app_config (RAM; may be empty), go to loading. */
 static void pw_next_cb(lv_event_t *e)
 {
     (void)e;
@@ -140,7 +115,6 @@ static void pw_next_cb(lv_event_t *e)
     ui_nav_go(UI_SCREEN_LOADING);
 }
 
-/* Orange corner on password screen: return to SSID entry (does not delete chars). */
 static void pw_back_cb(lv_event_t *e)
 {
     (void)e;
@@ -168,10 +142,7 @@ static void build_ssid(lv_obj_t *screens[UI_SCREEN_COUNT])
     };
     s_ssid_kb = ui_keyboard_create(s_scr_ssid, &kb_cfg);
 
-    lv_obj_t *next = ui_wedge_create(
-        s_scr_ssid, UI_WEDGE_CONFIRM,
-        UI_WF_X(UI_WEDGE_CONFIRM_X_WF, UI_RING_BORDER_WIFI),
-        UI_WF_Y(UI_WEDGE_CONFIRM_Y_WF, UI_RING_BORDER_WIFI));
+    lv_obj_t *next = ui_wedge_create(s_scr_ssid, UI_WEDGE_CONFIRM);
     lv_obj_add_event_cb(next, ssid_next_cb, LV_EVENT_CLICKED, NULL);
 }
 
@@ -196,15 +167,9 @@ static void build_password(lv_obj_t *screens[UI_SCREEN_COUNT])
     };
     s_pw_kb = ui_keyboard_create(s_scr_pw, &kb_cfg);
 
-    lv_obj_t *back = ui_wedge_create(
-        s_scr_pw, UI_WEDGE_CANCEL,
-        UI_WF_X(UI_WEDGE_CANCEL_X_WF, UI_RING_BORDER_WIFI),
-        UI_WF_Y(UI_WEDGE_CANCEL_Y_WF, UI_RING_BORDER_WIFI));
+    lv_obj_t *back = ui_wedge_create(s_scr_pw, UI_WEDGE_CANCEL);
     lv_obj_add_event_cb(back, pw_back_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_t *next = ui_wedge_create(
-        s_scr_pw, UI_WEDGE_CONFIRM,
-        UI_WF_X(UI_WEDGE_CONFIRM_X_WF, UI_RING_BORDER_WIFI),
-        UI_WF_Y(UI_WEDGE_CONFIRM_Y_WF, UI_RING_BORDER_WIFI));
+    lv_obj_t *next = ui_wedge_create(s_scr_pw, UI_WEDGE_CONFIRM);
     lv_obj_add_event_cb(next, pw_next_cb, LV_EVENT_CLICKED, NULL);
 }
 
@@ -228,7 +193,7 @@ void ui_screen_startup_wifi_wizard_apply_theme(void)
 
     for (size_t i = 0; i < sizeof(scrs) / sizeof(scrs[0]); i++) {
         if (scrs[i] != NULL) {
-            lv_obj_set_style_border_color(scrs[i], t->ring, 0);
+            ui_widgets_apply_screen_ring(scrs[i]);
         }
     }
     for (size_t i = 0; i < sizeof(boxes) / sizeof(boxes[0]); i++) {

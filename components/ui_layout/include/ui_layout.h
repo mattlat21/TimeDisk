@@ -19,9 +19,13 @@
 #define UI_SCREEN_CX (UI_SCREEN_W / 2)
 #define UI_SCREEN_CY (UI_SCREEN_H / 2)
 
-/** Ring border widths: default chrome vs Wi-Fi wizard (thicker ring). */
-#define UI_RING_BORDER_DEFAULT 6
-#define UI_RING_BORDER_WIFI    14
+/** Standard purple edge ring on ringed screens (startup_wizard_ssid.svg / Wi-Fi password). */
+#define UI_RING_BORDER 14
+
+/** @deprecated Use UI_RING_BORDER. */
+#define UI_RING_BORDER_DEFAULT UI_RING_BORDER
+/** @deprecated Use UI_RING_BORDER. */
+#define UI_RING_BORDER_WIFI UI_RING_BORDER
 
 #define UI_CONTENT_W(border)  (UI_SCREEN_W - 2 * (border))
 #define UI_CONTENT_H(border)  (UI_SCREEN_H - 2 * (border))
@@ -37,3 +41,16 @@ int ui_layout_wf_to_content_x(lv_obj_t *screen, int x_wf);
 int ui_layout_wf_to_content_y(lv_obj_t *screen, int y_wf);
 void ui_layout_get_content_size(lv_obj_t *parent, int32_t *w_out, int32_t *h_out);
 void ui_layout_get_content_center(lv_obj_t *parent, int32_t *cx_out, int32_t *cy_out);
+
+/** Walk parents to the top-level loadable screen (parent == NULL). */
+lv_obj_t *ui_layout_find_screen(lv_obj_t *obj);
+
+/**
+ * Wireframe LCD (x_wf, y_wf) → position in the root screen content area (same on every screen).
+ */
+void ui_layout_screen_pos_from_wf(lv_obj_t *screen, int x_wf, int y_wf, int *x_out, int *y_out);
+
+/**
+ * Wireframe LCD → position relative to parent (legacy; prefer screen-absolute wedges).
+ */
+void ui_layout_parent_pos_from_wf(lv_obj_t *parent, int x_wf, int y_wf, int *x_out, int *y_out);
