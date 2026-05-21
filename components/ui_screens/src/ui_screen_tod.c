@@ -74,8 +74,13 @@ static lv_obj_t *create_menu_btn(lv_obj_t *parent)
 
 static lv_obj_t *create_panel_root(lv_obj_t *parent)
 {
+    int32_t cw = 0;
+    int32_t ch = 0;
+
+    ui_layout_get_content_size(parent, &cw, &ch);
+
     lv_obj_t *root = lv_obj_create(parent);
-    lv_obj_set_size(root, UI_DISP, UI_DISP);
+    lv_obj_set_size(root, cw, ch);
     lv_obj_set_pos(root, 0, 0);
     lv_obj_set_style_bg_opa(root, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(root, 0, 0);
@@ -146,7 +151,7 @@ static void build_wake_panel(lv_obj_t *scr, tod_mode_panel_t *p, bool dim)
 
     p->lbl_time = lv_label_create(p->root);
     lv_obj_set_style_text_color(p->lbl_time, t->white, 0);
-    lv_obj_set_style_text_font(p->lbl_time, &lv_font_montserrat_26, 0);
+    lv_obj_set_style_text_font(p->lbl_time, &lv_font_montserrat_48, 0);
     lv_obj_align(p->lbl_time, LV_ALIGN_CENTER, 0, -30);
 
     p->menu_btn = create_menu_btn(p->root);
@@ -167,7 +172,7 @@ static void build_wind_down_panel(lv_obj_t *scr, tod_mode_panel_t *p, bool dim)
 
     p->lbl_time = lv_label_create(p->root);
     lv_obj_set_style_text_color(p->lbl_time, t->white, 0);
-    lv_obj_set_style_text_font(p->lbl_time, &lv_font_montserrat_26, 0);
+    lv_obj_set_style_text_font(p->lbl_time, &lv_font_montserrat_48, 0);
     lv_obj_align(p->lbl_time, LV_ALIGN_CENTER, 0, -20);
 
     p->lbl_remaining = lv_label_create(p->root);
@@ -203,7 +208,7 @@ static void build_sleep_style_panel(lv_obj_t *scr, tod_mode_panel_t *p, bool dim
 
     p->lbl_time = lv_label_create(box);
     lv_obj_set_style_text_color(p->lbl_time, t->white, 0);
-    lv_obj_set_style_text_font(p->lbl_time, &lv_font_montserrat_26, 0);
+    lv_obj_set_style_text_font(p->lbl_time, &lv_font_montserrat_48, 0);
     lv_obj_align(p->lbl_time, LV_ALIGN_CENTER, 0, -8);
 
     p->lbl_remaining = lv_label_create(box);

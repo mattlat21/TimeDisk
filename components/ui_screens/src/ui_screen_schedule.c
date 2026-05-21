@@ -9,7 +9,6 @@
 
 #define SCHEDULE_EDITOR_BOX_W  400
 #define SCHEDULE_EDITOR_BOX_H  100
-#define SCHEDULE_EDITOR_BOX_X  160
 #define SCHEDULE_EDITOR_BOX_Y  220
 
 typedef struct {
@@ -144,7 +143,6 @@ static void build_wizard_screen(lv_obj_t *screens[UI_SCREEN_COUNT], ui_screen_id
 
     ss->bundle.cfg = (ui_duration_editor_cfg_t){
         .value_sec = &s_wizard_vals[idx],
-        .box_x = SCHEDULE_EDITOR_BOX_X,
         .box_y = SCHEDULE_EDITOR_BOX_Y,
         .box_w = SCHEDULE_EDITOR_BOX_W,
         .box_h = SCHEDULE_EDITOR_BOX_H,

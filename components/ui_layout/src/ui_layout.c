@@ -92,3 +92,21 @@ void ui_layout_parent_pos_from_wf(lv_obj_t *parent, int x_wf, int y_wf, int *x_o
     *x_out = (screen_content.x1 + sx) - parent_content.x1;
     *y_out = (screen_content.y1 + sy) - parent_content.y1;
 }
+
+int ui_layout_parent_center_x_wf(lv_obj_t *parent, int32_t w)
+{
+    int x = 0;
+    int y = 0;
+    const int x_wf = (int)UI_SCREEN_CX - (int)(w / 2);
+    ui_layout_parent_pos_from_wf(parent, x_wf, 0, &x, &y);
+    return x;
+}
+
+int ui_layout_parent_center_y_wf(lv_obj_t *parent, int32_t h)
+{
+    int x = 0;
+    int y = 0;
+    const int y_wf = (int)UI_SCREEN_CY - (int)(h / 2);
+    ui_layout_parent_pos_from_wf(parent, 0, y_wf, &x, &y);
+    return y;
+}

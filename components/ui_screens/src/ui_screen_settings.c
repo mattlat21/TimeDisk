@@ -18,10 +18,12 @@
 #include <stdio.h>
 #include <string.h>
 
-#define HUB_BTN_W           560
-#define HUB_BTN_H           80
-#define HUB_BTN_GAP         12
-#define HUB_BTN_RADIUS      24
+#define HUB_BTN_W           248
+#define HUB_BTN_H           52
+#define HUB_BTN_GAP_X       14
+#define HUB_BTN_GAP_Y       10
+#define HUB_BTN_COLS        2
+#define HUB_BTN_RADIUS      16
 
 typedef enum {
     PANEL_HUB = 0,
@@ -46,13 +48,20 @@ typedef enum {
 } net_field_t;
 
 /* --- Colours (theme swatches) --- */
-#define THEME_SWATCH_SIZE     56
-#define THEME_SWATCH_GAP      12
-#define THEME_SWATCH_COUNT    8
-#define THEME_SWATCH_BLOCK_CY 360
-#define THEME_ROW_SPACING     80
-#define THEME_ROW_PRIMARY_Y   (THEME_SWATCH_BLOCK_CY - THEME_ROW_SPACING / 2 - THEME_SWATCH_SIZE / 2)
-#define THEME_ROW_SECONDARY_Y (THEME_SWATCH_BLOCK_CY + THEME_ROW_SPACING / 2 - THEME_SWATCH_SIZE / 2)
+#define THEME_SWATCH_SIZE          56
+#define THEME_SWATCH_GAP           12
+#define THEME_SWATCH_COUNT         8
+#define THEME_SWATCH_BLOCK_CY_WF   360
+#define THEME_ROW_SPACING          80
+#define THEME_TITLE_GAP_ABOVE      12
+#define THEME_TITLE_LINE_H         32
+#define THEME_LABEL_UNDER_GAP      8
+#define THEME_ROW_W                  (THEME_SWATCH_COUNT * THEME_SWATCH_SIZE \
+                                      + (THEME_SWATCH_COUNT - 1) * THEME_SWATCH_GAP)
+#define THEME_ROW_PRIMARY_Y_WF     (THEME_SWATCH_BLOCK_CY_WF - THEME_ROW_SPACING / 2 - THEME_SWATCH_SIZE / 2)
+#define THEME_ROW_SECONDARY_Y_WF   (THEME_SWATCH_BLOCK_CY_WF + THEME_ROW_SPACING / 2 - THEME_SWATCH_SIZE / 2)
+#define THEME_PRIMARY_TITLE_Y_WF   (THEME_ROW_PRIMARY_Y_WF - THEME_TITLE_GAP_ABOVE - THEME_TITLE_LINE_H)
+#define THEME_SECONDARY_LABEL_Y_WF (THEME_ROW_SECONDARY_Y_WF + THEME_SWATCH_SIZE + THEME_LABEL_UNDER_GAP)
 
 static const uint32_t s_palette[THEME_SWATCH_COUNT] = {
     0x7A24BC, 0x6BCA24, 0x5A189A, 0x1D4ED8,
@@ -67,8 +76,8 @@ typedef enum {
 /* --- Timezone --- */
 #define TZ_DROPDOWN_W       480
 #define TZ_DROPDOWN_H       52
-#define TZ_COUNTRY_Y        140
-#define TZ_LOCATION_Y       210
+#define TZ_COUNTRY_Y_WF     140
+#define TZ_LOCATION_Y_WF    210
 #define TZ_OPTIONS_BUF_LEN  512
 
 /* --- Network (list + per-field edit, wizard-style keyboard) --- */
@@ -77,11 +86,58 @@ typedef enum {
 #define NET_FIELD_W         563
 #define NET_FIELD_H         78
 #define NET_FIELD_RADIUS    20
-#define NET_EDIT_TITLE_Y    28
+#define NET_EDIT_TITLE_Y_WF  72
+#define NET_LIST_Y0_WF       180
 #define NET_BACKUP_LEN        APP_NTP_SERVER_MAX
+
+#define SCHED_ROW_Y0_WF      120
+#define SCHED_ROW_STEP_WF    140
+
+#define TIMEOUT_LIST_Y0_WF   100
+#define TIMEOUT_LIST_STEP_WF 76
+
+#define TZ_PREVIEW_Y_WF      380
+
+#define AA_CHK_W             140
+#define AA_CHK_PIN_Y_WF      90
+#define AA_CHK_MATHS_Y_WF    130
+#define AA_PIN_BAR_W         280
+#define AA_PIN_BAR_H         48
+#define AA_PIN_BAR_Y_WF      180
+#define AA_KEYPAD_Y_WF       300
+#define AA_BACK_X_WF         36
+#define AA_BACK_Y_WF         400
+#define TIMEOUT_BACK_X_WF    36
+#define TIMEOUT_BACK_Y_WF    330
 
 static lv_obj_t *s_scr;
 static lv_obj_t *s_panels[PANEL_COUNT];
+
+static int settings_wf_y(lv_obj_t *parent, int y_wf)
+{
+    int x = 0;
+    int y = 0;
+    ui_layout_parent_pos_from_wf(parent, 0, y_wf, &x, &y);
+    return y;
+}
+
+static int settings_wf_x(lv_obj_t *parent, int x_wf)
+{
+    int x = 0;
+    int y = 0;
+    ui_layout_parent_pos_from_wf(parent, x_wf, 0, &x, &y);
+    return x;
+}
+
+static void settings_fill_parent(lv_obj_t *parent, lv_obj_t *child)
+{
+    int32_t cw = 0;
+    int32_t ch = 0;
+
+    ui_layout_get_content_size(parent, &cw, &ch);
+    lv_obj_set_size(child, cw, ch);
+    lv_obj_set_pos(child, 0, 0);
+}
 static lv_obj_t *s_hub_cancel_wedge;
 static lv_obj_t *s_panel_cancel_wedge[PANEL_COUNT];
 static lv_obj_t *s_panel_save_wedge[PANEL_COUNT];
@@ -90,6 +146,8 @@ static app_config_t s_draft;
 
 /* Colours */
 static lv_obj_t *s_swatch_btns[2][THEME_SWATCH_COUNT];
+static lv_obj_t *s_lbl_primary_title;
+static lv_obj_t *s_lbl_secondary_title;
 static theme_slot_t s_active_slot = THEME_SLOT_PRIMARY;
 static uint32_t s_primary_rgb;
 static uint32_t s_secondary_rgb;
@@ -197,7 +255,7 @@ static lv_obj_t *hub_create_btn(lv_obj_t *parent, const char *text, int x, int y
     lv_obj_t *lbl = lv_label_create(btn);
     lv_label_set_text(lbl, text);
     lv_obj_set_style_text_color(lbl, t->white, 0);
-    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_22, 0);
+    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_18, 0);
     lv_obj_center(lbl);
 
     lv_obj_add_event_cb(btn, hub_btn_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)target);
@@ -267,6 +325,7 @@ static void settings_panel_layout(lv_obj_t *panel)
 
     ui_layout_get_content_size(s_scr, &cw, &ch);
     lv_obj_set_size(panel, cw, ch);
+    lv_obj_set_style_pad_all(panel, 0, 0);
     lv_obj_align(panel, LV_ALIGN_TOP_LEFT, 0, 0);
 }
 
@@ -403,10 +462,22 @@ static int palette_index_for_rgb(uint32_t rgb)
     return -1;
 }
 
+static void colours_refresh_slot_labels(void)
+{
+    if (s_lbl_primary_title != NULL) {
+        lv_obj_set_style_text_color(s_lbl_primary_title, lv_color_hex(s_primary_rgb), 0);
+    }
+    if (s_lbl_secondary_title != NULL) {
+        lv_obj_set_style_text_color(s_lbl_secondary_title, lv_color_hex(s_secondary_rgb), 0);
+    }
+}
+
 static void colours_refresh_swatch_highlights(void)
 {
     int pri_idx = palette_index_for_rgb(s_primary_rgb);
     int sec_idx = palette_index_for_rgb(s_secondary_rgb);
+
+    colours_refresh_slot_labels();
 
     for (int i = 0; i < THEME_SWATCH_COUNT; i++) {
         if (s_swatch_btns[THEME_SLOT_PRIMARY][i] != NULL) {
@@ -441,22 +512,27 @@ static void colours_swatch_cb(lv_event_t *e)
     ui_nav_reset_idle_timer();
 }
 
-static void colours_build_swatch_row(lv_obj_t *parent, theme_slot_t slot, int row_y)
+static void colours_build_swatch_row(lv_obj_t *parent, theme_slot_t slot, int row_y_wf)
 {
-    const int row_w = THEME_SWATCH_COUNT * THEME_SWATCH_SIZE
-                      + (THEME_SWATCH_COUNT - 1) * THEME_SWATCH_GAP;
-    int x = (UI_DISP - row_w) / 2;
+    lv_obj_t *row = lv_obj_create(parent);
+    int x = 0;
+
+    lv_obj_set_size(row, THEME_ROW_W, THEME_SWATCH_SIZE);
+    lv_obj_set_style_bg_opa(row, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(row, 0, 0);
+    lv_obj_set_style_pad_all(row, 0, 0);
+    lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_align(row, LV_ALIGN_TOP_MID, 0, settings_wf_y(parent, row_y_wf));
 
     for (int i = 0; i < THEME_SWATCH_COUNT; i++) {
-        lv_obj_t *btn = lv_button_create(parent);
+        lv_obj_t *btn = lv_button_create(row);
         lv_obj_set_size(btn, THEME_SWATCH_SIZE, THEME_SWATCH_SIZE);
-        lv_obj_set_pos(btn, x, row_y);
+        lv_obj_set_pos(btn, x, 0);
         lv_obj_set_style_radius(btn, LV_RADIUS_CIRCLE, 0);
         lv_obj_set_style_bg_color(btn, lv_color_hex(s_palette[i]), 0);
         lv_obj_set_style_border_width(btn, 0, 0);
         lv_obj_set_user_data(btn, (void *)(uintptr_t)s_palette[i]);
-        lv_obj_add_event_cb(btn, colours_swatch_cb, LV_EVENT_CLICKED,
-                            (void *)(uintptr_t)slot);
+        lv_obj_add_event_cb(btn, colours_swatch_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)slot);
         s_swatch_btns[slot][i] = btn;
         x += THEME_SWATCH_SIZE + THEME_SWATCH_GAP;
     }
@@ -500,10 +576,28 @@ static void colours_save_cb(lv_event_t *e)
 
 static void build_colours_panel(void)
 {
+    lv_obj_t *panel;
+
     s_panels[PANEL_COLOURS] = create_sub_panel("Colours");
-    colours_build_swatch_row(s_panels[PANEL_COLOURS], THEME_SLOT_PRIMARY, THEME_ROW_PRIMARY_Y);
-    colours_build_swatch_row(s_panels[PANEL_COLOURS], THEME_SLOT_SECONDARY, THEME_ROW_SECONDARY_Y);
-    attach_panel_wedges(s_panels[PANEL_COLOURS], PANEL_COLOURS, colours_save_cb);
+    panel = s_panels[PANEL_COLOURS];
+
+    s_lbl_primary_title = lv_label_create(panel);
+    lv_label_set_text(s_lbl_primary_title, "Primary");
+    lv_obj_set_style_text_font(s_lbl_primary_title, &lv_font_montserrat_20, 0);
+    lv_obj_align(s_lbl_primary_title, LV_ALIGN_TOP_MID, 0,
+                 settings_wf_y(panel, THEME_PRIMARY_TITLE_Y_WF));
+
+    colours_build_swatch_row(panel, THEME_SLOT_PRIMARY, THEME_ROW_PRIMARY_Y_WF);
+    colours_build_swatch_row(panel, THEME_SLOT_SECONDARY, THEME_ROW_SECONDARY_Y_WF);
+
+    s_lbl_secondary_title = lv_label_create(panel);
+    lv_label_set_text(s_lbl_secondary_title, "Secondary");
+    lv_obj_set_style_text_font(s_lbl_secondary_title, &lv_font_montserrat_20, 0);
+    lv_obj_align(s_lbl_secondary_title, LV_ALIGN_TOP_MID, 0,
+                 settings_wf_y(panel, THEME_SECONDARY_LABEL_Y_WF));
+
+    colours_refresh_slot_labels();
+    attach_panel_wedges(panel, PANEL_COLOURS, colours_save_cb);
 }
 
 /* ---------- Network ---------- */
@@ -740,10 +834,14 @@ static void network_save_cb(lv_event_t *e)
 static lv_obj_t *net_create_edit_field(lv_obj_t *parent, lv_obj_t **lbl_out)
 {
     const ui_theme_t *t = ui_theme_get();
+    int fx = 0;
+    int fy = 0;
+
+    ui_layout_parent_pos_from_wf(parent, NET_FIELD_X_WF, NET_FIELD_Y_WF, &fx, &fy);
+
     lv_obj_t *box = lv_obj_create(parent);
     lv_obj_set_size(box, NET_FIELD_W, NET_FIELD_H);
-    lv_obj_set_pos(box, UI_WF_X(NET_FIELD_X_WF, UI_RING_BORDER),
-                   UI_WF_Y(NET_FIELD_Y_WF, UI_RING_BORDER));
+    lv_obj_set_pos(box, fx, fy);
     lv_obj_set_style_bg_color(box, t->ring, 0);
     lv_obj_set_style_bg_opa(box, LV_OPA_COVER, 0);
     lv_obj_set_style_border_width(box, 0, 0);
@@ -774,16 +872,16 @@ static void build_network_panel(void)
     s_net_panel_title = ui_widgets_create_title(s_panels[PANEL_NETWORK], "Networking");
 
     s_net_list = lv_obj_create(s_panels[PANEL_NETWORK]);
-    lv_obj_set_size(s_net_list, UI_DISP, UI_DISP);
     lv_obj_set_style_bg_opa(s_net_list, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(s_net_list, 0, 0);
     lv_obj_remove_flag(s_net_list, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_center(s_net_list);
+    settings_fill_parent(s_panels[PANEL_NETWORK], s_net_list);
 
     for (int i = 0; i < 3; i++) {
         lv_obj_t *btn = lv_button_create(s_net_list);
         lv_obj_set_size(btn, HUB_BTN_W, HUB_BTN_H);
-        lv_obj_set_pos(btn, (UI_DISP - HUB_BTN_W) / 2, 180 + i * (HUB_BTN_H + HUB_BTN_GAP));
+        lv_obj_set_pos(btn, ui_layout_parent_center_x_wf(s_net_list, HUB_BTN_W),
+                       settings_wf_y(s_net_list, NET_LIST_Y0_WF + i * (HUB_BTN_H + HUB_BTN_GAP_Y)));
         lv_obj_set_style_radius(btn, HUB_BTN_RADIUS, 0);
         lv_obj_set_style_bg_color(btn, t->menu_petal, 0);
         lv_obj_set_style_border_width(btn, 0, 0);
@@ -791,7 +889,7 @@ static void build_network_panel(void)
         lv_obj_t *lbl = lv_label_create(btn);
         lv_label_set_text(lbl, row_labels[i]);
         lv_obj_set_style_text_color(lbl, t->white, 0);
-        lv_obj_set_style_text_font(lbl, &lv_font_montserrat_22, 0);
+        lv_obj_set_style_text_font(lbl, &lv_font_montserrat_18, 0);
         lv_obj_center(lbl);
         lv_obj_add_event_cb(btn, net_row_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)i);
     }
@@ -806,15 +904,14 @@ static void build_network_panel(void)
     lv_obj_add_flag(s_net_panel_save, LV_OBJ_FLAG_HIDDEN);
 
     s_net_edit = lv_obj_create(s_panels[PANEL_NETWORK]);
-    lv_obj_set_size(s_net_edit, UI_DISP, UI_DISP);
     lv_obj_set_style_bg_opa(s_net_edit, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(s_net_edit, 0, 0);
     lv_obj_remove_flag(s_net_edit, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_center(s_net_edit);
+    settings_fill_parent(s_panels[PANEL_NETWORK], s_net_edit);
     lv_obj_add_flag(s_net_edit, LV_OBJ_FLAG_HIDDEN);
 
     s_net_edit_title = ui_widgets_create_title(s_net_edit, "Wi-Fi Name");
-    lv_obj_align(s_net_edit_title, LV_ALIGN_TOP_MID, 0, NET_EDIT_TITLE_Y);
+    lv_obj_align(s_net_edit_title, LV_ALIGN_TOP_MID, 0, settings_wf_y(s_net_edit, NET_EDIT_TITLE_Y_WF));
 
     s_net_edit_field_box = net_create_edit_field(s_net_edit, &s_net_edit_lbl);
 
@@ -904,12 +1001,12 @@ static void tz_location_changed_cb(lv_event_t *e)
     ui_nav_reset_idle_timer();
 }
 
-static lv_obj_t *tz_create_dropdown(lv_obj_t *parent, int y)
+static lv_obj_t *tz_create_dropdown(lv_obj_t *parent, int y_wf)
 {
     const ui_theme_t *th = ui_theme_get();
     lv_obj_t *dd = lv_dropdown_create(parent);
     lv_obj_set_size(dd, TZ_DROPDOWN_W, TZ_DROPDOWN_H);
-    lv_obj_set_pos(dd, (UI_DISP - TZ_DROPDOWN_W) / 2, y);
+    lv_obj_set_pos(dd, ui_layout_parent_center_x_wf(parent, TZ_DROPDOWN_W), settings_wf_y(parent, y_wf));
     lv_obj_set_style_bg_color(dd, th->ring, 0);
     lv_obj_set_style_text_color(dd, th->white, 0);
     lv_obj_set_style_border_width(dd, 0, 0);
@@ -945,8 +1042,8 @@ static void build_timezone_panel(void)
 
     s_panels[PANEL_TIMEZONE] = create_sub_panel("Timezone");
 
-    s_dd_country = tz_create_dropdown(s_panels[PANEL_TIMEZONE], TZ_COUNTRY_Y);
-    s_dd_location = tz_create_dropdown(s_panels[PANEL_TIMEZONE], TZ_LOCATION_Y);
+    s_dd_country = tz_create_dropdown(s_panels[PANEL_TIMEZONE], TZ_COUNTRY_Y_WF);
+    s_dd_location = tz_create_dropdown(s_panels[PANEL_TIMEZONE], TZ_LOCATION_Y_WF);
 
     if (timezone_catalog_format_country_options(s_country_opts, sizeof(s_country_opts)) == 0) {
         s_country_opts[0] = '\0';
@@ -959,7 +1056,7 @@ static void build_timezone_panel(void)
     lv_label_set_text(s_lbl_tz_preview, "--:--");
     lv_obj_set_style_text_color(s_lbl_tz_preview, th->white, 0);
     lv_obj_set_style_text_font(s_lbl_tz_preview, &lv_font_montserrat_48, 0);
-    lv_obj_align(s_lbl_tz_preview, LV_ALIGN_CENTER, 0, 60);
+    lv_obj_align(s_lbl_tz_preview, LV_ALIGN_TOP_MID, 0, settings_wf_y(s_panels[PANEL_TIMEZONE], TZ_PREVIEW_Y_WF));
 
     attach_panel_wedges(s_panels[PANEL_TIMEZONE], PANEL_TIMEZONE, timezone_save_cb);
 }
@@ -998,22 +1095,21 @@ static void schedule_save_cb(lv_event_t *e)
 static void build_schedule_panel(void)
 {
     const ui_theme_t *t = ui_theme_get();
-    static const int row_y[3] = {120, 260, 400};
     static const int box_h = 72;
 
     s_panels[PANEL_SCHEDULE] = create_sub_panel("Schedule");
 
     for (int i = 0; i < 3; i++) {
+        const int row_y_wf = SCHED_ROW_Y0_WF + i * SCHED_ROW_STEP_WF;
         lv_obj_t *lbl = lv_label_create(s_panels[PANEL_SCHEDULE]);
         lv_label_set_text(lbl, s_sched_labels[i]);
         lv_obj_set_style_text_color(lbl, t->white, 0);
         lv_obj_set_style_text_font(lbl, &lv_font_montserrat_18, 0);
-        lv_obj_set_pos(lbl, 160, row_y[i] - 24);
+        lv_obj_align(lbl, LV_ALIGN_TOP_MID, 0, settings_wf_y(s_panels[PANEL_SCHEDULE], row_y_wf - 24));
 
         s_sched_bundles[i].cfg = (ui_duration_editor_cfg_t){
             .value_sec = &s_sched_vals[i],
-            .box_x = 160,
-            .box_y = row_y[i],
+            .box_y = row_y_wf,
             .box_w = 400,
             .box_h = box_h,
             .show_end_time = false,
@@ -1108,16 +1204,16 @@ static void build_timeouts_panel(void)
     s_panels[PANEL_TIMEOUTS] = create_sub_panel("Timeouts");
 
     s_timeout_list = lv_obj_create(s_panels[PANEL_TIMEOUTS]);
-    lv_obj_set_size(s_timeout_list, UI_DISP, UI_DISP);
     lv_obj_set_style_bg_opa(s_timeout_list, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(s_timeout_list, 0, 0);
     lv_obj_remove_flag(s_timeout_list, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_center(s_timeout_list);
+    settings_fill_parent(s_panels[PANEL_TIMEOUTS], s_timeout_list);
 
     for (int i = 0; i < 5; i++) {
         lv_obj_t *btn = lv_button_create(s_timeout_list);
         lv_obj_set_size(btn, HUB_BTN_W, 64);
-        lv_obj_set_pos(btn, (UI_DISP - HUB_BTN_W) / 2, 100 + i * 76);
+        lv_obj_set_pos(btn, ui_layout_parent_center_x_wf(s_timeout_list, HUB_BTN_W),
+                       settings_wf_y(s_timeout_list, TIMEOUT_LIST_Y0_WF + i * TIMEOUT_LIST_STEP_WF));
         lv_obj_set_style_radius(btn, 16, 0);
         lv_obj_set_style_bg_color(btn, t->menu_petal, 0);
         lv_obj_set_style_border_width(btn, 0, 0);
@@ -1131,21 +1227,23 @@ static void build_timeouts_panel(void)
     }
 
     s_timeout_edit = lv_obj_create(s_panels[PANEL_TIMEOUTS]);
-    lv_obj_set_size(s_timeout_edit, UI_DISP, UI_DISP);
     lv_obj_set_style_bg_opa(s_timeout_edit, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(s_timeout_edit, 0, 0);
     lv_obj_remove_flag(s_timeout_edit, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_center(s_timeout_edit);
+    settings_fill_parent(s_panels[PANEL_TIMEOUTS], s_timeout_edit);
     lv_obj_add_flag(s_timeout_edit, LV_OBJ_FLAG_HIDDEN);
 
     s_timeout_bundle.cfg = (ui_duration_editor_cfg_t){
         .value_sec = &s_timeout_edit_val,
+        .box_y = UI_DURATION_EDITOR_BOX_Y,
         .show_end_time = false,
         .on_change = settings_idle_cb,
     };
     ui_duration_editor_create(s_timeout_edit, &s_timeout_bundle);
 
-    lv_obj_t *edit_back = ui_widgets_create_side_btn(s_timeout_edit, true, 36, 330, NULL);
+    lv_obj_t *edit_back = ui_widgets_create_side_btn(s_timeout_edit, true,
+                                                     settings_wf_x(s_timeout_edit, TIMEOUT_BACK_X_WF),
+                                                     settings_wf_y(s_timeout_edit, TIMEOUT_BACK_Y_WF), NULL);
     lv_obj_add_event_cb(edit_back, timeout_edit_back_cb, LV_EVENT_CLICKED, NULL);
 
     attach_panel_wedges(s_panels[PANEL_TIMEOUTS], PANEL_TIMEOUTS, timeouts_save_cb);
@@ -1245,27 +1343,33 @@ static void build_aa_panel(void)
 
     s_panels[PANEL_AA] = create_sub_panel("Adult Authentication");
 
+    const int aa_chk_x = ui_layout_parent_center_x_wf(s_panels[PANEL_AA], AA_CHK_W);
+
     s_chk_pin = lv_checkbox_create(s_panels[PANEL_AA]);
     lv_checkbox_set_text(s_chk_pin, "PIN");
-    lv_obj_set_pos(s_chk_pin, 120, 90);
+    lv_obj_set_pos(s_chk_pin, aa_chk_x, settings_wf_y(s_panels[PANEL_AA], AA_CHK_PIN_Y_WF));
     lv_obj_set_style_text_color(s_chk_pin, t->white, 0);
     lv_obj_add_event_cb(s_chk_pin, aa_method_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
 
     s_chk_maths = lv_checkbox_create(s_panels[PANEL_AA]);
     lv_checkbox_set_text(s_chk_maths, "Maths");
-    lv_obj_set_pos(s_chk_maths, 120, 130);
+    lv_obj_set_pos(s_chk_maths, aa_chk_x, settings_wf_y(s_panels[PANEL_AA], AA_CHK_MATHS_Y_WF));
     lv_obj_set_style_text_color(s_chk_maths, t->white, 0);
     lv_obj_add_event_cb(s_chk_maths, aa_method_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
 
-    lv_obj_t *pin_bar = ui_widgets_create_purple_box(s_panels[PANEL_AA], 280, 48, 220, 180, false);
+    lv_obj_t *pin_bar = ui_widgets_create_purple_box(s_panels[PANEL_AA], AA_PIN_BAR_W, AA_PIN_BAR_H,
+                                                     ui_layout_parent_center_x_wf(s_panels[PANEL_AA], AA_PIN_BAR_W),
+                                                     settings_wf_y(s_panels[PANEL_AA], AA_PIN_BAR_Y_WF), false);
     s_lbl_aa_pin = lv_label_create(pin_bar);
     lv_label_set_text(s_lbl_aa_pin, "");
     lv_obj_set_style_text_color(s_lbl_aa_pin, t->white, 0);
     lv_obj_set_style_text_font(s_lbl_aa_pin, &lv_font_montserrat_22, 0);
     lv_obj_center(s_lbl_aa_pin);
 
-    ui_widgets_add_numeric_keypad(s_panels[PANEL_AA], 300, aa_pin_digit_cb, NULL);
-    lv_obj_t *back = ui_widgets_create_side_btn(s_panels[PANEL_AA], true, 36, 400, NULL);
+    ui_widgets_add_numeric_keypad(s_panels[PANEL_AA], AA_KEYPAD_Y_WF, aa_pin_digit_cb, NULL);
+    lv_obj_t *back = ui_widgets_create_side_btn(s_panels[PANEL_AA], true,
+                                                settings_wf_x(s_panels[PANEL_AA], AA_BACK_X_WF),
+                                                settings_wf_y(s_panels[PANEL_AA], AA_BACK_Y_WF), NULL);
     lv_obj_add_event_cb(back, aa_pin_back_cb, LV_EVENT_CLICKED, NULL);
 
     attach_panel_wedges(s_panels[PANEL_AA], PANEL_AA, aa_save_cb);
@@ -1293,9 +1397,12 @@ static void build_hub_panel(void)
     ui_widgets_create_title(s_panels[PANEL_HUB], "Settings");
 
     ui_layout_get_content_size(s_scr, &cw, &ch);
-    const int total_h = 6 * HUB_BTN_H + 5 * HUB_BTN_GAP;
-    const int y0 = (int)((ch - total_h) / 2) - 20;
-    const int x0 = (int)((cw - HUB_BTN_W) / 2);
+    (void)cw;
+    const int grid_w = HUB_BTN_COLS * HUB_BTN_W + (HUB_BTN_COLS - 1) * HUB_BTN_GAP_X;
+    const int rows = 6 / HUB_BTN_COLS;
+    const int total_h = rows * HUB_BTN_H + (rows - 1) * HUB_BTN_GAP_Y;
+    const int y0 = (int)((ch - total_h) / 2) - 16;
+    const int x0 = ui_layout_parent_center_x_wf(s_panels[PANEL_HUB], grid_w);
 
     static const char *labels[] = {
         "Colours",
@@ -1303,12 +1410,15 @@ static void build_hub_panel(void)
         "Timezone",
         "Schedule",
         "Timeouts",
-        "Adult Authentication",
+        "Adult Auth",
     };
 
     for (int i = 0; i < 6; i++) {
-        hub_create_btn(s_panels[PANEL_HUB], labels[i], x0,
-                       y0 + i * (HUB_BTN_H + HUB_BTN_GAP),
+        const int col = i % HUB_BTN_COLS;
+        const int row = i / HUB_BTN_COLS;
+        hub_create_btn(s_panels[PANEL_HUB], labels[i],
+                       x0 + col * (HUB_BTN_W + HUB_BTN_GAP_X),
+                       y0 + row * (HUB_BTN_H + HUB_BTN_GAP_Y),
                        (settings_panel_t)(PANEL_COLOURS + i));
     }
 

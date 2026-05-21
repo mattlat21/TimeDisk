@@ -120,14 +120,18 @@ lv_obj_t *ui_widgets_create_keypad_btn(lv_obj_t *parent, const char *txt, int x,
     return btn;
 }
 
-void ui_widgets_add_numeric_keypad(lv_obj_t *parent, int start_y, lv_event_cb_t digit_cb, void *user_ctx)
+void ui_widgets_add_numeric_keypad(lv_obj_t *parent, int start_y_wf, lv_event_cb_t digit_cb, void *user_ctx)
 {
     (void)user_ctx;
     const int btn = 72;
     const int gap = 14;
     const int cols = 3;
     const int grid_w = cols * btn + (cols - 1) * gap;
-    const int start_x = (UI_DISP - grid_w) / 2;
+    const int start_x = ui_layout_parent_center_x_wf(parent, grid_w);
+    int unused_x = 0;
+    int start_y = 0;
+
+    ui_layout_parent_pos_from_wf(parent, 0, start_y_wf, &unused_x, &start_y);
 
     static const char *keys[10] = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"};
     for (int i = 0; i < 9; i++) {

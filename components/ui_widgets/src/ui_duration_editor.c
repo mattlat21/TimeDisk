@@ -3,6 +3,7 @@
  */
 
 #include "ui_duration_editor.h"
+#include "ui_layout.h"
 #include "ui_format.h"
 #include "ui_theme.h"
 #include "ui_widgets.h"
@@ -115,11 +116,18 @@ void ui_duration_editor_create(lv_obj_t *parent, ui_duration_editor_bundle_t *bu
     if (cfg->box_h <= 0) {
         cfg->box_h = UI_DURATION_EDITOR_BOX_H;
     }
-    if (cfg->box_x < 0) {
-        cfg->box_x = UI_DURATION_EDITOR_BOX_X;
-    }
     if (cfg->box_y < 0) {
         cfg->box_y = UI_DURATION_EDITOR_BOX_Y;
+    }
+
+    {
+        int box_x_wf = (int)UI_SCREEN_CX - cfg->box_w / 2;
+        int box_y_wf = cfg->box_y;
+        int bx = 0;
+        int by = 0;
+        ui_layout_parent_pos_from_wf(parent, box_x_wf, box_y_wf, &bx, &by);
+        cfg->box_x = bx;
+        cfg->box_y = by;
     }
     if (cfg->max_sec == 0) {
         cfg->max_sec = UI_DURATION_EDITOR_MAX_SEC;

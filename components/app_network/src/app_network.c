@@ -213,7 +213,7 @@ static esp_err_t wifi_connect_from_config(void)
         wc.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
     }
 
-    set_state(APP_NETWORK_STATE_CONNECTING, "Connecting…");
+    set_state(APP_NETWORK_STATE_CONNECTING, "Connecting...");
 
     s_wifi_teardown_in_progress = true;
     esp_wifi_disconnect();
@@ -267,7 +267,7 @@ static esp_err_t sntp_sync_from_config(void)
     const app_config_t *cfg = app_config_get();
     const char *server = cfg->ntp_server[0] != '\0' ? cfg->ntp_server : "pool.ntp.org";
 
-    set_state(APP_NETWORK_STATE_SYNCING_TIME, "Syncing time…");
+    set_state(APP_NETWORK_STATE_SYNCING_TIME, "Syncing time...");
     sntp_stop();
 
     esp_sntp_setoperatingmode(SNTP_OPMODE_POLL);
@@ -347,7 +347,7 @@ void app_network_start_boot_sync(void)
 
     s_boot_cancel = false;
     s_boot_task_running = true;
-    set_state(APP_NETWORK_STATE_IDLE, "Starting…");
+    set_state(APP_NETWORK_STATE_IDLE, "Starting...");
 
     BaseType_t ok = xTaskCreate(boot_task, "app_net_boot", BOOT_TASK_STACK, NULL, BOOT_TASK_PRIO, NULL);
     if (ok != pdPASS) {

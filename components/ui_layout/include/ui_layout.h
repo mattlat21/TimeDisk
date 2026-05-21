@@ -54,3 +54,9 @@ void ui_layout_screen_pos_from_wf(lv_obj_t *screen, int x_wf, int y_wf, int *x_o
  * Wireframe LCD → position relative to parent (legacy; prefer screen-absolute wedges).
  */
 void ui_layout_parent_pos_from_wf(lv_obj_t *parent, int x_wf, int y_wf, int *x_out, int *y_out);
+
+/** Wireframe X of the left edge to horizontally center @p w on the full LCD, relative to @p parent. */
+int ui_layout_parent_center_x_wf(lv_obj_t *parent, int32_t w);
+
+/** Wireframe Y of the top edge to vertically center @p h on the full LCD, relative to @p parent. */
+int ui_layout_parent_center_y_wf(lv_obj_t *parent, int32_t h);

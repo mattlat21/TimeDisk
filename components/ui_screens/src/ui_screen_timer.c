@@ -113,7 +113,6 @@ static void build_duration(lv_obj_t *screens[UI_SCREEN_COUNT])
 
     s_duration_bundle.cfg = (ui_duration_editor_cfg_t){
         .value_sec = &s_duration_sec,
-        .box_x = UI_DURATION_EDITOR_BOX_X,
         .box_y = UI_DURATION_EDITOR_BOX_Y,
         .box_w = UI_DURATION_EDITOR_BOX_W,
         .box_h = UI_DURATION_EDITOR_BOX_H,
@@ -142,10 +141,13 @@ static void build_style(lv_obj_t *screens[UI_SCREEN_COUNT])
     ui_widgets_create_title(s_scr_style, "Set Style");
 
     const char *names[] = {"Default", "Ring", "Minimal"};
+    const int style_btn_w = 200;
+    const int style_btn_h = 48;
+    const int style_x = ui_layout_parent_center_x_wf(s_scr_style, style_btn_w);
     for (int i = 0; i < 3; i++) {
         lv_obj_t *btn = lv_button_create(s_scr_style);
-        lv_obj_set_size(btn, 200, 48);
-        lv_obj_set_pos(btn, 260, 200 + i * 60);
+        lv_obj_set_size(btn, style_btn_w, style_btn_h);
+        lv_obj_set_pos(btn, style_x, 200 + i * 60);
         lv_obj_set_style_bg_color(btn, t->panel, 0);
         lv_obj_t *l = lv_label_create(btn);
         lv_label_set_text(l, names[i]);

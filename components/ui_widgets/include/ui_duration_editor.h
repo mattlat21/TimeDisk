@@ -11,6 +11,7 @@
 
 #define UI_DURATION_EDITOR_BOX_W     400
 #define UI_DURATION_EDITOR_BOX_H     120
+/** @deprecated box_x is ignored; editor centres horizontally on the full LCD. */
 #define UI_DURATION_EDITOR_BOX_X     160
 #define UI_DURATION_EDITOR_BOX_Y     200
 #define UI_DURATION_EDITOR_STEPPER   80

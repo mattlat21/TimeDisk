@@ -27,7 +27,7 @@ void ui_screen_loading_build(lv_obj_t *screens[UI_SCREEN_COUNT])
 
 void ui_screen_loading_on_show(void)
 {
-    ui_screen_loading_set_status("Starting…");
+    ui_screen_loading_set_status("Starting...");
 }
 
 void ui_screen_loading_set_status(const char *text)
