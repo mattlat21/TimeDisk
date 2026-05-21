@@ -53,9 +53,9 @@ typedef enum {
 #define THEME_SWATCH_COUNT         8
 #define THEME_SWATCH_BLOCK_CY_WF   360
 #define THEME_ROW_SPACING          80
-#define THEME_TITLE_GAP_ABOVE      12
-#define THEME_TITLE_LINE_H         32
-#define THEME_LABEL_UNDER_GAP      8
+#define THEME_TITLE_GAP_ABOVE      24
+#define THEME_TITLE_LINE_H         36
+#define THEME_LABEL_UNDER_GAP      20
 #define THEME_ROW_W                  (THEME_SWATCH_COUNT * THEME_SWATCH_SIZE \
                                       + (THEME_SWATCH_COUNT - 1) * THEME_SWATCH_GAP)
 #define THEME_ROW_PRIMARY_Y_WF     (THEME_SWATCH_BLOCK_CY_WF - THEME_ROW_SPACING / 2 - THEME_SWATCH_SIZE / 2)
@@ -583,7 +583,7 @@ static void build_colours_panel(void)
 
     s_lbl_primary_title = lv_label_create(panel);
     lv_label_set_text(s_lbl_primary_title, "Primary");
-    lv_obj_set_style_text_font(s_lbl_primary_title, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_font(s_lbl_primary_title, &lv_font_montserrat_26, 0);
     lv_obj_align(s_lbl_primary_title, LV_ALIGN_TOP_MID, 0,
                  settings_wf_y(panel, THEME_PRIMARY_TITLE_Y_WF));
 
@@ -592,7 +592,7 @@ static void build_colours_panel(void)
 
     s_lbl_secondary_title = lv_label_create(panel);
     lv_label_set_text(s_lbl_secondary_title, "Secondary");
-    lv_obj_set_style_text_font(s_lbl_secondary_title, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_font(s_lbl_secondary_title, &lv_font_montserrat_26, 0);
     lv_obj_align(s_lbl_secondary_title, LV_ALIGN_TOP_MID, 0,
                  settings_wf_y(panel, THEME_SECONDARY_LABEL_Y_WF));
 
@@ -1006,7 +1006,7 @@ static lv_obj_t *tz_create_dropdown(lv_obj_t *parent, int y_wf)
     const ui_theme_t *th = ui_theme_get();
     lv_obj_t *dd = lv_dropdown_create(parent);
     lv_obj_set_size(dd, TZ_DROPDOWN_W, TZ_DROPDOWN_H);
-    lv_obj_set_pos(dd, ui_layout_parent_center_x_wf(parent, TZ_DROPDOWN_W), settings_wf_y(parent, y_wf));
+    lv_obj_align(dd, LV_ALIGN_TOP_MID, 0, settings_wf_y(parent, y_wf));
     lv_obj_set_style_bg_color(dd, th->ring, 0);
     lv_obj_set_style_text_color(dd, th->white, 0);
     lv_obj_set_style_border_width(dd, 0, 0);
