@@ -129,14 +129,20 @@ static int settings_wf_x(lv_obj_t *parent, int x_wf)
     return x;
 }
 
-static void settings_fill_parent(lv_obj_t *parent, lv_obj_t *child)
+/** Minimal non-blocking parent so edit widgets keep wireframe positions without covering the list. */
+static lv_obj_t *settings_create_edit_group(lv_obj_t *panel)
 {
-    int32_t cw = 0;
-    int32_t ch = 0;
+    lv_obj_t *group = lv_obj_create(panel);
 
-    ui_layout_get_content_size(parent, &cw, &ch);
-    lv_obj_set_size(child, cw, ch);
-    lv_obj_set_pos(child, 0, 0);
+    lv_obj_set_size(group, 1, 1);
+    lv_obj_set_pos(group, 0, 0);
+    lv_obj_set_style_bg_opa(group, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(group, 0, 0);
+    lv_obj_set_style_pad_all(group, 0, 0);
+    lv_obj_remove_flag(group, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_remove_flag(group, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_flag(group, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
+    return group;
 }
 static lv_obj_t *s_hub_cancel_wedge;
 static lv_obj_t *s_panel_cancel_wedge[PANEL_COUNT];
@@ -154,8 +160,7 @@ static uint32_t s_secondary_rgb;
 
 /* Network */
 static lv_obj_t *s_net_panel_title;
-static lv_obj_t *s_net_list;
-static lv_obj_t *s_net_edit;
+static lv_obj_t *s_net_row_btns[3];
 static lv_obj_t *s_net_edit_title;
 static lv_obj_t *s_net_edit_field_box;
 static lv_obj_t *s_net_edit_lbl;
@@ -187,8 +192,9 @@ static const char *s_sched_labels[3] = {"Wind down", "Sleep", "Rest"};
 /* Timeouts */
 static timeout_view_t s_timeout_view;
 static int s_timeout_edit_idx;
-static lv_obj_t *s_timeout_list;
-static lv_obj_t *s_timeout_edit;
+static lv_obj_t *s_timeout_row_btns[5];
+static lv_obj_t *s_timeout_edit_group;
+static lv_obj_t *s_timeout_edit_back;
 static lv_obj_t *s_timeout_row_lbls[5];
 static ui_duration_editor_bundle_t s_timeout_bundle;
 static uint32_t s_timeout_edit_val;
@@ -665,11 +671,16 @@ static void net_bind_keyboard(void)
 
 static void network_show_list(void)
 {
-    if (s_net_list != NULL) {
-        lv_obj_clear_flag(s_net_list, LV_OBJ_FLAG_HIDDEN);
+    for (int i = 0; i < 3; i++) {
+        if (s_net_row_btns[i] != NULL) {
+            lv_obj_clear_flag(s_net_row_btns[i], LV_OBJ_FLAG_HIDDEN);
+        }
     }
-    if (s_net_edit != NULL) {
-        lv_obj_add_flag(s_net_edit, LV_OBJ_FLAG_HIDDEN);
+    if (s_net_edit_title != NULL) {
+        lv_obj_add_flag(s_net_edit_title, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (s_net_edit_field_box != NULL) {
+        lv_obj_add_flag(s_net_edit_field_box, LV_OBJ_FLAG_HIDDEN);
     }
     if (s_net_panel_cancel != NULL) {
         lv_obj_clear_flag(s_net_panel_cancel, LV_OBJ_FLAG_HIDDEN);
@@ -729,11 +740,16 @@ static void network_show_edit(net_field_t field)
     }
     net_edit_refresh_label();
 
-    if (s_net_list != NULL) {
-        lv_obj_add_flag(s_net_list, LV_OBJ_FLAG_HIDDEN);
+    for (int i = 0; i < 3; i++) {
+        if (s_net_row_btns[i] != NULL) {
+            lv_obj_add_flag(s_net_row_btns[i], LV_OBJ_FLAG_HIDDEN);
+        }
     }
-    if (s_net_edit != NULL) {
-        lv_obj_clear_flag(s_net_edit, LV_OBJ_FLAG_HIDDEN);
+    if (s_net_edit_title != NULL) {
+        lv_obj_clear_flag(s_net_edit_title, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (s_net_edit_field_box != NULL) {
+        lv_obj_clear_flag(s_net_edit_field_box, LV_OBJ_FLAG_HIDDEN);
     }
     net_bind_keyboard();
     if (s_net_panel_cancel != NULL) {
@@ -871,17 +887,12 @@ static void build_network_panel(void)
     lv_obj_add_flag(s_panels[PANEL_NETWORK], LV_OBJ_FLAG_HIDDEN);
     s_net_panel_title = ui_widgets_create_title(s_panels[PANEL_NETWORK], "Networking");
 
-    s_net_list = lv_obj_create(s_panels[PANEL_NETWORK]);
-    lv_obj_set_style_bg_opa(s_net_list, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(s_net_list, 0, 0);
-    lv_obj_remove_flag(s_net_list, LV_OBJ_FLAG_SCROLLABLE);
-    settings_fill_parent(s_panels[PANEL_NETWORK], s_net_list);
-
     for (int i = 0; i < 3; i++) {
-        lv_obj_t *btn = lv_button_create(s_net_list);
+        lv_obj_t *btn = lv_button_create(s_panels[PANEL_NETWORK]);
         lv_obj_set_size(btn, HUB_BTN_W, HUB_BTN_H);
-        lv_obj_set_pos(btn, ui_layout_parent_center_x_wf(s_net_list, HUB_BTN_W),
-                       settings_wf_y(s_net_list, NET_LIST_Y0_WF + i * (HUB_BTN_H + HUB_BTN_GAP_Y)));
+        lv_obj_align(btn, LV_ALIGN_TOP_MID, 0,
+                     settings_wf_y(s_panels[PANEL_NETWORK],
+                                   NET_LIST_Y0_WF + i * (HUB_BTN_H + HUB_BTN_GAP_Y)));
         lv_obj_set_style_radius(btn, HUB_BTN_RADIUS, 0);
         lv_obj_set_style_bg_color(btn, t->menu_petal, 0);
         lv_obj_set_style_border_width(btn, 0, 0);
@@ -892,6 +903,7 @@ static void build_network_panel(void)
         lv_obj_set_style_text_font(lbl, &lv_font_montserrat_18, 0);
         lv_obj_center(lbl);
         lv_obj_add_event_cb(btn, net_row_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)i);
+        s_net_row_btns[i] = btn;
     }
 
     s_net_panel_cancel = ui_wedge_create(s_scr, UI_WEDGE_CANCEL);
@@ -903,17 +915,13 @@ static void build_network_panel(void)
     lv_obj_add_event_cb(s_net_panel_save, network_save_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_add_flag(s_net_panel_save, LV_OBJ_FLAG_HIDDEN);
 
-    s_net_edit = lv_obj_create(s_panels[PANEL_NETWORK]);
-    lv_obj_set_style_bg_opa(s_net_edit, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(s_net_edit, 0, 0);
-    lv_obj_remove_flag(s_net_edit, LV_OBJ_FLAG_SCROLLABLE);
-    settings_fill_parent(s_panels[PANEL_NETWORK], s_net_edit);
-    lv_obj_add_flag(s_net_edit, LV_OBJ_FLAG_HIDDEN);
+    s_net_edit_title = ui_widgets_create_title(s_panels[PANEL_NETWORK], "Wi-Fi Name");
+    lv_obj_align(s_net_edit_title, LV_ALIGN_TOP_MID, 0,
+                 settings_wf_y(s_panels[PANEL_NETWORK], NET_EDIT_TITLE_Y_WF));
+    lv_obj_add_flag(s_net_edit_title, LV_OBJ_FLAG_HIDDEN);
 
-    s_net_edit_title = ui_widgets_create_title(s_net_edit, "Wi-Fi Name");
-    lv_obj_align(s_net_edit_title, LV_ALIGN_TOP_MID, 0, settings_wf_y(s_net_edit, NET_EDIT_TITLE_Y_WF));
-
-    s_net_edit_field_box = net_create_edit_field(s_net_edit, &s_net_edit_lbl);
+    s_net_edit_field_box = net_create_edit_field(s_panels[PANEL_NETWORK], &s_net_edit_lbl);
+    lv_obj_add_flag(s_net_edit_field_box, LV_OBJ_FLAG_HIDDEN);
 
     s_net_edit_cancel = ui_wedge_create(s_scr, UI_WEDGE_CANCEL);
     lv_obj_add_event_cb(s_net_edit_cancel, net_edit_cancel_cb, LV_EVENT_CLICKED, NULL);
@@ -1155,8 +1163,17 @@ static void timeout_refresh_list_labels(void)
 static void timeout_show_list(void)
 {
     s_timeout_view = TIMEOUT_VIEW_LIST;
-    lv_obj_clear_flag(s_timeout_list, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(s_timeout_edit, LV_OBJ_FLAG_HIDDEN);
+    for (int i = 0; i < 5; i++) {
+        if (s_timeout_row_btns[i] != NULL) {
+            lv_obj_clear_flag(s_timeout_row_btns[i], LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+    if (s_timeout_edit_group != NULL) {
+        lv_obj_add_flag(s_timeout_edit_group, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (s_timeout_edit_back != NULL) {
+        lv_obj_add_flag(s_timeout_edit_back, LV_OBJ_FLAG_HIDDEN);
+    }
     timeout_refresh_list_labels();
 }
 
@@ -1167,8 +1184,18 @@ static void timeout_row_cb(lv_event_t *e)
     s_timeout_edit_val = *timeout_field_ptr(idx);
     s_timeout_view = TIMEOUT_VIEW_EDIT;
 
-    lv_obj_add_flag(s_timeout_list, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_clear_flag(s_timeout_edit, LV_OBJ_FLAG_HIDDEN);
+    for (int i = 0; i < 5; i++) {
+        if (s_timeout_row_btns[i] != NULL) {
+            lv_obj_add_flag(s_timeout_row_btns[i], LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+    if (s_timeout_edit_group != NULL) {
+        lv_obj_clear_flag(s_timeout_edit_group, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (s_timeout_edit_back != NULL) {
+        lv_obj_clear_flag(s_timeout_edit_back, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_move_foreground(s_timeout_edit_back);
+    }
     ui_duration_editor_refresh(&s_timeout_bundle.editor, &s_timeout_bundle.cfg);
     ui_nav_reset_idle_timer();
 }
@@ -1203,17 +1230,12 @@ static void build_timeouts_panel(void)
 
     s_panels[PANEL_TIMEOUTS] = create_sub_panel("Timeouts");
 
-    s_timeout_list = lv_obj_create(s_panels[PANEL_TIMEOUTS]);
-    lv_obj_set_style_bg_opa(s_timeout_list, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(s_timeout_list, 0, 0);
-    lv_obj_remove_flag(s_timeout_list, LV_OBJ_FLAG_SCROLLABLE);
-    settings_fill_parent(s_panels[PANEL_TIMEOUTS], s_timeout_list);
-
     for (int i = 0; i < 5; i++) {
-        lv_obj_t *btn = lv_button_create(s_timeout_list);
+        lv_obj_t *btn = lv_button_create(s_panels[PANEL_TIMEOUTS]);
         lv_obj_set_size(btn, HUB_BTN_W, 64);
-        lv_obj_set_pos(btn, ui_layout_parent_center_x_wf(s_timeout_list, HUB_BTN_W),
-                       settings_wf_y(s_timeout_list, TIMEOUT_LIST_Y0_WF + i * TIMEOUT_LIST_STEP_WF));
+        lv_obj_align(btn, LV_ALIGN_TOP_MID, 0,
+                     settings_wf_y(s_panels[PANEL_TIMEOUTS],
+                                   TIMEOUT_LIST_Y0_WF + i * TIMEOUT_LIST_STEP_WF));
         lv_obj_set_style_radius(btn, 16, 0);
         lv_obj_set_style_bg_color(btn, t->menu_petal, 0);
         lv_obj_set_style_border_width(btn, 0, 0);
@@ -1224,14 +1246,11 @@ static void build_timeouts_panel(void)
         lv_obj_set_style_text_font(s_timeout_row_lbls[i], &lv_font_montserrat_20, 0);
         lv_obj_center(s_timeout_row_lbls[i]);
         lv_obj_add_event_cb(btn, timeout_row_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)i);
+        s_timeout_row_btns[i] = btn;
     }
 
-    s_timeout_edit = lv_obj_create(s_panels[PANEL_TIMEOUTS]);
-    lv_obj_set_style_bg_opa(s_timeout_edit, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(s_timeout_edit, 0, 0);
-    lv_obj_remove_flag(s_timeout_edit, LV_OBJ_FLAG_SCROLLABLE);
-    settings_fill_parent(s_panels[PANEL_TIMEOUTS], s_timeout_edit);
-    lv_obj_add_flag(s_timeout_edit, LV_OBJ_FLAG_HIDDEN);
+    s_timeout_edit_group = settings_create_edit_group(s_panels[PANEL_TIMEOUTS]);
+    lv_obj_add_flag(s_timeout_edit_group, LV_OBJ_FLAG_HIDDEN);
 
     s_timeout_bundle.cfg = (ui_duration_editor_cfg_t){
         .value_sec = &s_timeout_edit_val,
@@ -1239,12 +1258,13 @@ static void build_timeouts_panel(void)
         .show_end_time = false,
         .on_change = settings_idle_cb,
     };
-    ui_duration_editor_create(s_timeout_edit, &s_timeout_bundle);
+    ui_duration_editor_create(s_timeout_edit_group, &s_timeout_bundle);
 
-    lv_obj_t *edit_back = ui_widgets_create_side_btn(s_timeout_edit, true,
-                                                     settings_wf_x(s_timeout_edit, TIMEOUT_BACK_X_WF),
-                                                     settings_wf_y(s_timeout_edit, TIMEOUT_BACK_Y_WF), NULL);
-    lv_obj_add_event_cb(edit_back, timeout_edit_back_cb, LV_EVENT_CLICKED, NULL);
+    s_timeout_edit_back = ui_widgets_create_side_btn(s_panels[PANEL_TIMEOUTS], true,
+                                                     settings_wf_x(s_panels[PANEL_TIMEOUTS], TIMEOUT_BACK_X_WF),
+                                                     settings_wf_y(s_panels[PANEL_TIMEOUTS], TIMEOUT_BACK_Y_WF), NULL);
+    lv_obj_add_flag(s_timeout_edit_back, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_event_cb(s_timeout_edit_back, timeout_edit_back_cb, LV_EVENT_CLICKED, NULL);
 
     attach_panel_wedges(s_panels[PANEL_TIMEOUTS], PANEL_TIMEOUTS, timeouts_save_cb);
     s_timeout_view = TIMEOUT_VIEW_LIST;
