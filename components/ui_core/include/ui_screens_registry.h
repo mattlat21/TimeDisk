@@ -45,6 +45,7 @@ bool ui_screen_aa_pin_ok_pressed(void);
 bool ui_screen_aa_maths_ok_pressed(void);
 void ui_screen_timer_on_show(ui_screen_id_t id);
 void ui_screen_timer_tick(void);
+void ui_screen_timer_set_running(bool running);
 void ui_screen_startup_wifi_wizard_ssid_get_text(char *out, size_t len);
 void ui_screen_startup_wifi_wizard_password_get_text(char *out, size_t len);
 uint32_t ui_screen_duration_get_sec(void);

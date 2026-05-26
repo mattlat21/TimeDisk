@@ -74,6 +74,9 @@ typedef struct {
     bool time_valid;
     uint8_t display_brightness;
     uint32_t active_timer_remaining_sec;
+    uint32_t active_timer_total_sec;
+    /** lv_tick_get() when the active countdown started (for smooth visuals). */
+    uint32_t active_timer_anim_start_ms;
     bool timer_running;
 } app_runtime_t;
 

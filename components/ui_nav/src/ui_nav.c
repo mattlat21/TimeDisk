@@ -484,6 +484,7 @@ static void tick_timer_cb(lv_timer_t *t)
     ui_screen_timer_tick();
 
     if (rt->active_timer_remaining_sec == 0) {
+        ui_screen_timer_set_running(false);
         ui_nav_go(UI_SCREEN_TIMER_TRIGGERED);
     }
 }

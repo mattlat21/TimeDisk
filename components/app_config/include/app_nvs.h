@@ -18,8 +18,11 @@
 /** Schema version written on save; bump when keys or semantics change. */
 #define APP_NVS_CFG_VERSION 1
 
-/** Number of timer styles defined in data_model.md. */
-#define APP_TIMER_STYLE_COUNT 3
+/** Number of timer styles (ring, water). */
+#define APP_TIMER_STYLE_COUNT 2
+
+#define APP_TIMER_STYLE_RING  0
+#define APP_TIMER_STYLE_WATER 1
 
 /**
  * Initialise NVS flash partition (safe to call once at boot).
