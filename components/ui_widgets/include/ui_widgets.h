@@ -10,11 +10,23 @@
 /** Apply standard TimeDisk circular panel styling (black fill + purple ring). */
 void ui_widgets_style_circle_panel(lv_obj_t *obj);
 
+/** Circular panel with theme background but no chrome ring (e.g. active timer countdown). */
+void ui_widgets_style_circle_panel_no_ring(lv_obj_t *obj);
+
 /** Apply the standard 14 px purple circular edge ring (theme ring colour). */
 void ui_widgets_apply_screen_ring(lv_obj_t *screen);
 
 /** Create a loadable LVGL screen with standard 14 px ring border. */
 lv_obj_t *ui_widgets_create_screen(void);
+
+/** Create a loadable LVGL screen without the chrome ring border. */
+lv_obj_t *ui_widgets_create_screen_no_ring(void);
+
+/**
+ * Full-bleed circular backdrop behind screen content (ringless countdown screens).
+ * Call after all children are created so it stays at the back of the z-order.
+ */
+void ui_widgets_attach_screen_edge_fill(lv_obj_t *screen);
 
 lv_obj_t *ui_widgets_create_title(lv_obj_t *parent, const char *text);
 lv_obj_t *ui_widgets_create_purple_box(lv_obj_t *parent, int w, int h, int x, int y, bool outline_only);

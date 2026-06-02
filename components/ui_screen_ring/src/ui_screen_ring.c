@@ -24,7 +24,13 @@ void ui_screen_ring_clear(lv_obj_t *screen)
     if (screen == NULL) {
         return;
     }
+    const ui_theme_t *t = ui_theme_get();
+
     lv_obj_set_style_border_width(screen, 0, 0);
+    lv_obj_set_style_border_opa(screen, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_color(screen, t->bg, 0);
+    lv_obj_set_style_outline_width(screen, 0, 0);
+    lv_obj_set_style_outline_opa(screen, LV_OPA_TRANSP, 0);
 }
 
 void ui_screen_ring_refresh(lv_obj_t *screen)

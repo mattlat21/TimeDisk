@@ -22,6 +22,9 @@
 /** Standard purple edge ring on ringed screens (startup_wizard_ssid.svg / Wi-Fi password). */
 #define UI_RING_BORDER 14
 
+/** Overscan for ringless screens — covers chrome-ring band + clip fringe at the bezel. */
+#define UI_SCREEN_EDGE_BLEED_PX (UI_RING_BORDER + 4)
+
 /** @deprecated Use UI_RING_BORDER. */
 #define UI_RING_BORDER_DEFAULT UI_RING_BORDER
 /** @deprecated Use UI_RING_BORDER. */

@@ -519,7 +519,7 @@ static void build_countdown(lv_obj_t **scr, lv_obj_t **lbl, timer_countdown_vis_
                             ui_screen_id_t id, lv_obj_t *screens[UI_SCREEN_COUNT])
 {
     const ui_theme_t *t = ui_theme_get();
-    *scr = ui_widgets_create_screen();
+    *scr = ui_widgets_create_screen_no_ring();
     screens[id] = *scr;
 
     vis->water_fill = timer_create_water_fill(*scr);
@@ -543,6 +543,8 @@ static void build_countdown(lv_obj_t **scr, lv_obj_t **lbl, timer_countdown_vis_
     lv_obj_center(el);
     lv_obj_add_event_cb(end, timer_end_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_move_foreground(end);
+
+    ui_widgets_attach_screen_edge_fill(*scr);
 }
 
 static void build_triggered(lv_obj_t *screens[UI_SCREEN_COUNT])
@@ -569,10 +571,14 @@ static void build_confirm(lv_obj_t *screens[UI_SCREEN_COUNT])
 
     ui_widgets_create_title(s_scr_confirm, "Are you sure?");
 
-    lv_obj_t *no = ui_widgets_create_side_btn(s_scr_confirm, true, 36, 330, "No");
-    lv_obj_add_event_cb(no, confirm_no_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_t *yes = ui_widgets_create_side_btn(s_scr_confirm, false, UI_DISP - 36 - 64, 330, "Yes");
-    lv_obj_add_event_cb(yes, confirm_yes_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *cancel = ui_wedge_create(s_scr_confirm, UI_WEDGE_CANCEL);
+    lv_obj_add_event_cb(cancel, confirm_no_cb, LV_EVENT_CLICKED, NULL);
+
+    lv_obj_t *confirm = ui_wedge_create(s_scr_confirm, UI_WEDGE_CONFIRM);
+    lv_obj_add_event_cb(confirm, confirm_yes_cb, LV_EVENT_CLICKED, NULL);
+
+    lv_obj_move_foreground(cancel);
+    lv_obj_move_foreground(confirm);
 }
 
 void ui_screen_timer_build(lv_obj_t *screens[UI_SCREEN_COUNT])
@@ -662,7 +668,13 @@ void ui_screen_timer_apply_theme(void)
         s_scr_duration, s_scr_style, s_scr_bright, s_scr_dim, s_scr_triggered, s_scr_confirm,
     };
     for (size_t i = 0; i < sizeof(scrs) / sizeof(scrs[0]); i++) {
-        if (scrs[i] != NULL) {
+        if (scrs[i] == NULL) {
+            continue;
+        }
+        if (scrs[i] == s_scr_bright || scrs[i] == s_scr_dim) {
+            ui_widgets_style_circle_panel_no_ring(scrs[i]);
+            ui_widgets_attach_screen_edge_fill(scrs[i]);
+        } else {
             ui_widgets_style_circle_panel(scrs[i]);
         }
     }

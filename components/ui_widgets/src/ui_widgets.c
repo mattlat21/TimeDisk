@@ -8,6 +8,12 @@
 #include "ui_screen_ring.h"
 #include "ui_theme.h"
 
+/** Stored on ringless screen user_data — circular overscan backdrop. */
+static lv_obj_t *screen_edge_fill_get(const lv_obj_t *screen)
+{
+    return (lv_obj_t *)lv_obj_get_user_data(screen);
+}
+
 void ui_widgets_apply_screen_ring(lv_obj_t *screen)
 {
     ui_screen_ring_apply(screen);
@@ -25,10 +31,60 @@ void ui_widgets_style_circle_panel(lv_obj_t *obj)
     lv_obj_remove_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
 }
 
+void ui_widgets_style_circle_panel_no_ring(lv_obj_t *obj)
+{
+    const ui_theme_t *t = ui_theme_get();
+
+    lv_obj_set_size(obj, UI_DISP, UI_DISP);
+    lv_obj_set_style_bg_color(obj, t->bg, 0);
+    lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, 0);
+    ui_screen_ring_clear(obj);
+    /* Square root; round LCD masks corners. Avoid clip_corner AA fringe at the bezel. */
+    lv_obj_set_style_radius(obj, 0, 0);
+    lv_obj_set_style_clip_corner(obj, false, 0);
+    lv_obj_set_style_pad_all(obj, 0, 0);
+    lv_obj_remove_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(obj, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
+}
+
+void ui_widgets_attach_screen_edge_fill(lv_obj_t *screen)
+{
+    if (screen == NULL) {
+        return;
+    }
+
+    const ui_theme_t *t = ui_theme_get();
+    const lv_coord_t outer = (lv_coord_t)(UI_DISP + UI_SCREEN_EDGE_BLEED_PX);
+
+    lv_obj_t *fill = screen_edge_fill_get(screen);
+    if (fill == NULL || lv_obj_get_parent(fill) != screen) {
+        fill = lv_obj_create(screen);
+        lv_obj_set_user_data(screen, fill);
+        lv_obj_remove_flag(fill, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
+    }
+
+    lv_obj_set_size(fill, outer, outer);
+    lv_obj_align(fill, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_style_bg_color(fill, t->bg, 0);
+    lv_obj_set_style_bg_opa(fill, LV_OPA_COVER, 0);
+    ui_screen_ring_clear(fill);
+    lv_obj_set_style_radius(fill, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_clip_corner(fill, false, 0);
+    lv_obj_set_style_pad_all(fill, 0, 0);
+    lv_obj_move_background(fill);
+}
+
 lv_obj_t *ui_widgets_create_screen(void)
 {
     lv_obj_t *scr = lv_obj_create(NULL);
     ui_widgets_style_circle_panel(scr);
+    return scr;
+}
+
+lv_obj_t *ui_widgets_create_screen_no_ring(void)
+{
+    lv_obj_t *scr = lv_obj_create(NULL);
+    ui_widgets_style_circle_panel_no_ring(scr);
     return scr;
 }
 
