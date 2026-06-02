@@ -85,9 +85,28 @@ void ui_layout_parent_pos_from_wf(lv_obj_t *parent, int x_wf, int y_wf, int *x_o
     ui_layout_screen_pos_from_wf(screen, x_wf, y_wf, &sx, &sy);
 
     lv_area_t screen_content;
-    lv_area_t parent_content;
     lv_obj_get_content_coords(screen, &screen_content);
+
+    /*
+     * Some callers build UI into containers that start out hidden (e.g. panels that are
+     * shown later). In that case, LVGL can report 0,0 for content coords before the
+     * layout pass, which would skew absolute wireframe placement.
+     *
+     * Fall back to deriving the parent content origin from object coords + padding.
+     */
+    lv_area_t parent_content;
     lv_obj_get_content_coords(parent, &parent_content);
+    if (lv_obj_has_flag(parent, LV_OBJ_FLAG_HIDDEN) && (parent_content.x1 == 0 && parent_content.y1 == 0)) {
+        lv_area_t parent_coords;
+        lv_obj_get_coords(parent, &parent_coords);
+
+        const int32_t pad_l = lv_obj_get_style_pad_left(parent, LV_PART_MAIN);
+        const int32_t pad_t = lv_obj_get_style_pad_top(parent, LV_PART_MAIN);
+        const int32_t border = lv_obj_get_style_border_width(parent, LV_PART_MAIN);
+
+        parent_content.x1 = parent_coords.x1 + border + pad_l;
+        parent_content.y1 = parent_coords.y1 + border + pad_t;
+    }
 
     *x_out = (screen_content.x1 + sx) - parent_content.x1;
     *y_out = (screen_content.y1 + sy) - parent_content.y1;

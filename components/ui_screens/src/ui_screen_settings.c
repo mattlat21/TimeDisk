@@ -99,6 +99,62 @@ static void settings_wedges_hide_all(void);
 static void settings_wedges_show_for_panel(settings_panel_t panel);
 void ui_settings_idle_cb(void *user_data);
 
+// #region agent log
+static void dbg_log_settings_panel(const char *hypothesisId, const char *location, const char *message,
+                                   settings_panel_t panel_id, lv_obj_t *panel_obj)
+{
+    FILE *f = fopen("/Users/matt/Documents/Repos/GitHub/TimeDisk/.cursor/debug-d8ef62.log", "a");
+    if (!f) return;
+
+    lv_area_t pc = {0}, pcont = {0}, sc = {0}, scont = {0};
+    if (panel_obj) {
+        lv_obj_get_coords(panel_obj, &pc);
+        lv_obj_get_content_coords(panel_obj, &pcont);
+    }
+    if (s_scr) {
+        lv_obj_get_coords(s_scr, &sc);
+        lv_obj_get_content_coords(s_scr, &scont);
+    }
+
+    const int p_hidden = panel_obj ? (lv_obj_has_flag(panel_obj, LV_OBJ_FLAG_HIDDEN) ? 1 : 0) : -1;
+
+    fprintf(
+        f,
+        "{\"sessionId\":\"d8ef62\",\"runId\":\"pre-fix\",\"hypothesisId\":\"%s\",\"location\":\"%s\","
+        "\"message\":\"%s\",\"timestamp\":%lu,\"data\":{"
+        "\"panel_id\":%d,\"panel\":%lu,\"p_hidden\":%d,"
+        "\"pc\":[%d,%d,%d,%d],\"pcont\":[%d,%d,%d,%d],"
+        "\"scr\":%lu,\"sc\":[%d,%d,%d,%d],\"scont\":[%d,%d,%d,%d]"
+        "}}\n",
+        hypothesisId ? hypothesisId : "",
+        location ? location : "",
+        message ? message : "",
+        (unsigned long)lv_tick_get(),
+        (int)panel_id,
+        (unsigned long)(uintptr_t)panel_obj,
+        p_hidden,
+        (int)pc.x1,
+        (int)pc.y1,
+        (int)pc.x2,
+        (int)pc.y2,
+        (int)pcont.x1,
+        (int)pcont.y1,
+        (int)pcont.x2,
+        (int)pcont.y2,
+        (unsigned long)(uintptr_t)s_scr,
+        (int)sc.x1,
+        (int)sc.y1,
+        (int)sc.x2,
+        (int)sc.y2,
+        (int)scont.x1,
+        (int)scont.y1,
+        (int)scont.x2,
+        (int)scont.y2);
+
+    fclose(f);
+}
+// #endregion
+
 static void hub_cancel_cb(lv_event_t *e)
 {
     (void)e;
@@ -282,6 +338,13 @@ static void show_panel(settings_panel_t panel)
         lv_obj_clear_flag(s_panels[panel], LV_OBJ_FLAG_HIDDEN);
     }
 
+    // #region agent log
+    if (panel == PANEL_AA && s_panels[panel] != NULL) {
+        dbg_log_settings_panel("H2", "ui_screen_settings.c:show_panel", "after show PANEL_AA",
+                               panel, s_panels[panel]);
+    }
+    // #endregion
+
     settings_wedges_show_for_panel(panel);
 
     switch (panel) {
@@ -321,6 +384,11 @@ lv_obj_t *ui_settings_create_sub_panel(const char *title)
     lv_obj_remove_flag(panel, LV_OBJ_FLAG_SCROLLABLE);
     ui_settings_panel_layout(panel);
     lv_obj_add_flag(panel, LV_OBJ_FLAG_HIDDEN);
+
+    // #region agent log
+    dbg_log_settings_panel("H3", "ui_screen_settings.c:ui_settings_create_sub_panel",
+                           "after create+layout+hide", PANEL_COUNT, panel);
+    // #endregion
 
     ui_widgets_create_title(panel, title);
     return panel;
