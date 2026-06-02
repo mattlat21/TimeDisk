@@ -21,9 +21,10 @@
 #define AA_KEYPAD_GAP        8
 #define AA_KEYPAD_COLS       3
 #define AA_KEYPAD_GRID_W     (AA_KEYPAD_COLS * AA_KEYPAD_BTN + (AA_KEYPAD_COLS - 1) * AA_KEYPAD_GAP)
-#define AA_PIN_BAR_W         AA_KEYPAD_GRID_W
-#define AA_PIN_BAR_H         72
-#define AA_PIN_BAR_Y_WF      160
+/* Larger, centered PIN bar for Settings->Adult Auth. */
+#define AA_PIN_BAR_W         360
+#define AA_PIN_BAR_H         88
+#define AA_PIN_BAR_Y_WF      108
 #define AA_KEYPAD_Y_WF       252
 #define AA_RIGHT_COL_GAP     22
 
@@ -155,7 +156,8 @@ lv_obj_t *ui_settings_adult_auth_build(void)
 
     lv_obj_t *pin_bar = ui_widgets_create_purple_box(s_panel, AA_PIN_BAR_W, AA_PIN_BAR_H,
                                                      ui_layout_parent_center_x_wf(s_panel, AA_PIN_BAR_W),
-                                                     ui_settings_wf_y(s_panel, AA_PIN_BAR_Y_WF), false);
+                                                     ui_settings_wf_y(s_panel, AA_PIN_BAR_Y_WF),
+                                                     false);
     s_lbl_aa_pin = lv_label_create(pin_bar);
     lv_label_set_text(s_lbl_aa_pin, "");
     lv_obj_set_style_text_color(s_lbl_aa_pin, t->white, 0);

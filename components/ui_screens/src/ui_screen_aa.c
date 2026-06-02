@@ -25,6 +25,19 @@ static lv_obj_t *wedge_maths_cancel;
 static lv_obj_t *wedge_maths_ok;
 static ui_numeric_keypad_t *s_keypad;
 
+/* Match Settings -> Adult Auth PIN bar (size, position, font). */
+#define AA_PIN_BAR_W    360
+#define AA_PIN_BAR_H    88
+#define AA_PIN_BAR_Y_WF 108
+
+static int aa_pin_bar_y(lv_obj_t *parent, int y_wf)
+{
+    int x = 0;
+    int y = 0;
+    ui_layout_parent_pos_from_wf(parent, 0, y_wf, &x, &y);
+    return y;
+}
+
 static void pin_digit_cb(lv_event_t *e)
 {
     lv_obj_t *btn = lv_event_get_target(e);
@@ -151,18 +164,25 @@ static void maths_ok_cb(lv_event_t *e)
 static void build_pin_panel(lv_obj_t *parent)
 {
     const ui_theme_t *t = ui_theme_get();
+    int32_t cw = 0;
+    int32_t ch = 0;
+
     scr_pin = lv_obj_create(parent);
-    lv_obj_set_size(scr_pin, UI_DISP, UI_DISP);
+    ui_layout_get_content_size(parent, &cw, &ch);
+    lv_obj_set_size(scr_pin, cw, ch);
     lv_obj_set_style_bg_opa(scr_pin, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(scr_pin, 0, 0);
     lv_obj_remove_flag(scr_pin, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_center(scr_pin);
+    lv_obj_align(scr_pin, LV_ALIGN_TOP_LEFT, 0, 0);
 
-    lv_obj_t *pin_bar = ui_widgets_create_purple_box(scr_pin, 340, 56, (UI_DISP - 340) / 2, 72, false);
+    lv_obj_t *pin_bar = ui_widgets_create_purple_box(scr_pin, AA_PIN_BAR_W, AA_PIN_BAR_H,
+                                                     ui_layout_parent_center_x_wf(scr_pin, AA_PIN_BAR_W),
+                                                     aa_pin_bar_y(scr_pin, AA_PIN_BAR_Y_WF),
+                                                     false);
     lbl_pin = lv_label_create(pin_bar);
     lv_label_set_text(lbl_pin, "");
     lv_obj_set_style_text_color(lbl_pin, t->white, 0);
-    lv_obj_set_style_text_font(lbl_pin, &lv_font_montserrat_26, 0);
+    lv_obj_set_style_text_font(lbl_pin, &lv_font_montserrat_48, 0);
     lv_obj_center(lbl_pin);
 
     wedge_pin_cancel = ui_wedge_create(scr_pin, UI_WEDGE_CANCEL);
