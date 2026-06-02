@@ -12,6 +12,12 @@ idf_component_register(
         "src/ui_screen_timer.c"
         "src/ui_screen_schedule.c"
         "src/ui_screen_settings.c"
+        "src/ui_settings_colours.c"
+        "src/ui_settings_network.c"
+        "src/ui_settings_timezone.c"
+        "src/ui_settings_schedule.c"
+        "src/ui_settings_timeouts.c"
+        "src/ui_settings_adult_auth.c"
     INCLUDE_DIRS "include"
     REQUIRES
         ui_core

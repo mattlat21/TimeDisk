@@ -35,6 +35,9 @@ typedef struct {
 } ui_duration_editor_cfg_t;
 
 typedef struct {
+    lv_obj_t *box;
+    lv_obj_t *btn_minus;
+    lv_obj_t *btn_plus;
     lv_obj_t *lbl_value;
     lv_obj_t *lbl_subtitle;
 } ui_duration_editor_t;
@@ -48,6 +51,9 @@ typedef struct {
 void ui_duration_editor_create(lv_obj_t *parent, ui_duration_editor_bundle_t *bundle);
 
 void ui_duration_editor_refresh(const ui_duration_editor_t *ed, const ui_duration_editor_cfg_t *cfg);
+
+/** Show or hide all editor widgets (box, steppers, optional subtitle). */
+void ui_duration_editor_set_visible(const ui_duration_editor_t *ed, bool visible);
 
 /** Re-apply theme colours to subtitle labels (e.g. after primary/secondary change). */
 void ui_duration_editor_apply_theme(const ui_duration_editor_t *ed);

@@ -68,6 +68,31 @@ static lv_obj_t *make_stepper_btn(lv_obj_t *parent, const char *txt, int x, int 
     return btn;
 }
 
+static void set_obj_visible(lv_obj_t *obj, bool visible)
+{
+    if (obj == NULL) {
+        return;
+    }
+    if (visible) {
+        lv_obj_remove_flag(obj, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+void ui_duration_editor_set_visible(const ui_duration_editor_t *ed, bool visible)
+{
+    if (ed == NULL) {
+        return;
+    }
+    set_obj_visible(ed->box, visible);
+    set_obj_visible(ed->btn_minus, visible);
+    set_obj_visible(ed->btn_plus, visible);
+    if (ed->lbl_subtitle != NULL) {
+        set_obj_visible(ed->lbl_subtitle, visible);
+    }
+}
+
 void ui_duration_editor_apply_theme(const ui_duration_editor_t *ed)
 {
     if (ed == NULL || ed->lbl_subtitle == NULL) {
@@ -104,6 +129,9 @@ void ui_duration_editor_create(lv_obj_t *parent, ui_duration_editor_bundle_t *bu
     ui_duration_editor_cfg_t *cfg = &bundle->cfg;
     ui_duration_editor_t *out = &bundle->editor;
 
+    out->box = NULL;
+    out->btn_minus = NULL;
+    out->btn_plus = NULL;
     out->lbl_value = NULL;
     out->lbl_subtitle = NULL;
 
@@ -136,8 +164,8 @@ void ui_duration_editor_create(lv_obj_t *parent, ui_duration_editor_bundle_t *bu
         cfg->step_sec = UI_DURATION_EDITOR_STEP_SEC;
     }
 
-    lv_obj_t *box = ui_widgets_create_purple_box(parent, cfg->box_w, cfg->box_h, cfg->box_x, cfg->box_y, false);
-    out->lbl_value = lv_label_create(box);
+    out->box = ui_widgets_create_purple_box(parent, cfg->box_w, cfg->box_h, cfg->box_x, cfg->box_y, false);
+    out->lbl_value = lv_label_create(out->box);
     lv_obj_set_style_text_color(out->lbl_value, t->white, 0);
     lv_obj_set_style_text_font(out->lbl_value, &lv_font_montserrat_26, 0);
     lv_obj_center(out->lbl_value);
@@ -155,8 +183,8 @@ void ui_duration_editor_create(lv_obj_t *parent, ui_duration_editor_bundle_t *bu
     const int minus_x = cfg->box_x - UI_DURATION_EDITOR_GAP - UI_DURATION_EDITOR_STEPPER;
     const int plus_x = cfg->box_x + cfg->box_w + UI_DURATION_EDITOR_GAP;
 
-    make_stepper_btn(parent, "-", minus_x, stepper_y, minus_cb, bundle);
-    make_stepper_btn(parent, "+", plus_x, stepper_y, plus_cb, bundle);
+    out->btn_minus = make_stepper_btn(parent, "-", minus_x, stepper_y, minus_cb, bundle);
+    out->btn_plus = make_stepper_btn(parent, "+", plus_x, stepper_y, plus_cb, bundle);
 
     ui_duration_editor_refresh(out, cfg);
 }
