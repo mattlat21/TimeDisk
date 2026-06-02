@@ -33,4 +33,5 @@ idf_component_register(
         ui_assets
         lvgl
         waveshare__esp32_p4_wifi6_touch_lcd_xc
+        ui_numeric_keypad
 )

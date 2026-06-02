@@ -8,6 +8,7 @@
 #include "ui_layout.h"
 #include "ui_theme.h"
 #include "ui_widgets.h"
+#include "ui_numeric_keypad.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -16,14 +17,14 @@
 #define AA_TITLE_Y_WF        64
 #define AA_CHK_PIN_Y_WF      90
 #define AA_CHK_MATHS_Y_WF    130
-#define AA_KEYPAD_BTN        72
-#define AA_KEYPAD_GAP        14
+#define AA_KEYPAD_BTN        76
+#define AA_KEYPAD_GAP        8
 #define AA_KEYPAD_COLS       3
 #define AA_KEYPAD_GRID_W     (AA_KEYPAD_COLS * AA_KEYPAD_BTN + (AA_KEYPAD_COLS - 1) * AA_KEYPAD_GAP)
 #define AA_PIN_BAR_W         AA_KEYPAD_GRID_W
 #define AA_PIN_BAR_H         72
 #define AA_PIN_BAR_Y_WF      160
-#define AA_KEYPAD_Y_WF       245
+#define AA_KEYPAD_Y_WF       252
 #define AA_RIGHT_COL_GAP     22
 
 static lv_obj_t *s_panel;
@@ -153,12 +154,13 @@ lv_obj_t *ui_settings_adult_auth_build(void)
     lv_obj_set_style_text_font(s_lbl_aa_pin, &lv_font_montserrat_48, 0);
     lv_obj_center(s_lbl_aa_pin);
 
-    ui_widgets_add_numeric_keypad(s_panel, AA_KEYPAD_Y_WF, aa_pin_digit_cb, NULL);
-    lv_obj_t *bs = ui_widgets_create_keypad_btn(s_panel, LV_SYMBOL_BACKSPACE,
-                                                keypad_x + 2 * (AA_KEYPAD_BTN + AA_KEYPAD_GAP),
-                                                keypad_y + 3 * (AA_KEYPAD_BTN + AA_KEYPAD_GAP),
-                                                AA_KEYPAD_BTN);
-    lv_obj_add_event_cb(bs, aa_pin_back_cb, LV_EVENT_CLICKED, NULL);
+    (void)keypad_x;
+    (void)keypad_y;
+    ui_numeric_keypad_create(s_panel, &(ui_numeric_keypad_cfg_t){
+        .digit_cb = aa_pin_digit_cb,
+        .backspace_cb = aa_pin_back_cb,
+        .user_ctx = NULL,
+    });
 
     ui_settings_attach_panel_wedges(s_panel, PANEL_AA, aa_save_cb);
     return s_panel;

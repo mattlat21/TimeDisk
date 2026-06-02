@@ -21,5 +21,3 @@ lv_obj_t *ui_widgets_create_purple_box(lv_obj_t *parent, int w, int h, int x, in
 lv_obj_t *ui_widgets_create_side_btn(lv_obj_t *parent, bool is_back, int x, int y, const char *label);
 lv_obj_t *ui_widgets_create_side_next(lv_obj_t *parent, int x, int y);
 lv_obj_t *ui_widgets_create_keypad_btn(lv_obj_t *parent, const char *txt, int x, int y, int size);
-/** @p start_y_wf is the keypad grid top edge in full LCD (wireframe) coordinates. */
-void ui_widgets_add_numeric_keypad(lv_obj_t *parent, int start_y_wf, lv_event_cb_t digit_cb, void *user_ctx);

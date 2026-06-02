@@ -6,6 +6,7 @@
 #include "ui_lines.h"
 #include "ui_theme.h"
 #include "ui_nav.h"
+#include "ui_numeric_keypad.h"
 #include "app_config.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,6 +19,10 @@ static lv_obj_t *lbl_pin;
 static lv_obj_t *lbl_a;
 static lv_obj_t *lbl_b;
 static lv_obj_t *lbl_answer;
+static lv_obj_t *wedge_pin_cancel;
+static lv_obj_t *wedge_pin_ok;
+static lv_obj_t *wedge_maths_cancel;
+static lv_obj_t *wedge_maths_ok;
 
 static void pin_digit_cb(lv_event_t *e)
 {
@@ -151,24 +156,18 @@ static void build_pin_panel(lv_obj_t *parent)
     lv_obj_set_style_text_font(lbl_pin, &lv_font_montserrat_26, 0);
     lv_obj_center(lbl_pin);
 
-    ui_widgets_add_numeric_keypad(scr_pin, 268, pin_digit_cb, NULL);
+    ui_numeric_keypad_create(scr_pin, &(ui_numeric_keypad_cfg_t){
+        .digit_cb = pin_digit_cb,
+        .backspace_cb = pin_back_cb,
+        .user_ctx = NULL,
+    });
 
-    lv_obj_t *back = ui_widgets_create_side_btn(scr_pin, true, 36, 330, NULL);
-    lv_obj_add_event_cb(back, pin_back_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_t *ok = ui_widgets_create_side_btn(scr_pin, false, UI_DISP - 36 - 64, 330, NULL);
-    lv_obj_add_event_cb(ok, pin_ok_cb, LV_EVENT_CLICKED, NULL);
-
-    lv_obj_t *cancel = lv_button_create(scr_pin);
-    lv_obj_set_size(cancel, 107, 107);
-    lv_obj_align(cancel, LV_ALIGN_BOTTOM_MID, 0, -24);
-    lv_obj_set_style_radius(cancel, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_color(cancel, t->keypad, 0);
-    lv_obj_t *cl = lv_label_create(cancel);
-    lv_label_set_text(cl, "Cancel");
-    lv_obj_set_style_text_color(cl, t->white, 0);
-    lv_obj_set_style_text_font(cl, &lv_font_montserrat_20, 0);
-    lv_obj_center(cl);
-    lv_obj_add_event_cb(cancel, pin_cancel_cb, LV_EVENT_CLICKED, NULL);
+    wedge_pin_cancel = ui_wedge_create(scr_pin, UI_WEDGE_CANCEL);
+    lv_obj_add_event_cb(wedge_pin_cancel, pin_cancel_cb, LV_EVENT_CLICKED, NULL);
+    wedge_pin_ok = ui_wedge_create(scr_pin, UI_WEDGE_CONFIRM);
+    lv_obj_add_event_cb(wedge_pin_ok, pin_ok_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_move_foreground(wedge_pin_cancel);
+    lv_obj_move_foreground(wedge_pin_ok);
 }
 
 static lv_obj_t *make_eq_box(lv_obj_t *parent, int x, int y, lv_obj_t **lbl_out, bool outline)
@@ -218,12 +217,19 @@ static void build_maths_panel(lv_obj_t *parent)
     x += 28 + gap;
     make_eq_box(scr_maths, x, y, &lbl_answer, true);
 
-    ui_widgets_add_numeric_keypad(scr_maths, 300, maths_digit_cb, NULL);
+    ui_numeric_keypad_create(scr_maths, &(ui_numeric_keypad_cfg_t){
+        .digit_cb = maths_digit_cb,
+        .backspace_cb = maths_back_cb,
+        .user_ctx = NULL,
+    });
 
-    lv_obj_t *back = ui_widgets_create_side_btn(scr_maths, true, 36, 330, NULL);
-    lv_obj_add_event_cb(back, maths_back_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_t *ok = ui_widgets_create_side_btn(scr_maths, false, UI_DISP - 36 - 64, 330, NULL);
-    lv_obj_add_event_cb(ok, maths_ok_cb, LV_EVENT_CLICKED, NULL);
+    (void)t;
+    wedge_maths_cancel = ui_wedge_create(scr_maths, UI_WEDGE_CANCEL);
+    lv_obj_add_event_cb(wedge_maths_cancel, pin_cancel_cb, LV_EVENT_CLICKED, NULL);
+    wedge_maths_ok = ui_wedge_create(scr_maths, UI_WEDGE_CONFIRM);
+    lv_obj_add_event_cb(wedge_maths_ok, maths_ok_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_move_foreground(wedge_maths_cancel);
+    lv_obj_move_foreground(wedge_maths_ok);
 }
 
 void ui_screen_aa_build(lv_obj_t *screens[UI_SCREEN_COUNT])
@@ -255,12 +261,20 @@ void ui_screen_aa_show_pin(void)
 {
     lv_obj_remove_flag(scr_pin, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(scr_maths, LV_OBJ_FLAG_HIDDEN);
+    if (wedge_pin_cancel) lv_obj_remove_flag(wedge_pin_cancel, LV_OBJ_FLAG_HIDDEN);
+    if (wedge_pin_ok) lv_obj_remove_flag(wedge_pin_ok, LV_OBJ_FLAG_HIDDEN);
+    if (wedge_maths_cancel) lv_obj_add_flag(wedge_maths_cancel, LV_OBJ_FLAG_HIDDEN);
+    if (wedge_maths_ok) lv_obj_add_flag(wedge_maths_ok, LV_OBJ_FLAG_HIDDEN);
 }
 
 void ui_screen_aa_show_maths(void)
 {
     lv_obj_add_flag(scr_pin, LV_OBJ_FLAG_HIDDEN);
     lv_obj_remove_flag(scr_maths, LV_OBJ_FLAG_HIDDEN);
+    if (wedge_pin_cancel) lv_obj_add_flag(wedge_pin_cancel, LV_OBJ_FLAG_HIDDEN);
+    if (wedge_pin_ok) lv_obj_add_flag(wedge_pin_ok, LV_OBJ_FLAG_HIDDEN);
+    if (wedge_maths_cancel) lv_obj_remove_flag(wedge_maths_cancel, LV_OBJ_FLAG_HIDDEN);
+    if (wedge_maths_ok) lv_obj_remove_flag(wedge_maths_ok, LV_OBJ_FLAG_HIDDEN);
 }
 
 void ui_screen_aa_reset_pin(void)
