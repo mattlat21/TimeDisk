@@ -21,6 +21,15 @@
 
 typedef void (*ui_duration_editor_cb_t)(void *user_data);
 
+/** When set, overrides fixed @p step_sec (e.g. timer tiered +/- steps). */
+typedef uint32_t (*ui_duration_editor_step_fn_t)(uint32_t value_sec, void *user_data);
+
+typedef enum {
+    UI_DURATION_DISPLAY_MINUTES = 0,
+    /** Shows seconds when under 1 minute (timer Set Duration). */
+    UI_DURATION_DISPLAY_HUMAN,
+} ui_duration_display_t;
+
 typedef struct {
     uint32_t *value_sec;
     int box_x;
@@ -29,7 +38,10 @@ typedef struct {
     int box_h;
     bool show_end_time;
     uint32_t max_sec;
+    uint32_t min_sec;
     uint32_t step_sec;
+    ui_duration_display_t display;
+    ui_duration_editor_step_fn_t get_step_sec;
     ui_duration_editor_cb_t on_change;
     void *user_data;
 } ui_duration_editor_cfg_t;

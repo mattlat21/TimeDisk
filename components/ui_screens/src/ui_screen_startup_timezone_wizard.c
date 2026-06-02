@@ -6,6 +6,7 @@
 #include "ui_screens_registry.h"
 #include "ui_layout.h"
 #include "ui_widgets.h"
+#include "ui_screen_ring.h"
 #include "ui_wedge.h"
 #include "ui_theme.h"
 #include "ui_format.h"
@@ -198,7 +199,7 @@ void ui_screen_startup_timezone_wizard_apply_theme(void)
 {
     const ui_theme_t *t = ui_theme_get();
     if (s_scr != NULL) {
-        ui_widgets_apply_screen_ring(s_scr);
+        ui_screen_ring_refresh(s_scr);
     }
     if (s_dd_country != NULL) {
         lv_obj_set_style_bg_color(s_dd_country, t->ring, 0);

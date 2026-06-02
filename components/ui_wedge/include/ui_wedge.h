@@ -12,6 +12,7 @@
 #pragma once
 
 #include "lvgl.h"
+#include <stdbool.h>
 
 /** Which corner the wedge sits in (mirrored shape). */
 typedef enum {
@@ -64,4 +65,14 @@ ui_wedge_button_t *ui_wedge_button_create_at(lv_obj_t *parent, const ui_wedge_co
 void ui_wedge_button_set_color(ui_wedge_button_t *btn, lv_color_t color);
 void ui_wedge_button_set_icon(ui_wedge_button_t *btn, ui_wedge_icon_t icon);
 
+typedef struct ui_wedge ui_wedge_t;
+
 lv_obj_t *ui_wedge_create(lv_obj_t *parent, ui_wedge_type_t type);
+
+/** Screen-root wedge at standard wireframe position. */
+ui_wedge_t *ui_wedge_create_overlay(lv_obj_t *screen, ui_wedge_type_t type);
+void ui_wedge_destroy(ui_wedge_t *wedge);
+void ui_wedge_set_visible(ui_wedge_t *wedge, bool visible);
+void ui_wedge_bind(ui_wedge_t *wedge, ui_wedge_type_t type, lv_event_cb_t cb, void *user_data);
+void ui_wedge_refresh_theme(ui_wedge_t *wedge);
+lv_obj_t *ui_wedge_get_obj(const ui_wedge_t *wedge);

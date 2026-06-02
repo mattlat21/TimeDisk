@@ -3,5 +3,5 @@ idf_component_register(
         "src/ui_widgets.c"
         "src/ui_duration_editor.c"
     INCLUDE_DIRS "include"
-    REQUIRES ui_theme ui_layout ui_format lvgl
+    REQUIRES ui_theme ui_layout ui_format ui_screen_ring lvgl
 )

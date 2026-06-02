@@ -33,6 +33,31 @@ void ui_format_duration_minutes(char *buf, size_t len, uint32_t sec)
     }
 }
 
+void ui_format_duration_human(char *buf, size_t len, uint32_t sec)
+{
+    if (sec < 60) {
+        if (sec == 1) {
+            snprintf(buf, len, "1 second");
+        } else {
+            snprintf(buf, len, "%u seconds", (unsigned)sec);
+        }
+        return;
+    }
+
+    const unsigned mins = (unsigned)(sec / 60);
+    const unsigned rem = (unsigned)(sec % 60);
+    if (rem == 0) {
+        ui_format_duration_minutes(buf, len, sec);
+        return;
+    }
+
+    if (mins == 1) {
+        snprintf(buf, len, "1 minute %u seconds", rem);
+    } else {
+        snprintf(buf, len, "%u minutes %u seconds", mins, rem);
+    }
+}
+
 void ui_format_hh_mm_ampm_after_sec(char *buf, size_t len, uint32_t offset_sec)
 {
     time_t end = time(NULL) + (time_t)offset_sec;

@@ -5,16 +5,12 @@
 
 #include "ui_widgets.h"
 #include "ui_layout.h"
+#include "ui_screen_ring.h"
 #include "ui_theme.h"
 
 void ui_widgets_apply_screen_ring(lv_obj_t *screen)
 {
-    const ui_theme_t *t = ui_theme_get();
-
-    lv_obj_set_style_border_color(screen, t->ring, 0);
-    lv_obj_set_style_border_width(screen, UI_RING_BORDER, 0);
-    lv_obj_set_style_radius(screen, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_clip_corner(screen, true, 0);
+    ui_screen_ring_apply(screen);
 }
 
 void ui_widgets_style_circle_panel(lv_obj_t *obj)

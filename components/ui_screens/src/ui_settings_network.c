@@ -44,16 +44,19 @@ static lv_obj_t *s_net_row_btns[3];
 static lv_obj_t *s_net_edit_title;
 static lv_obj_t *s_net_edit_field_box;
 static lv_obj_t *s_net_edit_lbl;
-static lv_obj_t *s_net_panel_cancel;
-static lv_obj_t *s_net_panel_save;
-static lv_obj_t *s_net_edit_cancel;
-static lv_obj_t *s_net_edit_save;
+static ui_wedge_t *s_net_cancel_wedge;
+static ui_wedge_t *s_net_action_wedge;
 static char s_ssid_buf[APP_WIFI_SSID_MAX];
 static char s_pw_buf[APP_WIFI_PASSWORD_MAX];
 static char s_ntp_buf[APP_NTP_SERVER_MAX];
 static char s_net_edit_backup[NET_BACKUP_LEN];
 static ui_keyboard_t *s_net_kb;
 static net_field_t s_net_active = NET_FIELD_SSID;
+
+static void net_panel_cancel_cb(lv_event_t *e);
+static void network_save_cb(lv_event_t *e);
+static void net_edit_cancel_cb(lv_event_t *e);
+static void net_edit_save_cb(lv_event_t *e);
 
 static const char *net_field_title(net_field_t field)
 {
@@ -138,19 +141,13 @@ static void network_show_list(void)
     if (s_net_edit_field_box != NULL) {
         lv_obj_add_flag(s_net_edit_field_box, LV_OBJ_FLAG_HIDDEN);
     }
-    if (s_net_panel_cancel != NULL) {
-        lv_obj_clear_flag(s_net_panel_cancel, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_move_foreground(s_net_panel_cancel);
+    if (s_net_cancel_wedge != NULL) {
+        ui_wedge_bind(s_net_cancel_wedge, UI_WEDGE_CANCEL, net_panel_cancel_cb, NULL);
+        ui_wedge_set_visible(s_net_cancel_wedge, true);
     }
-    if (s_net_panel_save != NULL) {
-        lv_obj_clear_flag(s_net_panel_save, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_move_foreground(s_net_panel_save);
-    }
-    if (s_net_edit_cancel != NULL) {
-        lv_obj_add_flag(s_net_edit_cancel, LV_OBJ_FLAG_HIDDEN);
-    }
-    if (s_net_edit_save != NULL) {
-        lv_obj_add_flag(s_net_edit_save, LV_OBJ_FLAG_HIDDEN);
+    if (s_net_action_wedge != NULL) {
+        ui_wedge_bind(s_net_action_wedge, UI_WEDGE_CONFIRM, network_save_cb, NULL);
+        ui_wedge_set_visible(s_net_action_wedge, true);
     }
     if (s_net_panel_title != NULL) {
         lv_obj_clear_flag(s_net_panel_title, LV_OBJ_FLAG_HIDDEN);
@@ -208,29 +205,19 @@ static void network_show_edit(net_field_t field)
         lv_obj_clear_flag(s_net_edit_field_box, LV_OBJ_FLAG_HIDDEN);
     }
     net_bind_keyboard();
-    if (s_net_panel_cancel != NULL) {
-        lv_obj_add_flag(s_net_panel_cancel, LV_OBJ_FLAG_HIDDEN);
+    if (s_net_cancel_wedge != NULL) {
+        ui_wedge_bind(s_net_cancel_wedge, UI_WEDGE_CANCEL, net_edit_cancel_cb, NULL);
+        ui_wedge_set_visible(s_net_cancel_wedge, true);
     }
-    if (s_net_panel_save != NULL) {
-        lv_obj_add_flag(s_net_panel_save, LV_OBJ_FLAG_HIDDEN);
-    }
-    if (s_net_edit_cancel != NULL) {
-        lv_obj_clear_flag(s_net_edit_cancel, LV_OBJ_FLAG_HIDDEN);
-    }
-    if (s_net_edit_save != NULL) {
-        lv_obj_clear_flag(s_net_edit_save, LV_OBJ_FLAG_HIDDEN);
+    if (s_net_action_wedge != NULL) {
+        ui_wedge_bind(s_net_action_wedge, UI_WEDGE_CONFIRM, net_edit_save_cb, NULL);
+        ui_wedge_set_visible(s_net_action_wedge, true);
     }
     if (s_net_edit_field_box != NULL) {
         lv_obj_move_foreground(s_net_edit_field_box);
     }
     if (s_net_edit_title != NULL) {
         lv_obj_move_foreground(s_net_edit_title);
-    }
-    if (s_net_edit_cancel != NULL) {
-        lv_obj_move_foreground(s_net_edit_cancel);
-    }
-    if (s_net_edit_save != NULL) {
-        lv_obj_move_foreground(s_net_edit_save);
     }
     if (s_net_panel_title != NULL) {
         lv_obj_add_flag(s_net_panel_title, LV_OBJ_FLAG_HIDDEN);
@@ -373,15 +360,16 @@ lv_obj_t *ui_settings_network_build(void)
         s_net_row_btns[i] = btn;
     }
 
-    s_net_panel_cancel = ui_wedge_create(ui_settings_screen(), UI_WEDGE_CANCEL);
-    lv_obj_add_event_cb(s_net_panel_cancel, net_panel_cancel_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_add_flag(s_net_panel_cancel, LV_OBJ_FLAG_HIDDEN);
-    ui_settings_register_overlay_obj(s_net_panel_cancel);
-
-    s_net_panel_save = ui_wedge_create(ui_settings_screen(), UI_WEDGE_CONFIRM);
-    lv_obj_add_event_cb(s_net_panel_save, network_save_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_add_flag(s_net_panel_save, LV_OBJ_FLAG_HIDDEN);
-    ui_settings_register_overlay_obj(s_net_panel_save);
+    s_net_cancel_wedge = ui_wedge_create_overlay(ui_settings_screen(), UI_WEDGE_CANCEL);
+    s_net_action_wedge = ui_wedge_create_overlay(ui_settings_screen(), UI_WEDGE_CONFIRM);
+    if (s_net_cancel_wedge != NULL) {
+        ui_wedge_set_visible(s_net_cancel_wedge, false);
+        ui_settings_register_overlay_obj(ui_wedge_get_obj(s_net_cancel_wedge));
+    }
+    if (s_net_action_wedge != NULL) {
+        ui_wedge_set_visible(s_net_action_wedge, false);
+        ui_settings_register_overlay_obj(ui_wedge_get_obj(s_net_action_wedge));
+    }
 
     s_net_edit_title = ui_widgets_create_title(s_panel, "Wi-Fi Name");
     lv_obj_align(s_net_edit_title, LV_ALIGN_TOP_MID, 0,
@@ -390,16 +378,6 @@ lv_obj_t *ui_settings_network_build(void)
 
     s_net_edit_field_box = net_create_edit_field(s_panel, &s_net_edit_lbl);
     lv_obj_add_flag(s_net_edit_field_box, LV_OBJ_FLAG_HIDDEN);
-
-    s_net_edit_cancel = ui_wedge_create(ui_settings_screen(), UI_WEDGE_CANCEL);
-    lv_obj_add_event_cb(s_net_edit_cancel, net_edit_cancel_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_add_flag(s_net_edit_cancel, LV_OBJ_FLAG_HIDDEN);
-    ui_settings_register_overlay_obj(s_net_edit_cancel);
-
-    s_net_edit_save = ui_wedge_create(ui_settings_screen(), UI_WEDGE_CONFIRM);
-    lv_obj_add_event_cb(s_net_edit_save, net_edit_save_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_add_flag(s_net_edit_save, LV_OBJ_FLAG_HIDDEN);
-    ui_settings_register_overlay_obj(s_net_edit_save);
 
     return s_panel;
 }
@@ -418,6 +396,12 @@ void ui_settings_network_apply_theme(void)
     const ui_theme_t *t = ui_theme_get();
     if (s_net_edit_field_box != NULL) {
         lv_obj_set_style_bg_color(s_net_edit_field_box, t->ring, 0);
+    }
+    if (s_net_cancel_wedge != NULL) {
+        ui_wedge_refresh_theme(s_net_cancel_wedge);
+    }
+    if (s_net_action_wedge != NULL) {
+        ui_wedge_refresh_theme(s_net_action_wedge);
     }
 }
 

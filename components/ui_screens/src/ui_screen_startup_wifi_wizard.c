@@ -23,6 +23,7 @@
 #include "ui_screens_registry.h"
 #include "ui_layout.h"
 #include "ui_widgets.h"
+#include "ui_screen_ring.h"
 #include "ui_wedge.h"
 #include "ui_lines.h"
 #include "ui_theme.h"
@@ -193,7 +194,7 @@ void ui_screen_startup_wifi_wizard_apply_theme(void)
 
     for (size_t i = 0; i < sizeof(scrs) / sizeof(scrs[0]); i++) {
         if (scrs[i] != NULL) {
-            ui_widgets_apply_screen_ring(scrs[i]);
+            ui_screen_ring_refresh(scrs[i]);
         }
     }
     for (size_t i = 0; i < sizeof(boxes) / sizeof(boxes[0]); i++) {

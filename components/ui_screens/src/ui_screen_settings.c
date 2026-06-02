@@ -88,9 +88,9 @@ int ui_settings_wf_x(lv_obj_t *parent, int x_wf)
     return x;
 }
 
-static lv_obj_t *s_hub_cancel_wedge;
-static lv_obj_t *s_panel_cancel_wedge[PANEL_COUNT];
-static lv_obj_t *s_panel_save_wedge[PANEL_COUNT];
+static ui_wedge_t *s_hub_cancel_wedge;
+static ui_wedge_t *s_panel_cancel_wedge[PANEL_COUNT];
+static ui_wedge_t *s_panel_save_wedge[PANEL_COUNT];
 
 static void show_panel(settings_panel_t panel);
 void ui_settings_show_panel(settings_panel_t panel);
@@ -267,14 +267,14 @@ void ui_settings_panel_layout(lv_obj_t *panel)
 static void settings_wedges_hide_all(void)
 {
     if (s_hub_cancel_wedge != NULL) {
-        lv_obj_add_flag(s_hub_cancel_wedge, LV_OBJ_FLAG_HIDDEN);
+        ui_wedge_set_visible(s_hub_cancel_wedge, false);
     }
     for (int i = 0; i < PANEL_COUNT; i++) {
         if (s_panel_cancel_wedge[i] != NULL) {
-            lv_obj_add_flag(s_panel_cancel_wedge[i], LV_OBJ_FLAG_HIDDEN);
+            ui_wedge_set_visible(s_panel_cancel_wedge[i], false);
         }
         if (s_panel_save_wedge[i] != NULL) {
-            lv_obj_add_flag(s_panel_save_wedge[i], LV_OBJ_FLAG_HIDDEN);
+            ui_wedge_set_visible(s_panel_save_wedge[i], false);
         }
     }
     for (size_t i = 0; i < s_overlay_obj_count; i++) {
@@ -290,8 +290,7 @@ static void settings_wedges_show_for_panel(settings_panel_t panel)
 
     if (panel == PANEL_HUB) {
         if (s_hub_cancel_wedge != NULL) {
-            lv_obj_clear_flag(s_hub_cancel_wedge, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_move_foreground(s_hub_cancel_wedge);
+            ui_wedge_set_visible(s_hub_cancel_wedge, true);
         }
         return;
     }
@@ -301,12 +300,10 @@ static void settings_wedges_show_for_panel(settings_panel_t panel)
     }
 
     if (s_panel_cancel_wedge[panel] != NULL) {
-        lv_obj_clear_flag(s_panel_cancel_wedge[panel], LV_OBJ_FLAG_HIDDEN);
-        lv_obj_move_foreground(s_panel_cancel_wedge[panel]);
+        ui_wedge_set_visible(s_panel_cancel_wedge[panel], true);
     }
     if (s_panel_save_wedge[panel] != NULL) {
-        lv_obj_clear_flag(s_panel_save_wedge[panel], LV_OBJ_FLAG_HIDDEN);
-        lv_obj_move_foreground(s_panel_save_wedge[panel]);
+        ui_wedge_set_visible(s_panel_save_wedge[panel], true);
     }
 }
 
@@ -314,17 +311,18 @@ void ui_settings_attach_panel_wedges(lv_obj_t *panel, settings_panel_t panel_id,
                                      lv_event_cb_t save_cb)
 {
     (void)panel;
-    lv_obj_t *cancel = ui_wedge_create(s_scr, UI_WEDGE_CANCEL);
-    lv_obj_add_event_cb(cancel, panel_cancel_cb, LV_EVENT_CLICKED,
-                        (void *)(uintptr_t)panel_id);
+    s_panel_cancel_wedge[panel_id] = ui_wedge_create_overlay(s_scr, UI_WEDGE_CANCEL);
+    s_panel_save_wedge[panel_id] = ui_wedge_create_overlay(s_scr, UI_WEDGE_CONFIRM);
 
-    lv_obj_t *save = ui_wedge_create(s_scr, UI_WEDGE_CONFIRM);
-    lv_obj_add_event_cb(save, save_cb, LV_EVENT_CLICKED, NULL);
-
-    s_panel_cancel_wedge[panel_id] = cancel;
-    s_panel_save_wedge[panel_id] = save;
-    lv_obj_add_flag(cancel, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(save, LV_OBJ_FLAG_HIDDEN);
+    if (s_panel_cancel_wedge[panel_id] != NULL) {
+        ui_wedge_bind(s_panel_cancel_wedge[panel_id], UI_WEDGE_CANCEL, panel_cancel_cb,
+                      (void *)(uintptr_t)panel_id);
+        ui_wedge_set_visible(s_panel_cancel_wedge[panel_id], false);
+    }
+    if (s_panel_save_wedge[panel_id] != NULL) {
+        ui_wedge_bind(s_panel_save_wedge[panel_id], UI_WEDGE_CONFIRM, save_cb, NULL);
+        ui_wedge_set_visible(s_panel_save_wedge[panel_id], false);
+    }
 }
 
 static void show_panel(settings_panel_t panel)
@@ -450,9 +448,11 @@ static void build_hub_panel(void)
                        (settings_panel_t)(PANEL_COLOURS + i));
     }
 
-    s_hub_cancel_wedge = ui_wedge_create(s_scr, UI_WEDGE_CANCEL);
-    lv_obj_add_event_cb(s_hub_cancel_wedge, hub_cancel_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_add_flag(s_hub_cancel_wedge, LV_OBJ_FLAG_HIDDEN);
+    s_hub_cancel_wedge = ui_wedge_create_overlay(s_scr, UI_WEDGE_CANCEL);
+    if (s_hub_cancel_wedge != NULL) {
+        ui_wedge_bind(s_hub_cancel_wedge, UI_WEDGE_CANCEL, hub_cancel_cb, NULL);
+        ui_wedge_set_visible(s_hub_cancel_wedge, false);
+    }
 }
 
 void ui_screen_settings_build(lv_obj_t *screens[UI_SCREEN_COUNT])
@@ -496,6 +496,17 @@ void ui_screen_settings_apply_theme(void)
 
     if (s_scr != NULL) {
         ui_widgets_style_circle_panel(s_scr);
+    }
+    if (s_hub_cancel_wedge != NULL) {
+        ui_wedge_refresh_theme(s_hub_cancel_wedge);
+    }
+    for (int i = 0; i < PANEL_COUNT; i++) {
+        if (s_panel_cancel_wedge[i] != NULL) {
+            ui_wedge_refresh_theme(s_panel_cancel_wedge[i]);
+        }
+        if (s_panel_save_wedge[i] != NULL) {
+            ui_wedge_refresh_theme(s_panel_save_wedge[i]);
+        }
     }
     ui_settings_colours_apply_theme();
     ui_settings_network_apply_theme();

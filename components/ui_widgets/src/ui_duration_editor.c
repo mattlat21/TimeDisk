@@ -20,33 +20,67 @@ static void notify_change(ui_duration_editor_bundle_t *bundle)
     }
 }
 
+static uint32_t step_for_value(const ui_duration_editor_cfg_t *cfg)
+{
+    if (cfg == NULL || cfg->value_sec == NULL) {
+        return UI_DURATION_EDITOR_STEP_SEC;
+    }
+    if (cfg->get_step_sec != NULL) {
+        return cfg->get_step_sec(*cfg->value_sec, cfg->user_data);
+    }
+    return cfg->step_sec > 0 ? cfg->step_sec : UI_DURATION_EDITOR_STEP_SEC;
+}
+
+static void clamp_duration(ui_duration_editor_cfg_t *cfg)
+{
+    if (cfg == NULL || cfg->value_sec == NULL) {
+        return;
+    }
+    const uint32_t max_sec = cfg->max_sec > 0 ? cfg->max_sec : UI_DURATION_EDITOR_MAX_SEC;
+    if (*cfg->value_sec > max_sec) {
+        *cfg->value_sec = max_sec;
+    }
+    if (cfg->min_sec > 0 && *cfg->value_sec < cfg->min_sec) {
+        *cfg->value_sec = cfg->min_sec;
+    }
+}
+
 static void minus_cb(lv_event_t *e)
 {
     ui_duration_editor_bundle_t *bundle = bundle_from_event(e);
-    uint32_t *sec = bundle->cfg.value_sec;
-    uint32_t step = bundle->cfg.step_sec > 0 ? bundle->cfg.step_sec : UI_DURATION_EDITOR_STEP_SEC;
+    ui_duration_editor_cfg_t *cfg = &bundle->cfg;
+    uint32_t *sec = cfg->value_sec;
+    const uint32_t step = step_for_value(cfg);
+    const uint32_t min_sec = cfg->min_sec;
 
-    if (*sec > step) {
+    if (min_sec > 0) {
+        if (*sec <= min_sec) {
+            *sec = min_sec;
+        } else if (*sec - step < min_sec) {
+            *sec = min_sec;
+        } else {
+            *sec -= step;
+        }
+    } else if (*sec > step) {
         *sec -= step;
     } else {
         *sec = 0;
     }
-    ui_duration_editor_refresh(&bundle->editor, &bundle->cfg);
+    clamp_duration(cfg);
+    ui_duration_editor_refresh(&bundle->editor, cfg);
     notify_change(bundle);
 }
 
 static void plus_cb(lv_event_t *e)
 {
     ui_duration_editor_bundle_t *bundle = bundle_from_event(e);
-    uint32_t *sec = bundle->cfg.value_sec;
-    uint32_t step = bundle->cfg.step_sec > 0 ? bundle->cfg.step_sec : UI_DURATION_EDITOR_STEP_SEC;
-    uint32_t max_sec = bundle->cfg.max_sec > 0 ? bundle->cfg.max_sec : UI_DURATION_EDITOR_MAX_SEC;
+    ui_duration_editor_cfg_t *cfg = &bundle->cfg;
+    uint32_t *sec = cfg->value_sec;
+    const uint32_t step = step_for_value(cfg);
 
     *sec += step;
-    if (*sec > max_sec) {
-        *sec = max_sec;
-    }
-    ui_duration_editor_refresh(&bundle->editor, &bundle->cfg);
+    clamp_duration(cfg);
+    ui_duration_editor_refresh(&bundle->editor, cfg);
     notify_change(bundle);
 }
 
@@ -107,9 +141,18 @@ void ui_duration_editor_refresh(const ui_duration_editor_t *ed, const ui_duratio
     if (ed == NULL || cfg == NULL || cfg->value_sec == NULL) {
         return;
     }
+
+    if (cfg->min_sec > 0 && *cfg->value_sec < cfg->min_sec) {
+        *cfg->value_sec = cfg->min_sec;
+    }
+
     char dur[32];
 
-    ui_format_duration_minutes(dur, sizeof(dur), *cfg->value_sec);
+    if (cfg->display == UI_DURATION_DISPLAY_HUMAN) {
+        ui_format_duration_human(dur, sizeof(dur), *cfg->value_sec);
+    } else {
+        ui_format_duration_minutes(dur, sizeof(dur), *cfg->value_sec);
+    }
     if (ed->lbl_value != NULL) {
         lv_label_set_text(ed->lbl_value, dur);
     }
@@ -160,9 +203,10 @@ void ui_duration_editor_create(lv_obj_t *parent, ui_duration_editor_bundle_t *bu
     if (cfg->max_sec == 0) {
         cfg->max_sec = UI_DURATION_EDITOR_MAX_SEC;
     }
-    if (cfg->step_sec == 0) {
+    if (cfg->step_sec == 0 && cfg->get_step_sec == NULL) {
         cfg->step_sec = UI_DURATION_EDITOR_STEP_SEC;
     }
+    clamp_duration(cfg);
 
     out->box = ui_widgets_create_purple_box(parent, cfg->box_w, cfg->box_h, cfg->box_x, cfg->box_y, false);
     out->lbl_value = lv_label_create(out->box);

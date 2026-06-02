@@ -200,8 +200,114 @@ void ui_wedge_button_set_icon(ui_wedge_button_t *btn, ui_wedge_icon_t icon)
     icon_apply(btn, icon);
 }
 
+struct ui_wedge {
+    ui_wedge_button_t *btn;
+    ui_wedge_type_t type;
+    lv_event_cb_t cb;
+    void *user_data;
+};
+
+static void apply_config_to_button(ui_wedge_button_t *btn, const ui_wedge_config_t *cfg)
+{
+    lv_obj_t *shape = wedge_shape_obj(btn);
+    if (shape != NULL) {
+        lv_image_set_src(shape, shape_for_side(cfg->side));
+        apply_shape_color(shape, cfg->color);
+    }
+    ui_wedge_button_set_icon(btn, cfg->icon);
+}
+
 lv_obj_t *ui_wedge_create(lv_obj_t *parent, ui_wedge_type_t type)
 {
     ui_wedge_config_t cfg = ui_wedge_config_from_type(type);
     return ui_wedge_button_create(parent, &cfg);
+}
+
+ui_wedge_t *ui_wedge_create_overlay(lv_obj_t *screen, ui_wedge_type_t type)
+{
+    if (screen == NULL || lv_obj_get_parent(screen) != NULL) {
+        return NULL;
+    }
+
+    ui_wedge_t *wedge = lv_malloc(sizeof(*wedge));
+    if (wedge == NULL) {
+        return NULL;
+    }
+
+    ui_wedge_config_t cfg = ui_wedge_config_from_type(type);
+    wedge->btn = ui_wedge_button_create(screen, &cfg);
+    if (wedge->btn == NULL) {
+        lv_free(wedge);
+        return NULL;
+    }
+
+    wedge->type = type;
+    wedge->cb = NULL;
+    wedge->user_data = NULL;
+    lv_obj_move_foreground(wedge->btn);
+    return wedge;
+}
+
+void ui_wedge_destroy(ui_wedge_t *wedge)
+{
+    if (wedge == NULL) {
+        return;
+    }
+    if (wedge->btn != NULL) {
+        lv_obj_delete(wedge->btn);
+    }
+    lv_free(wedge);
+}
+
+void ui_wedge_set_visible(ui_wedge_t *wedge, bool visible)
+{
+    if (wedge == NULL || wedge->btn == NULL) {
+        return;
+    }
+    if (visible) {
+        lv_obj_clear_flag(wedge->btn, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_move_foreground(wedge->btn);
+    } else {
+        lv_obj_add_flag(wedge->btn, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+void ui_wedge_bind(ui_wedge_t *wedge, ui_wedge_type_t type, lv_event_cb_t cb, void *user_data)
+{
+    if (wedge == NULL || wedge->btn == NULL) {
+        return;
+    }
+
+    if (wedge->cb != NULL) {
+        lv_obj_remove_event_cb(wedge->btn, wedge->cb);
+        wedge->cb = NULL;
+    }
+
+    wedge->type = type;
+    wedge->user_data = user_data;
+    wedge->cb = cb;
+
+    ui_wedge_config_t cfg = ui_wedge_config_from_type(type);
+    apply_config_to_button(wedge->btn, &cfg);
+
+    if (cb != NULL) {
+        lv_obj_add_event_cb(wedge->btn, cb, LV_EVENT_CLICKED, user_data);
+    }
+}
+
+void ui_wedge_refresh_theme(ui_wedge_t *wedge)
+{
+    if (wedge == NULL || wedge->btn == NULL) {
+        return;
+    }
+    ui_wedge_config_t cfg = ui_wedge_config_from_type(wedge->type);
+    apply_config_to_button(wedge->btn, &cfg);
+}
+
+lv_obj_t *ui_wedge_get_obj(const ui_wedge_t *wedge)
+{
+    if (wedge == NULL) {
+        return NULL;
+    }
+    return wedge->btn;
 }

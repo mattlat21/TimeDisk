@@ -8,6 +8,7 @@
 #include "ui_theme.h"
 #include "ui_nav.h"
 #include "app_config.h"
+#include <math.h>
 #include <stdio.h>
 
 #define TIMER_STYLE_TILE_W   200
@@ -24,10 +25,35 @@
 /** Visual refresh for ring/water (~60 Hz). */
 #define TIMER_ANIM_PERIOD_MS 16
 
+/** Timer Set Duration: minimum and tiered +/- step sizes. */
+#define TIMER_DURATION_MIN_SEC 5
+
+static uint32_t timer_duration_step_sec(uint32_t value_sec, void *user_data)
+{
+    (void)user_data;
+    if (value_sec < 30) {
+        return 5;
+    }
+    if (value_sec < 120) {
+        return 15;
+    }
+    if (value_sec < 300) {
+        return 30;
+    }
+    if (value_sec < 1800) {
+        return 60;
+    }
+    return 300;
+}
+
 #define TIMER_WATER_COLOR    lv_color_make(0x2E, 0x7A, 0xE8)
 /** Wider than the LCD so circular clip still fills edge-to-edge horizontally. */
 #define TIMER_WATER_H_BLEED  96
 #define TIMER_WATER_W        (UI_SCREEN_W + 2 * TIMER_WATER_H_BLEED)
+
+/** Water surface bobbing (pixels, milliseconds). Tune these. */
+#define TIMER_WATER_BOB_AMP_PX     4.0f
+#define TIMER_WATER_BOB_PERIOD_MS 2500.0f
 
 typedef struct {
     lv_obj_t *water_fill;
@@ -49,6 +75,13 @@ static uint32_t s_duration_sec;
 static uint8_t s_style_id;
 static ui_duration_editor_bundle_t s_duration_bundle;
 static lv_timer_t *s_anim_timer;
+
+static void timer_duration_clamp(void)
+{
+    if (s_duration_sec < TIMER_DURATION_MIN_SEC) {
+        s_duration_sec = TIMER_DURATION_MIN_SEC;
+    }
+}
 
 static uint32_t timer_total_sec(const app_runtime_t *rt)
 {
@@ -106,7 +139,16 @@ static void timer_layout_ring(lv_obj_t *arc)
 
 static void timer_layout_water(lv_obj_t *water, float progress)
 {
-    int fill_h = (int)((float)UI_SCREEN_H * progress);
+    float bob = 0.0f;
+    if (timer_total_sec(app_runtime_get()) >= 60) {
+        const uint32_t now = timer_now_ms();
+        const float phase = (TIMER_WATER_BOB_PERIOD_MS > 0.0f)
+                                ? (2.0f * (float)M_PI * ((float)now / TIMER_WATER_BOB_PERIOD_MS))
+                                : 0.0f;
+        bob = TIMER_WATER_BOB_AMP_PX * sinf(phase);
+    }
+
+    int fill_h = (int)((float)UI_SCREEN_H * progress + bob);
     if (fill_h < 1) {
         fill_h = 1;
     }
@@ -114,7 +156,11 @@ static void timer_layout_water(lv_obj_t *water, float progress)
         fill_h = (int)UI_SCREEN_H;
     }
     lv_obj_set_size(water, TIMER_WATER_W, fill_h);
-    lv_obj_align(water, LV_ALIGN_BOTTOM_MID, 0, 0);
+
+    /* Align to the physical LCD bottom (screen border sits outside content). */
+    lv_obj_t *screen = ui_layout_find_screen(water);
+    const int32_t border = ui_layout_screen_border(screen);
+    lv_obj_align(water, LV_ALIGN_BOTTOM_MID, 0, (int)border);
 }
 
 static void timer_update_countdown_visuals(timer_countdown_vis_t *vis, lv_obj_t *lbl, uint8_t style_id,
@@ -228,6 +274,7 @@ static void duration_back_cb(lv_event_t *e)
 static void duration_next_cb(lv_event_t *e)
 {
     (void)e;
+    timer_duration_clamp();
     app_config_get()->timer_duration_sec = s_duration_sec;
     app_config_save_timer();
     ui_nav_go(UI_SCREEN_TIMER_STYLE);
@@ -363,6 +410,7 @@ static void build_duration(lv_obj_t *screens[UI_SCREEN_COUNT])
     s_scr_duration = ui_widgets_create_screen();
     screens[UI_SCREEN_TIMER_DURATION] = s_scr_duration;
     s_duration_sec = app_config_get()->timer_duration_sec;
+    timer_duration_clamp();
 
     ui_widgets_create_title(s_scr_duration, "Set Duration");
 
@@ -372,6 +420,9 @@ static void build_duration(lv_obj_t *screens[UI_SCREEN_COUNT])
         .box_w = UI_DURATION_EDITOR_BOX_W,
         .box_h = UI_DURATION_EDITOR_BOX_H,
         .show_end_time = true,
+        .min_sec = TIMER_DURATION_MIN_SEC,
+        .display = UI_DURATION_DISPLAY_HUMAN,
+        .get_step_sec = timer_duration_step_sec,
         .on_change = duration_idle_cb,
     };
     ui_duration_editor_create(s_scr_duration, &s_duration_bundle);
@@ -506,8 +557,9 @@ static void build_triggered(lv_obj_t *screens[UI_SCREEN_COUNT])
     lv_obj_set_style_text_font(lbl, &lv_font_montserrat_26, 0);
     lv_obj_align(lbl, LV_ALIGN_CENTER, 0, -40);
 
-    lv_obj_t *ok = ui_widgets_create_side_btn(s_scr_triggered, false, UI_DISP - 36 - 64, 330, NULL);
+    lv_obj_t *ok = ui_wedge_create(s_scr_triggered, UI_WEDGE_CONFIRM);
     lv_obj_add_event_cb(ok, triggered_ok_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_move_foreground(ok);
 }
 
 static void build_confirm(lv_obj_t *screens[UI_SCREEN_COUNT])
@@ -542,6 +594,8 @@ void ui_screen_timer_on_show(ui_screen_id_t id)
     app_runtime_t *rt = app_runtime_get();
 
     if (id == UI_SCREEN_TIMER_DURATION) {
+        s_duration_sec = app_config_get()->timer_duration_sec;
+        timer_duration_clamp();
         ui_duration_editor_refresh(&s_duration_bundle.editor, &s_duration_bundle.cfg);
     }
 
