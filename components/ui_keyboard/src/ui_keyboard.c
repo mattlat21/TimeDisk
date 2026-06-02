@@ -45,6 +45,7 @@ static bool s_module_inited;
 
 static int keyboard_row_cy(lv_obj_t *screen, int cy_wf)
 {
+    /* Absolute LCD (wireframe) Y → screen content Y. */
     return ui_layout_wf_to_content_y(screen, cy_wf);
 }
 
@@ -57,8 +58,8 @@ static void keyboard_key_cx(lv_obj_t *screen, int *cx, int count, int x_offset)
         count = UI_KB_MAX_ROW_KEYS;
     }
 
-    int32_t center_x;
-    ui_layout_get_content_center(screen, &center_x, NULL);
+    /* Absolute LCD center X → screen content coordinates. */
+    const int32_t center_x = ui_layout_wf_to_content_x(screen, UI_SCREEN_CX);
     const int span = (count - 1) * UI_KB_ROW_PITCH;
     const int first = (int)center_x - span / 2 + x_offset;
     for (int i = 0; i < count; i++) {
@@ -72,8 +73,7 @@ static void keyboard_bottom_centers(lv_obj_t *screen, int *mode_cx, int *space_c
         return;
     }
 
-    int32_t center_x;
-    ui_layout_get_content_center(screen, &center_x, NULL);
+    const int32_t center_x = ui_layout_wf_to_content_x(screen, UI_SCREEN_CX);
     const int left = (int)center_x - UI_KB_BOTTOM_W / 2;
 
     *mode_cx = left + UI_KB_KEY_RADIUS;
@@ -375,6 +375,15 @@ ui_keyboard_t *ui_keyboard_create(lv_obj_t *parent, const ui_keyboard_config_t *
     if (screen == NULL) {
         return NULL;
     }
+    return ui_keyboard_create_overlay(screen, config);
+}
+
+ui_keyboard_t *ui_keyboard_create_overlay(lv_obj_t *screen, const ui_keyboard_config_t *config)
+{
+    if (screen == NULL || config == NULL || config->buf == NULL || config->label == NULL ||
+        config->buf_len == 0) {
+        return NULL;
+    }
 
     ui_keyboard_module_init();
 
@@ -425,6 +434,61 @@ ui_keyboard_t *ui_keyboard_create(lv_obj_t *parent, const ui_keyboard_config_t *
     lv_obj_move_foreground(kb->mode_btn);
 
     return kb;
+}
+
+void ui_keyboard_bind(ui_keyboard_t *kb, const ui_keyboard_config_t *config)
+{
+    if (kb == NULL || config == NULL || config->buf == NULL || config->label == NULL ||
+        config->buf_len == 0) {
+        return;
+    }
+    kb->config = *config;
+    lv_label_set_text(kb->config.label, kb->config.buf);
+}
+
+void ui_keyboard_set_visible(ui_keyboard_t *kb, bool visible)
+{
+    if (kb == NULL) {
+        return;
+    }
+    for (int i = 0; i < UI_KEYBOARD_MODE_COUNT; i++) {
+        if (kb->layers[i] == NULL) {
+            continue;
+        }
+        if (visible) {
+            lv_obj_clear_flag(kb->layers[i], LV_OBJ_FLAG_HIDDEN);
+            lv_obj_move_foreground(kb->layers[i]);
+        } else {
+            lv_obj_add_flag(kb->layers[i], LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+    if (kb->mode_btn != NULL) {
+        if (visible) {
+            lv_obj_clear_flag(kb->mode_btn, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_move_foreground(kb->mode_btn);
+        } else {
+            lv_obj_add_flag(kb->mode_btn, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+    if (visible) {
+        show_layer(kb);
+    }
+}
+
+lv_obj_t *ui_keyboard_get_layer(ui_keyboard_t *kb, ui_keyboard_mode_t mode)
+{
+    if (kb == NULL || mode >= UI_KEYBOARD_MODE_COUNT) {
+        return NULL;
+    }
+    return kb->layers[mode];
+}
+
+lv_obj_t *ui_keyboard_get_mode_button(ui_keyboard_t *kb)
+{
+    if (kb == NULL) {
+        return NULL;
+    }
+    return kb->mode_btn;
 }
 
 void ui_keyboard_destroy(ui_keyboard_t *kb)

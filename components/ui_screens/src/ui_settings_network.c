@@ -102,10 +102,6 @@ static void net_bind_keyboard(void)
         buf_len = sizeof(s_ntp_buf);
     }
 
-    if (s_net_kb != NULL) {
-        ui_keyboard_destroy(s_net_kb);
-    }
-
     ui_keyboard_config_t kb_cfg = {
         .buf = buf,
         .buf_len = buf_len,
@@ -114,7 +110,19 @@ static void net_bind_keyboard(void)
         .on_activity = ui_settings_idle_cb,
         .user_data = NULL,
     };
-    s_net_kb = ui_keyboard_create(ui_settings_screen(), &kb_cfg);
+    if (s_net_kb == NULL) {
+        s_net_kb = ui_keyboard_create_overlay(ui_settings_screen(), &kb_cfg);
+        if (s_net_kb != NULL) {
+            /* Ensure panel switches hide the keyboard overlays. */
+            for (int m = 0; m < UI_KEYBOARD_MODE_COUNT; m++) {
+                ui_settings_register_overlay_obj(ui_keyboard_get_layer(s_net_kb, (ui_keyboard_mode_t)m));
+            }
+            ui_settings_register_overlay_obj(ui_keyboard_get_mode_button(s_net_kb));
+        }
+    } else {
+        ui_keyboard_bind(s_net_kb, &kb_cfg);
+    }
+    ui_keyboard_set_visible(s_net_kb, true);
 }
 
 static void network_show_list(void)
@@ -148,8 +156,7 @@ static void network_show_list(void)
         lv_obj_clear_flag(s_net_panel_title, LV_OBJ_FLAG_HIDDEN);
     }
     if (s_net_kb != NULL) {
-        ui_keyboard_destroy(s_net_kb);
-        s_net_kb = NULL;
+        ui_keyboard_set_visible(s_net_kb, false);
     }
 }
 

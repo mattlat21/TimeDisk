@@ -23,10 +23,15 @@ static lv_obj_t *wedge_pin_cancel;
 static lv_obj_t *wedge_pin_ok;
 static lv_obj_t *wedge_maths_cancel;
 static lv_obj_t *wedge_maths_ok;
+static ui_numeric_keypad_t *s_keypad;
 
 static void pin_digit_cb(lv_event_t *e)
 {
-    const char *digit = (const char *)lv_event_get_user_data(e);
+    lv_obj_t *btn = lv_event_get_target(e);
+    const char *digit = btn ? (const char *)lv_obj_get_user_data(btn) : NULL;
+    if (digit == NULL) {
+        return;
+    }
     aa_session_t *s = ui_nav_aa_session();
     size_t len = strlen(s->pin_buf);
     if (len >= 4) {
@@ -94,7 +99,11 @@ static void pin_cancel_cb(lv_event_t *e)
 
 static void maths_digit_cb(lv_event_t *e)
 {
-    const char *digit = (const char *)lv_event_get_user_data(e);
+    lv_obj_t *btn = lv_event_get_target(e);
+    const char *digit = btn ? (const char *)lv_obj_get_user_data(btn) : NULL;
+    if (digit == NULL) {
+        return;
+    }
     aa_session_t *s = ui_nav_aa_session();
     size_t len = strlen(s->answer_buf);
     if (len >= 2) {
@@ -156,12 +165,6 @@ static void build_pin_panel(lv_obj_t *parent)
     lv_obj_set_style_text_font(lbl_pin, &lv_font_montserrat_26, 0);
     lv_obj_center(lbl_pin);
 
-    ui_numeric_keypad_create(scr_pin, &(ui_numeric_keypad_cfg_t){
-        .digit_cb = pin_digit_cb,
-        .backspace_cb = pin_back_cb,
-        .user_ctx = NULL,
-    });
-
     wedge_pin_cancel = ui_wedge_create(scr_pin, UI_WEDGE_CANCEL);
     lv_obj_add_event_cb(wedge_pin_cancel, pin_cancel_cb, LV_EVENT_CLICKED, NULL);
     wedge_pin_ok = ui_wedge_create(scr_pin, UI_WEDGE_CONFIRM);
@@ -217,12 +220,6 @@ static void build_maths_panel(lv_obj_t *parent)
     x += 28 + gap;
     make_eq_box(scr_maths, x, y, &lbl_answer, true);
 
-    ui_numeric_keypad_create(scr_maths, &(ui_numeric_keypad_cfg_t){
-        .digit_cb = maths_digit_cb,
-        .backspace_cb = maths_back_cb,
-        .user_ctx = NULL,
-    });
-
     (void)t;
     wedge_maths_cancel = ui_wedge_create(scr_maths, UI_WEDGE_CANCEL);
     lv_obj_add_event_cb(wedge_maths_cancel, pin_cancel_cb, LV_EVENT_CLICKED, NULL);
@@ -238,6 +235,12 @@ void ui_screen_aa_build(lv_obj_t *screens[UI_SCREEN_COUNT])
     screens[UI_SCREEN_ADULT_AUTH] = s_scr;
     build_pin_panel(s_scr);
     build_maths_panel(s_scr);
+
+    s_keypad = ui_numeric_keypad_create_overlay(s_scr, &(ui_numeric_keypad_cfg_t){
+        .digit_cb = pin_digit_cb,
+        .backspace_cb = pin_back_cb,
+        .user_ctx = NULL,
+    });
 }
 
 void ui_screen_aa_apply_theme(void)
@@ -261,6 +264,14 @@ void ui_screen_aa_show_pin(void)
 {
     lv_obj_remove_flag(scr_pin, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(scr_maths, LV_OBJ_FLAG_HIDDEN);
+    if (s_keypad != NULL) {
+        ui_numeric_keypad_set_cfg(s_keypad, &(ui_numeric_keypad_cfg_t){
+            .digit_cb = pin_digit_cb,
+            .backspace_cb = pin_back_cb,
+            .user_ctx = NULL,
+        });
+        ui_numeric_keypad_set_visible(s_keypad, true);
+    }
     if (wedge_pin_cancel) lv_obj_remove_flag(wedge_pin_cancel, LV_OBJ_FLAG_HIDDEN);
     if (wedge_pin_ok) lv_obj_remove_flag(wedge_pin_ok, LV_OBJ_FLAG_HIDDEN);
     if (wedge_maths_cancel) lv_obj_add_flag(wedge_maths_cancel, LV_OBJ_FLAG_HIDDEN);
@@ -271,6 +282,14 @@ void ui_screen_aa_show_maths(void)
 {
     lv_obj_add_flag(scr_pin, LV_OBJ_FLAG_HIDDEN);
     lv_obj_remove_flag(scr_maths, LV_OBJ_FLAG_HIDDEN);
+    if (s_keypad != NULL) {
+        ui_numeric_keypad_set_cfg(s_keypad, &(ui_numeric_keypad_cfg_t){
+            .digit_cb = maths_digit_cb,
+            .backspace_cb = maths_back_cb,
+            .user_ctx = NULL,
+        });
+        ui_numeric_keypad_set_visible(s_keypad, true);
+    }
     if (wedge_pin_cancel) lv_obj_add_flag(wedge_pin_cancel, LV_OBJ_FLAG_HIDDEN);
     if (wedge_pin_ok) lv_obj_add_flag(wedge_pin_ok, LV_OBJ_FLAG_HIDDEN);
     if (wedge_maths_cancel) lv_obj_remove_flag(wedge_maths_cancel, LV_OBJ_FLAG_HIDDEN);

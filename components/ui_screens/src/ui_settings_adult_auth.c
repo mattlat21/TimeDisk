@@ -32,6 +32,7 @@ static lv_obj_t *s_chk_pin;
 static lv_obj_t *s_chk_maths;
 static lv_obj_t *s_lbl_aa_pin;
 static char s_aa_pin_buf[APP_AA_PIN_LEN];
+static ui_numeric_keypad_t *s_keypad;
 
 static void aa_refresh_pin_label(void)
 {
@@ -40,7 +41,11 @@ static void aa_refresh_pin_label(void)
 
 static void aa_pin_digit_cb(lv_event_t *e)
 {
-    const char *digit = (const char *)lv_event_get_user_data(e);
+    lv_obj_t *btn = lv_event_get_target(e);
+    const char *digit = btn ? (const char *)lv_obj_get_user_data(btn) : NULL;
+    if (digit == NULL) {
+        return;
+    }
     size_t len = strlen(s_aa_pin_buf);
     if (len >= 4) {
         return;
@@ -81,6 +86,9 @@ void ui_settings_adult_auth_sync_from_draft(void)
     app_config_t *draft = ui_settings_draft();
     snprintf(s_aa_pin_buf, sizeof(s_aa_pin_buf), "%s", draft->aa_pin);
     aa_refresh_pin_label();
+    if (s_keypad != NULL) {
+        ui_numeric_keypad_set_visible(s_keypad, true);
+    }
 
     if (draft->aa_methods & AA_METHOD_PIN) {
         lv_obj_add_state(s_chk_pin, LV_STATE_CHECKED);
@@ -156,11 +164,15 @@ lv_obj_t *ui_settings_adult_auth_build(void)
 
     (void)keypad_x;
     (void)keypad_y;
-    ui_numeric_keypad_create(s_panel, &(ui_numeric_keypad_cfg_t){
+    s_keypad = ui_numeric_keypad_create_overlay(ui_settings_screen(), &(ui_numeric_keypad_cfg_t){
         .digit_cb = aa_pin_digit_cb,
         .backspace_cb = aa_pin_back_cb,
         .user_ctx = NULL,
     });
+    if (s_keypad != NULL) {
+        ui_numeric_keypad_set_visible(s_keypad, false);
+        ui_settings_register_overlay_obj(ui_numeric_keypad_get_container(s_keypad));
+    }
 
     ui_settings_attach_panel_wedges(s_panel, PANEL_AA, aa_save_cb);
     return s_panel;

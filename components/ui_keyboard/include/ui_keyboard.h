@@ -9,6 +9,7 @@
 #pragma once
 
 #include "lvgl.h"
+#include <stdbool.h>
 #include <stddef.h>
 
 typedef enum {
@@ -33,6 +34,18 @@ typedef struct ui_keyboard ui_keyboard_t;
 
 void ui_keyboard_module_init(void);
 ui_keyboard_t *ui_keyboard_create(lv_obj_t *parent, const ui_keyboard_config_t *config);
+/** Create keyboard as a screen-root overlay (absolute LCD positioning). */
+ui_keyboard_t *ui_keyboard_create_overlay(lv_obj_t *screen, const ui_keyboard_config_t *config);
 void ui_keyboard_destroy(ui_keyboard_t *kb);
 ui_keyboard_mode_t ui_keyboard_get_mode(const ui_keyboard_t *kb);
 void ui_keyboard_set_mode(ui_keyboard_t *kb, ui_keyboard_mode_t mode);
+
+/** Re-bind target buffer/label without recreating the keyboard. */
+void ui_keyboard_bind(ui_keyboard_t *kb, const ui_keyboard_config_t *config);
+
+/** Show/hide the keyboard overlays (all layers + mode button). */
+void ui_keyboard_set_visible(ui_keyboard_t *kb, bool visible);
+
+/** Expose overlay objects for screen-level overlay registries. */
+lv_obj_t *ui_keyboard_get_layer(ui_keyboard_t *kb, ui_keyboard_mode_t mode);
+lv_obj_t *ui_keyboard_get_mode_button(ui_keyboard_t *kb);
