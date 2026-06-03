@@ -34,7 +34,6 @@ typedef struct {
 static lv_obj_t *s_scr_bright;
 static lv_obj_t *s_scr_dim;
 static ui_wedge_t *s_menu_wedge_bright;
-static ui_wedge_t *s_menu_wedge_dim;
 static tod_mode_panel_t s_panels_bright[TOD_MODE_COUNT];
 static tod_mode_panel_t s_panels_dim[TOD_MODE_COUNT];
 static bool s_showing_dim;
@@ -143,6 +142,8 @@ static lv_obj_t *create_panel_root(lv_obj_t *parent)
     lv_obj_set_style_bg_opa(root, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(root, 0, 0);
     lv_obj_remove_flag(root, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_remove_flag(root, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_flag(root, LV_OBJ_FLAG_EVENT_BUBBLE);
     return root;
 }
 
@@ -239,13 +240,15 @@ static void build_screen(lv_obj_t **scr, tod_mode_panel_t *panels, bool dim)
         lv_obj_add_flag(panels[i].root, LV_OBJ_FLAG_HIDDEN);
     }
 
+    lv_obj_add_flag(*scr, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_event_cb(*scr, screen_tap_cb, LV_EVENT_CLICKED, NULL);
 
-    ui_wedge_t **wedge_slot = dim ? &s_menu_wedge_dim : &s_menu_wedge_bright;
-    *wedge_slot = ui_wedge_create_overlay(*scr, UI_WEDGE_MENU);
-    if (*wedge_slot != NULL) {
-        ui_wedge_bind(*wedge_slot, UI_WEDGE_MENU, menu_btn_cb, NULL);
-        ui_wedge_set_label(*wedge_slot, "Menu");
+    if (!dim) {
+        s_menu_wedge_bright = ui_wedge_create_overlay(*scr, UI_WEDGE_MENU);
+        if (s_menu_wedge_bright != NULL) {
+            ui_wedge_bind(s_menu_wedge_bright, UI_WEDGE_MENU, menu_btn_cb, NULL);
+            ui_wedge_set_label(s_menu_wedge_bright, "Menu");
+        }
     }
 }
 
@@ -272,6 +275,10 @@ static void apply_mode(bool dim)
         } else {
             lv_obj_add_flag(all[i].root, LV_OBJ_FLAG_HIDDEN);
         }
+    }
+
+    if (s_menu_wedge_bright != NULL) {
+        ui_wedge_set_visible(s_menu_wedge_bright, !dim);
     }
 
     s_showing_dim = dim;
@@ -335,9 +342,6 @@ void ui_screen_tod_apply_theme(void)
     }
     if (s_menu_wedge_bright != NULL) {
         ui_wedge_refresh_theme(s_menu_wedge_bright);
-    }
-    if (s_menu_wedge_dim != NULL) {
-        ui_wedge_refresh_theme(s_menu_wedge_dim);
     }
     apply_mode(s_showing_dim);
 }

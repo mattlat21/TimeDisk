@@ -44,6 +44,25 @@ static const char *s_timeout_names[5] = {
     "Timer dim",
 };
 
+/** Tiered +/- step sizes for timeout edit screens. */
+static uint32_t timeout_step_sec(uint32_t value_sec, void *user_data)
+{
+    (void)user_data;
+    if (value_sec < 10) {
+        return 1;
+    }
+    if (value_sec < 60) {
+        return 5;
+    }
+    if (value_sec < 300) {
+        return 30;
+    }
+    if (value_sec < 2700) {
+        return 60;
+    }
+    return 300;
+}
+
 static uint32_t *timeout_field_ptr(int idx)
 {
     app_config_t *draft = ui_settings_draft();
@@ -67,7 +86,7 @@ static void timeout_refresh_list_labels(void)
 {
     char buf[48];
     for (int i = 0; i < 5; i++) {
-        ui_format_duration_minutes(buf, sizeof(buf), *timeout_field_ptr(i));
+        ui_format_duration_human(buf, sizeof(buf), *timeout_field_ptr(i));
         char line[64];
         snprintf(line, sizeof(line), "%s: %s", s_timeout_names[i], buf);
         lv_label_set_text(s_timeout_row_lbls[i], line);
@@ -196,6 +215,9 @@ lv_obj_t *ui_settings_timeouts_build(void)
         .value_sec = &s_timeout_edit_val,
         .box_y = UI_DURATION_EDITOR_BOX_Y,
         .show_end_time = false,
+        .min_sec = 1,
+        .display = UI_DURATION_DISPLAY_HUMAN,
+        .get_step_sec = timeout_step_sec,
         .on_change = ui_settings_idle_cb,
     };
     ui_duration_editor_create(s_panel, &s_timeout_bundle);

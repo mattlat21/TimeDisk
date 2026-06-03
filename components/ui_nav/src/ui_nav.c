@@ -29,6 +29,9 @@ static uint32_t s_loading_retry_at_ms;
 
 #define LOADING_RETRY_MS 10000U
 
+#define UI_NAV_BRIGHTNESS_BRIGHT  100
+#define UI_NAV_BRIGHTNESS_DIM     30
+
 static uint32_t now_ms(void)
 {
     return lv_tick_get();
@@ -42,7 +45,7 @@ void ui_nav_set_brightness(uint8_t pct)
 
 void ui_nav_apply_dim(bool dim)
 {
-    ui_nav_set_brightness(dim ? 30 : 100);
+    ui_nav_set_brightness(dim ? UI_NAV_BRIGHTNESS_DIM : UI_NAV_BRIGHTNESS_BRIGHT);
 }
 
 static void aa_generate_maths(void)
