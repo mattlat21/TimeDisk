@@ -77,6 +77,11 @@ for src in "${ASSETS_DIR}"/*; do
         splash)
           embed_png "${stem}" RGB565 "${src}"
           ;;
+        tod_*)
+          png="${TMP}/${stem}.png"
+          sips -z 720 720 "${src}" --out "${png}" >/dev/null
+          embed_png "${stem}" RGB565 "${png}"
+          ;;
         wedge_shape_wide)
           embed_png "${stem}" A8 "${src}"
           ;;
@@ -90,7 +95,7 @@ for src in "${ASSETS_DIR}"/*; do
           embed_png "${stem}" RGB565A8 "${src}"
           ;;
         *)
-          die "unknown PNG '${base}' — use wedge_shape_*, icon_wedge_*, or splash.png"
+          die "unknown PNG '${base}' — use wedge_shape_*, icon_wedge_*, splash.png, or tod_*.png"
           ;;
       esac
       ;;

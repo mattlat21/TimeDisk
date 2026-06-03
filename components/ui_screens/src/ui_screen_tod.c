@@ -10,19 +10,12 @@
 #include "ui_format.h"
 #include "ui_theme.h"
 #include "ui_nav.h"
+#include "ui_assets.h"
 #include "app_config.h"
 #include <stdio.h>
 #include <string.h>
 
 #define TOD_MODE_COUNT 4
-
-/** Placeholder full-screen backgrounds per mode (until wireframes). */
-static const uint32_t s_mode_bg_rgb[TOD_MODE_COUNT] = {
-    [APP_MODE_WAKE] = 0x101010,
-    [APP_MODE_WIND_DOWN] = 0x3D2A14,
-    [APP_MODE_SLEEP] = 0x1A0A3A,
-    [APP_MODE_REST] = 0x0A2A3A,
-};
 
 typedef struct {
     lv_obj_t *root;
@@ -33,6 +26,8 @@ typedef struct {
 
 static lv_obj_t *s_scr_bright;
 static lv_obj_t *s_scr_dim;
+static lv_obj_t *s_bg_bright;
+static lv_obj_t *s_bg_dim;
 static ui_wedge_t *s_menu_wedge_bright;
 static tod_mode_panel_t s_panels_bright[TOD_MODE_COUNT];
 static tod_mode_panel_t s_panels_dim[TOD_MODE_COUNT];
@@ -46,12 +41,20 @@ static tod_mode_panel_t *panel_for(app_mode_t mode, bool dim)
     return dim ? &s_panels_dim[mode] : &s_panels_bright[mode];
 }
 
-static lv_color_t mode_bg_color(app_mode_t mode)
+static const lv_image_dsc_t *mode_image(app_mode_t mode)
 {
-    if (mode >= TOD_MODE_COUNT) {
-        mode = APP_MODE_WAKE;
+    switch (mode) {
+    case APP_MODE_WAKE:
+        return &tod_wake;
+    case APP_MODE_WIND_DOWN:
+        return &tod_winddown;
+    case APP_MODE_SLEEP:
+        return &tod_sleep;
+    case APP_MODE_REST:
+        return &tod_rest;
+    default:
+        return &tod_wake;
     }
-    return ui_theme_from_rgb(s_mode_bg_rgb[mode]);
 }
 
 static const char *mode_label(app_mode_t mode)
@@ -106,13 +109,25 @@ static app_mode_t peek_next_mode(app_mode_t current)
     }
 }
 
-static void apply_mode_background(lv_obj_t *scr, app_mode_t mode)
+static void apply_mode_background(lv_obj_t *bg, app_mode_t mode, bool dim)
 {
-    if (scr == NULL) {
+    if (bg == NULL) {
         return;
     }
-    lv_obj_set_style_bg_color(scr, mode_bg_color(mode), 0);
-    lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, 0);
+    lv_image_set_src(bg, mode_image(mode));
+    lv_obj_set_style_opa(bg, dim ? LV_OPA_60 : LV_OPA_COVER, 0);
+}
+
+static lv_obj_t *create_mode_background(lv_obj_t *scr)
+{
+    lv_obj_t *img = lv_image_create(scr);
+    lv_image_set_src(img, &tod_wake);
+    lv_obj_set_size(img, UI_DISP, UI_DISP);
+    lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_remove_flag(img, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(img, LV_OBJ_FLAG_EVENT_BUBBLE);
+    lv_obj_move_background(img);
+    return img;
 }
 
 static void screen_tap_cb(lv_event_t *e)
@@ -228,9 +243,10 @@ static void build_mode_panel(lv_obj_t *scr, tod_mode_panel_t *p, bool dim, app_m
     lv_obj_align(p->lbl_remaining, LV_ALIGN_CENTER, 0, 40);
 }
 
-static void build_screen(lv_obj_t **scr, tod_mode_panel_t *panels, bool dim)
+static void build_screen(lv_obj_t **scr, lv_obj_t **bg, tod_mode_panel_t *panels, bool dim)
 {
-    *scr = ui_widgets_create_screen();
+    *scr = ui_widgets_create_screen_no_ring();
+    *bg = create_mode_background(*scr);
 
     for (int i = 0; i < TOD_MODE_COUNT; i++) {
         build_mode_panel(*scr, &panels[i], dim, (app_mode_t)i);
@@ -250,6 +266,10 @@ static void build_screen(lv_obj_t **scr, tod_mode_panel_t *panels, bool dim)
             ui_wedge_set_label(s_menu_wedge_bright, "Menu");
         }
     }
+
+    if (*bg != NULL) {
+        lv_obj_move_background(*bg);
+    }
 }
 
 static void apply_mode(bool dim)
@@ -260,8 +280,8 @@ static void apply_mode(bool dim)
         mode = APP_MODE_WAKE;
     }
 
-    apply_mode_background(s_scr_bright, mode);
-    apply_mode_background(s_scr_dim, mode);
+    apply_mode_background(s_bg_bright, mode, false);
+    apply_mode_background(s_bg_dim, mode, true);
 
     tod_mode_panel_t *all = dim ? s_panels_dim : s_panels_bright;
 
@@ -286,8 +306,8 @@ static void apply_mode(bool dim)
 
 void ui_screen_tod_build(lv_obj_t *screens[UI_SCREEN_COUNT])
 {
-    build_screen(&s_scr_bright, s_panels_bright, false);
-    build_screen(&s_scr_dim, s_panels_dim, true);
+    build_screen(&s_scr_bright, &s_bg_bright, s_panels_bright, false);
+    build_screen(&s_scr_dim, &s_bg_dim, s_panels_dim, true);
     screens[UI_SCREEN_TOD_BRIGHT] = s_scr_bright;
     screens[UI_SCREEN_TOD_DIM] = s_scr_dim;
 }
@@ -331,10 +351,10 @@ static void apply_theme_to_panel(tod_mode_panel_t *p)
 void ui_screen_tod_apply_theme(void)
 {
     if (s_scr_bright != NULL) {
-        ui_widgets_style_circle_panel(s_scr_bright);
+        ui_widgets_style_circle_panel_no_ring(s_scr_bright);
     }
     if (s_scr_dim != NULL) {
-        ui_widgets_style_circle_panel(s_scr_dim);
+        ui_widgets_style_circle_panel_no_ring(s_scr_dim);
     }
     for (int i = 0; i < TOD_MODE_COUNT; i++) {
         apply_theme_to_panel(&s_panels_bright[i]);

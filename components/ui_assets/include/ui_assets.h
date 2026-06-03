@@ -9,6 +9,12 @@
 
 extern const lv_image_dsc_t splash;
 
+/** Full-screen Time of Day backgrounds (720×720 RGB565). */
+extern const lv_image_dsc_t tod_wake;
+extern const lv_image_dsc_t tod_winddown;
+extern const lv_image_dsc_t tod_sleep;
+extern const lv_image_dsc_t tod_rest;
+
 /** A8 wedge silhouettes — tint at runtime via image_recolor. */
 extern const lv_image_dsc_t wedge_shape_left;
 extern const lv_image_dsc_t wedge_shape_right;

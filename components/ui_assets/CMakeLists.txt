@@ -9,6 +9,10 @@ idf_component_register(
         "src/icon_wedge_next.c"
         "src/icon_wedge_settings.c"
         "src/icon_wedge_menu_wide.c"
+        "src/tod_wake.c"
+        "src/tod_winddown.c"
+        "src/tod_sleep.c"
+        "src/tod_rest.c"
     INCLUDE_DIRS "include"
     REQUIRES lvgl
 )
