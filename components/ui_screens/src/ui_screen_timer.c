@@ -15,9 +15,9 @@
 #define TIMER_STYLE_TILE_Y   180
 #define TIMER_STYLE_TILE_GAP 40
 
-/** Progress ring size — centered on the 720×720 display. */
-#define TIMER_RING_DIAMETER  640
-#define TIMER_RING_STROKE    28
+/** Progress ring: outer edge at display bounds, centered on 720×720. */
+#define TIMER_RING_DIAMETER  UI_SCREEN_W
+#define TIMER_RING_STROKE    56
 #define TIMER_RING_VALUE_MAX 1000
 #define TIMER_RING_TRACK_COLOR lv_color_make(0x3D, 0x3D, 0x3D)
 
@@ -647,10 +647,18 @@ static void build_triggered(lv_obj_t *screens[UI_SCREEN_COUNT])
 
 static void build_confirm(lv_obj_t *screens[UI_SCREEN_COUNT])
 {
+    const ui_theme_t *t = ui_theme_get();
+
     s_scr_confirm = ui_widgets_create_screen();
     screens[UI_SCREEN_CONFIRM_END_TIMER] = s_scr_confirm;
 
-    ui_widgets_create_title(s_scr_confirm, "Are you sure?");
+    lv_obj_t *prompt = lv_label_create(s_scr_confirm);
+    lv_label_set_text(prompt, "Are you sure you want to\ncancel the timer?");
+    lv_obj_set_width(prompt, UI_SCREEN_W);
+    lv_obj_set_style_text_color(prompt, t->white, 0);
+    lv_obj_set_style_text_font(prompt, &lv_font_montserrat_26, 0);
+    lv_obj_set_style_text_align(prompt, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_center(prompt);
 
     lv_obj_t *cancel = ui_wedge_create(s_scr_confirm, UI_WEDGE_CANCEL);
     lv_obj_add_event_cb(cancel, confirm_no_cb, LV_EVENT_CLICKED, NULL);

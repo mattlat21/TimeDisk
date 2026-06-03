@@ -16,8 +16,13 @@
 
 #define TOD_MODE_COUNT 4
 
-#define TOD_SLEEP_PANEL_W  480
-#define TOD_SLEEP_PANEL_H  200
+/** Placeholder full-screen backgrounds per mode (until wireframes). */
+static const uint32_t s_mode_bg_rgb[TOD_MODE_COUNT] = {
+    [APP_MODE_WAKE] = 0x101010,
+    [APP_MODE_WIND_DOWN] = 0x3D2A14,
+    [APP_MODE_SLEEP] = 0x1A0A3A,
+    [APP_MODE_REST] = 0x0A2A3A,
+};
 
 typedef struct {
     lv_obj_t *root;
@@ -40,6 +45,75 @@ static tod_mode_panel_t *panel_for(app_mode_t mode, bool dim)
         mode = APP_MODE_WAKE;
     }
     return dim ? &s_panels_dim[mode] : &s_panels_bright[mode];
+}
+
+static lv_color_t mode_bg_color(app_mode_t mode)
+{
+    if (mode >= TOD_MODE_COUNT) {
+        mode = APP_MODE_WAKE;
+    }
+    return ui_theme_from_rgb(s_mode_bg_rgb[mode]);
+}
+
+static const char *mode_label(app_mode_t mode)
+{
+    switch (mode) {
+    case APP_MODE_WAKE:
+        return "Wake";
+    case APP_MODE_WIND_DOWN:
+        return "Wind Down";
+    case APP_MODE_SLEEP:
+        return "Sleep";
+    case APP_MODE_REST:
+        return "Rest";
+    default:
+        return "Wake";
+    }
+}
+
+static app_mode_t peek_next_mode(app_mode_t current)
+{
+    const app_config_t *cfg = app_config_get();
+
+    switch (current) {
+    case APP_MODE_WAKE:
+        if (cfg->wind_down_sec > 0) {
+            return APP_MODE_WIND_DOWN;
+        }
+        if (cfg->sleep_sec > 0) {
+            return APP_MODE_SLEEP;
+        }
+        if (cfg->rest_sec > 0) {
+            return APP_MODE_REST;
+        }
+        return APP_MODE_WAKE;
+    case APP_MODE_WIND_DOWN:
+        if (cfg->sleep_sec > 0) {
+            return APP_MODE_SLEEP;
+        }
+        if (cfg->rest_sec > 0) {
+            return APP_MODE_REST;
+        }
+        return APP_MODE_WAKE;
+    case APP_MODE_SLEEP:
+        if (cfg->rest_sec > 0) {
+            return APP_MODE_REST;
+        }
+        return APP_MODE_WAKE;
+    case APP_MODE_REST:
+        return APP_MODE_WAKE;
+    default:
+        return APP_MODE_WAKE;
+    }
+}
+
+static void apply_mode_background(lv_obj_t *scr, app_mode_t mode)
+{
+    if (scr == NULL) {
+        return;
+    }
+    lv_obj_set_style_bg_color(scr, mode_bg_color(mode), 0);
+    lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, 0);
 }
 
 static void screen_tap_cb(lv_event_t *e)
@@ -93,12 +167,17 @@ static void refresh_panel_remaining(const tod_mode_panel_t *p, app_mode_t mode)
         return;
     }
     app_runtime_t *rt = app_runtime_get();
-    if (!rt->cycle_active || mode == APP_MODE_WAKE) {
+    if (!rt->cycle_active || rt->mode_remaining_sec == 0) {
         lv_obj_add_flag(p->lbl_remaining, LV_OBJ_FLAG_HIDDEN);
         return;
     }
-    char buf[16];
-    ui_format_mm_ss(buf, sizeof(buf), rt->mode_remaining_sec);
+
+    app_mode_t next = peek_next_mode(mode);
+    char time_buf[16];
+    char buf[48];
+
+    ui_format_mm_ss(time_buf, sizeof(time_buf), rt->mode_remaining_sec);
+    snprintf(buf, sizeof(buf), "%s in %s", mode_label(next), time_buf);
     lv_label_set_text(p->lbl_remaining, buf);
     lv_obj_remove_flag(p->lbl_remaining, LV_OBJ_FLAG_HIDDEN);
 }
@@ -124,22 +203,7 @@ static void refresh_panel(const tod_mode_panel_t *p, app_mode_t mode, bool dim)
     apply_dim_styles(p, dim);
 }
 
-static void build_wake_panel(lv_obj_t *scr, tod_mode_panel_t *p, bool dim)
-{
-    const ui_theme_t *t = ui_theme_get();
-
-    (void)dim;
-    p->root = create_panel_root(scr);
-    p->lbl_subtitle = NULL;
-    p->lbl_remaining = NULL;
-
-    p->lbl_time = lv_label_create(p->root);
-    lv_obj_set_style_text_color(p->lbl_time, t->white, 0);
-    lv_obj_set_style_text_font(p->lbl_time, &lv_font_montserrat_48, 0);
-    lv_obj_align(p->lbl_time, LV_ALIGN_CENTER, 0, -30);
-}
-
-static void build_wind_down_panel(lv_obj_t *scr, tod_mode_panel_t *p, bool dim)
+static void build_mode_panel(lv_obj_t *scr, tod_mode_panel_t *p, bool dim, app_mode_t mode)
 {
     const ui_theme_t *t = ui_theme_get();
 
@@ -147,7 +211,7 @@ static void build_wind_down_panel(lv_obj_t *scr, tod_mode_panel_t *p, bool dim)
     p->root = create_panel_root(scr);
 
     p->lbl_subtitle = lv_label_create(p->root);
-    lv_label_set_text(p->lbl_subtitle, "Wind Down");
+    lv_label_set_text(p->lbl_subtitle, mode_label(mode));
     lv_obj_set_style_text_color(p->lbl_subtitle, t->secondary, 0);
     lv_obj_set_style_text_font(p->lbl_subtitle, &lv_font_montserrat_20, 0);
     lv_obj_align(p->lbl_subtitle, LV_ALIGN_CENTER, 0, -80);
@@ -163,60 +227,13 @@ static void build_wind_down_panel(lv_obj_t *scr, tod_mode_panel_t *p, bool dim)
     lv_obj_align(p->lbl_remaining, LV_ALIGN_CENTER, 0, 40);
 }
 
-static void build_sleep_style_panel(lv_obj_t *scr, tod_mode_panel_t *p, bool dim,
-                                    const char *title, lv_color_t panel_bg, lv_color_t countdown_color)
-{
-    const ui_theme_t *t = ui_theme_get();
-
-    (void)dim;
-    p->root = create_panel_root(scr);
-
-    lv_obj_t *box = lv_obj_create(p->root);
-    lv_obj_set_size(box, TOD_SLEEP_PANEL_W, TOD_SLEEP_PANEL_H);
-    lv_obj_align(box, LV_ALIGN_CENTER, 0, -30);
-    lv_obj_set_style_bg_color(box, panel_bg, 0);
-    lv_obj_set_style_bg_opa(box, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_width(box, 0, 0);
-    lv_obj_set_style_radius(box, 16, 0);
-    lv_obj_remove_flag(box, LV_OBJ_FLAG_SCROLLABLE);
-
-    p->lbl_subtitle = lv_label_create(box);
-    lv_label_set_text(p->lbl_subtitle, title);
-    lv_obj_set_style_text_color(p->lbl_subtitle, t->white, 0);
-    lv_obj_set_style_text_font(p->lbl_subtitle, &lv_font_montserrat_20, 0);
-    lv_obj_align(p->lbl_subtitle, LV_ALIGN_TOP_MID, 0, 16);
-
-    p->lbl_time = lv_label_create(box);
-    lv_obj_set_style_text_color(p->lbl_time, t->white, 0);
-    lv_obj_set_style_text_font(p->lbl_time, &lv_font_montserrat_48, 0);
-    lv_obj_align(p->lbl_time, LV_ALIGN_CENTER, 0, -8);
-
-    p->lbl_remaining = lv_label_create(box);
-    lv_obj_set_style_text_color(p->lbl_remaining, countdown_color, 0);
-    lv_obj_set_style_text_font(p->lbl_remaining, &lv_font_montserrat_20, 0);
-    lv_obj_align(p->lbl_remaining, LV_ALIGN_BOTTOM_MID, 0, -16);
-}
-
-static void build_sleep_panel(lv_obj_t *scr, tod_mode_panel_t *p, bool dim)
-{
-    const ui_theme_t *t = ui_theme_get();
-    build_sleep_style_panel(scr, p, dim, "Sleep", t->panel, t->white);
-}
-
-static void build_rest_panel(lv_obj_t *scr, tod_mode_panel_t *p, bool dim)
-{
-    const ui_theme_t *t = ui_theme_get();
-    build_sleep_style_panel(scr, p, dim, "Rest", t->ring, t->secondary);
-}
-
 static void build_screen(lv_obj_t **scr, tod_mode_panel_t *panels, bool dim)
 {
     *scr = ui_widgets_create_screen();
 
-    build_wake_panel(*scr, &panels[APP_MODE_WAKE], dim);
-    build_wind_down_panel(*scr, &panels[APP_MODE_WIND_DOWN], dim);
-    build_sleep_panel(*scr, &panels[APP_MODE_SLEEP], dim);
-    build_rest_panel(*scr, &panels[APP_MODE_REST], dim);
+    for (int i = 0; i < TOD_MODE_COUNT; i++) {
+        build_mode_panel(*scr, &panels[i], dim, (app_mode_t)i);
+    }
 
     for (int i = 0; i < TOD_MODE_COUNT; i++) {
         lv_obj_add_flag(panels[i].root, LV_OBJ_FLAG_HIDDEN);
@@ -239,6 +256,9 @@ static void apply_mode(bool dim)
     if (mode >= TOD_MODE_COUNT) {
         mode = APP_MODE_WAKE;
     }
+
+    apply_mode_background(s_scr_bright, mode);
+    apply_mode_background(s_scr_dim, mode);
 
     tod_mode_panel_t *all = dim ? s_panels_dim : s_panels_bright;
 
@@ -286,29 +306,18 @@ void ui_screen_tod_tick(void)
     refresh_panel_remaining(p, mode);
 }
 
-static void apply_theme_to_panel(tod_mode_panel_t *p, app_mode_t mode)
+static void apply_theme_to_panel(tod_mode_panel_t *p)
 {
     const ui_theme_t *t = ui_theme_get();
 
-    switch (mode) {
-    case APP_MODE_WIND_DOWN:
-        if (p->lbl_subtitle != NULL) {
-            lv_obj_set_style_text_color(p->lbl_subtitle, t->secondary, 0);
-        }
-        break;
-    case APP_MODE_REST:
-        if (p->root != NULL) {
-            lv_obj_t *box = lv_obj_get_child(p->root, 0);
-            if (box != NULL) {
-                lv_obj_set_style_bg_color(box, t->ring, 0);
-            }
-        }
-        if (p->lbl_remaining != NULL) {
-            lv_obj_set_style_text_color(p->lbl_remaining, t->secondary, 0);
-        }
-        break;
-    default:
-        break;
+    if (p->lbl_subtitle != NULL) {
+        lv_obj_set_style_text_color(p->lbl_subtitle, t->secondary, 0);
+    }
+    if (p->lbl_time != NULL) {
+        lv_obj_set_style_text_color(p->lbl_time, t->white, 0);
+    }
+    if (p->lbl_remaining != NULL) {
+        lv_obj_set_style_text_color(p->lbl_remaining, t->orange, 0);
     }
 }
 
@@ -321,8 +330,8 @@ void ui_screen_tod_apply_theme(void)
         ui_widgets_style_circle_panel(s_scr_dim);
     }
     for (int i = 0; i < TOD_MODE_COUNT; i++) {
-        apply_theme_to_panel(&s_panels_bright[i], (app_mode_t)i);
-        apply_theme_to_panel(&s_panels_dim[i], (app_mode_t)i);
+        apply_theme_to_panel(&s_panels_bright[i]);
+        apply_theme_to_panel(&s_panels_dim[i]);
     }
     if (s_menu_wedge_bright != NULL) {
         ui_wedge_refresh_theme(s_menu_wedge_bright);
@@ -330,4 +339,5 @@ void ui_screen_tod_apply_theme(void)
     if (s_menu_wedge_dim != NULL) {
         ui_wedge_refresh_theme(s_menu_wedge_dim);
     }
+    apply_mode(s_showing_dim);
 }
