@@ -6,6 +6,7 @@
 #include "ui_screens_registry.h"
 #include "ui_layout.h"
 #include "ui_widgets.h"
+#include "ui_wedge.h"
 #include "ui_format.h"
 #include "ui_theme.h"
 #include "ui_nav.h"
@@ -23,11 +24,12 @@ typedef struct {
     lv_obj_t *lbl_time;
     lv_obj_t *lbl_subtitle;
     lv_obj_t *lbl_remaining;
-    lv_obj_t *menu_btn;
 } tod_mode_panel_t;
 
 static lv_obj_t *s_scr_bright;
 static lv_obj_t *s_scr_dim;
+static ui_wedge_t *s_menu_wedge_bright;
+static ui_wedge_t *s_menu_wedge_dim;
 static tod_mode_panel_t s_panels_bright[TOD_MODE_COUNT];
 static tod_mode_panel_t s_panels_dim[TOD_MODE_COUNT];
 static bool s_showing_dim;
@@ -52,24 +54,6 @@ static void menu_btn_cb(lv_event_t *e)
 {
     (void)e;
     ui_nav_start_aa(UI_SCREEN_TOD_BRIGHT, UI_SCREEN_MENU);
-}
-
-static lv_obj_t *create_menu_btn(lv_obj_t *parent)
-{
-    const ui_theme_t *t = ui_theme_get();
-
-    lv_obj_t *menu_btn = lv_button_create(parent);
-    lv_obj_set_size(menu_btn, 160, 80);
-    lv_obj_align(menu_btn, LV_ALIGN_BOTTOM_MID, 0, -80);
-    lv_obj_set_style_bg_color(menu_btn, t->ring, 0);
-    lv_obj_set_style_radius(menu_btn, 16, 0);
-    lv_obj_t *ml = lv_label_create(menu_btn);
-    lv_label_set_text(ml, "Menu");
-    lv_obj_set_style_text_color(ml, t->white, 0);
-    lv_obj_set_style_text_font(ml, &lv_font_montserrat_26, 0);
-    lv_obj_center(ml);
-    lv_obj_add_event_cb(menu_btn, menu_btn_cb, LV_EVENT_CLICKED, NULL);
-    return menu_btn;
 }
 
 static lv_obj_t *create_panel_root(lv_obj_t *parent)
@@ -153,8 +137,6 @@ static void build_wake_panel(lv_obj_t *scr, tod_mode_panel_t *p, bool dim)
     lv_obj_set_style_text_color(p->lbl_time, t->white, 0);
     lv_obj_set_style_text_font(p->lbl_time, &lv_font_montserrat_48, 0);
     lv_obj_align(p->lbl_time, LV_ALIGN_CENTER, 0, -30);
-
-    p->menu_btn = create_menu_btn(p->root);
 }
 
 static void build_wind_down_panel(lv_obj_t *scr, tod_mode_panel_t *p, bool dim)
@@ -179,8 +161,6 @@ static void build_wind_down_panel(lv_obj_t *scr, tod_mode_panel_t *p, bool dim)
     lv_obj_set_style_text_color(p->lbl_remaining, t->orange, 0);
     lv_obj_set_style_text_font(p->lbl_remaining, &lv_font_montserrat_20, 0);
     lv_obj_align(p->lbl_remaining, LV_ALIGN_CENTER, 0, 40);
-
-    p->menu_btn = create_menu_btn(p->root);
 }
 
 static void build_sleep_style_panel(lv_obj_t *scr, tod_mode_panel_t *p, bool dim,
@@ -215,8 +195,6 @@ static void build_sleep_style_panel(lv_obj_t *scr, tod_mode_panel_t *p, bool dim
     lv_obj_set_style_text_color(p->lbl_remaining, countdown_color, 0);
     lv_obj_set_style_text_font(p->lbl_remaining, &lv_font_montserrat_20, 0);
     lv_obj_align(p->lbl_remaining, LV_ALIGN_BOTTOM_MID, 0, -16);
-
-    p->menu_btn = create_menu_btn(p->root);
 }
 
 static void build_sleep_panel(lv_obj_t *scr, tod_mode_panel_t *p, bool dim)
@@ -245,6 +223,13 @@ static void build_screen(lv_obj_t **scr, tod_mode_panel_t *panels, bool dim)
     }
 
     lv_obj_add_event_cb(*scr, screen_tap_cb, LV_EVENT_CLICKED, NULL);
+
+    ui_wedge_t **wedge_slot = dim ? &s_menu_wedge_dim : &s_menu_wedge_bright;
+    *wedge_slot = ui_wedge_create_overlay(*scr, UI_WEDGE_MENU);
+    if (*wedge_slot != NULL) {
+        ui_wedge_bind(*wedge_slot, UI_WEDGE_MENU, menu_btn_cb, NULL);
+        ui_wedge_set_label(*wedge_slot, "Menu");
+    }
 }
 
 static void apply_mode(bool dim)
@@ -305,9 +290,6 @@ static void apply_theme_to_panel(tod_mode_panel_t *p, app_mode_t mode)
 {
     const ui_theme_t *t = ui_theme_get();
 
-    if (p->menu_btn != NULL) {
-        lv_obj_set_style_bg_color(p->menu_btn, t->ring, 0);
-    }
     switch (mode) {
     case APP_MODE_WIND_DOWN:
         if (p->lbl_subtitle != NULL) {
@@ -341,5 +323,11 @@ void ui_screen_tod_apply_theme(void)
     for (int i = 0; i < TOD_MODE_COUNT; i++) {
         apply_theme_to_panel(&s_panels_bright[i], (app_mode_t)i);
         apply_theme_to_panel(&s_panels_dim[i], (app_mode_t)i);
+    }
+    if (s_menu_wedge_bright != NULL) {
+        ui_wedge_refresh_theme(s_menu_wedge_bright);
+    }
+    if (s_menu_wedge_dim != NULL) {
+        ui_wedge_refresh_theme(s_menu_wedge_dim);
     }
 }

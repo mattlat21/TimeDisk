@@ -3,10 +3,12 @@ idf_component_register(
         "src/splash.c"
         "src/wedge_shape_left.c"
         "src/wedge_shape_right.c"
+        "src/wedge_shape_wide.c"
         "src/icon_wedge_cancel.c"
         "src/icon_wedge_confirm.c"
         "src/icon_wedge_next.c"
         "src/icon_wedge_settings.c"
+        "src/icon_wedge_menu_wide.c"
     INCLUDE_DIRS "include"
     REQUIRES lvgl
 )

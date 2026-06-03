@@ -10,6 +10,7 @@ VENV="${ROOT}/.venv-assets"
 
 WEDGE_W=209
 WEDGE_H=106
+WEDGE_WIDE_W=443
 
 die() { echo "embed_ui_assets: $*" >&2; exit 1; }
 
@@ -46,9 +47,17 @@ for src in "${ASSETS_DIR}"/*; do
     svg|SVG)
       png="${TMP}/${stem}.png"
       case "${stem}" in
+        wedge_shape_wide)
+          rsvg-convert -w "${WEDGE_WIDE_W}" -h "${WEDGE_H}" "${src}" -o "${png}"
+          embed_png "${stem}" A8 "${png}"
+          ;;
         wedge_shape_*)
           rsvg-convert -w "${WEDGE_W}" -h "${WEDGE_H}" "${src}" -o "${png}"
           embed_png "${stem}" A8 "${png}"
+          ;;
+        icon_wedge_menu_wide)
+          rsvg-convert -w "${WEDGE_WIDE_W}" -h "${WEDGE_H}" "${src}" -o "${png}"
+          embed_png "${stem}" RGB565A8 "${png}"
           ;;
         icon_wedge_*)
           rsvg-convert -w "${WEDGE_W}" -h "${WEDGE_H}" "${src}" -o "${png}"
@@ -68,8 +77,14 @@ for src in "${ASSETS_DIR}"/*; do
         splash)
           embed_png "${stem}" RGB565 "${src}"
           ;;
+        wedge_shape_wide)
+          embed_png "${stem}" A8 "${src}"
+          ;;
         wedge_shape_*)
           embed_png "${stem}" A8 "${src}"
+          ;;
+        icon_wedge_menu_wide)
+          embed_png "${stem}" RGB565A8 "${src}"
           ;;
         icon_wedge_*)
           embed_png "${stem}" RGB565A8 "${src}"
