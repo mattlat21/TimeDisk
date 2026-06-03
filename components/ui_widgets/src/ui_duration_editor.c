@@ -158,7 +158,8 @@ void ui_duration_editor_refresh(const ui_duration_editor_t *ed, const ui_duratio
     }
     if (cfg->show_end_time && ed->lbl_subtitle != NULL) {
         char end[32];
-        ui_format_hh_mm_ampm_after_sec(end, sizeof(end), *cfg->value_sec);
+        ui_format_hh_mm_ampm_after_sec(end, sizeof(end),
+                                       cfg->end_time_offset_sec + *cfg->value_sec);
         lv_label_set_text(ed->lbl_subtitle, end);
         lv_obj_remove_flag(ed->lbl_subtitle, LV_OBJ_FLAG_HIDDEN);
     } else if (ed->lbl_subtitle != NULL) {

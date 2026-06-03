@@ -149,30 +149,64 @@ Durations for automatic mode cycling. All fields are **`uint32`**, unit **second
 
 **Zero means skip:** if a mode’s duration is `0`, that mode is not entered during the cycle. See [mode_flow.md](mode_flow.md).
 
+NVS and the mode engine store **net** segment durations (the time each mode actually runs). Main Menu wizards collect **gross** durations in the UI and convert on save — see below.
+
 ### Sleep wizard (Main Menu → Sleep)
 
-User sets all three durations. On completion, `sleep_sec`, `rest_sec`, and `wind_down_sec` are written to NVS and the device returns to **Wake** mode, then the automatic cycle begins.
+User sets sleep (required, > 0), rest (optional, ≥ 0), and wind down. On completion, net values are written to NVS and the device returns to **Wake** mode, then the automatic cycle begins.
+
+| Wizard step | Gross value | End-time subtitle |
+| ----------- | ----------- | ----------------- |
+| Wake up Time | `gross_sleep` | now + `gross_sleep` |
+| Rest End Time | `gross_rest` | now + `gross_sleep` + `gross_rest` |
+| Wind Down | `gross_wd` | now + `gross_wd` |
+
+**Validation:** `gross_sleep > 0`; `gross_rest ≥ 0`; `gross_wd < gross_sleep` (strict; `0` skips Wind Down).
+
+**Save transform (net NVS):**
+
+- `wind_down_sec = gross_wd`
+- `sleep_sec = gross_sleep - gross_wd` (wind down eats into sleep only, not rest)
+- `rest_sec = gross_rest`
+
+**Reload (first wizard step):** `gross_sleep = sleep_sec + wind_down_sec`, `gross_rest = rest_sec`, `gross_wd = wind_down_sec`.
 
 ### Rest wizard (Main Menu → Rest)
 
-User sets wind down and rest durations. On completion:
+User sets rest (required, > 0) and wind down. On completion:
 
-- `wind_down_sec` and `rest_sec` are written
+- `wind_down_sec = gross_wd`
+- `rest_sec = gross_rest - gross_wd` (wind down eats into rest)
 - **`sleep_sec` is forced to `0`** (Sleep is always skipped for Rest schedules)
+
+| Wizard step | Gross value | End-time subtitle |
+| ----------- | ----------- | ----------------- |
+| Rest End Time | `gross_rest` | now + `gross_rest` |
+| Wind Down | `gross_wd` | now + `gross_wd` |
+
+**Validation:** `gross_rest > 0`; `gross_wd < gross_rest` (strict; `0` skips Wind Down).
+
+**Reload (first wizard step):** `gross_rest = rest_sec + wind_down_sec`, `gross_wd = wind_down_sec`.
+
+Wind-down subtraction keeps the rest-end clock time consistent: e.g. rest gross 5 min and wind down 1 min → Wind Down 1 min then Rest 4 min (ends at the same wall time as the 5 min gross rest step showed).
+
+### Settings → Schedule
+
+Edits **net** `wind_down_sec`, `sleep_sec`, and `rest_sec` directly (no gross/end-time wizard semantics).
 
 ### Screen flow label mapping
 
-Wizard screen names in [screen_flow.md](screen_flow.md) collect **segment durations**, not clock times. Logical field names:
+Wizard screen names in [screen_flow.md](screen_flow.md). Logical field names:
 
-| Screen flow label (today) | Data field |
-| ------------------------- | ---------- |
-| Sleep: Set Wake up Time | `sleep_sec` |
-| Sleep: Set Rest End Time | `rest_sec` |
-| Sleep: Set Wind Down Time | `wind_down_sec` |
-| Rest: Set Rest End Time | `rest_sec` |
-| Rest: Set Wind Down Time | `wind_down_sec` |
+| Screen flow label (today) | Wizard gross field | NVS field(s) |
+| ------------------------- | ------------------ | ------------ |
+| Sleep: Set Wake up Time | `gross_sleep` | `sleep_sec` (net) |
+| Sleep: Set Rest End Time | `gross_rest` | `rest_sec` |
+| Sleep: Set Wind Down Time | `gross_wd` | `wind_down_sec`; subtracted from `sleep_sec` on save |
+| Rest: Set Rest End Time | `gross_rest` | `rest_sec` (net) |
+| Rest: Set Wind Down Time | `gross_wd` | `wind_down_sec`; subtracted from `rest_sec` on save |
 
-Wizard **order** in the screen-flow diagram may be reconciled later; the data model always uses `wind_down_sec`, `sleep_sec`, `rest_sec`.
+Wizard **order** in the screen-flow diagram may be reconciled later; NVS always uses net `wind_down_sec`, `sleep_sec`, `rest_sec`.
 
 ---
 

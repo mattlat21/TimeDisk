@@ -37,6 +37,8 @@ typedef struct {
     int box_w;
     int box_h;
     bool show_end_time;
+    /** Added to *value_sec when computing the end-time subtitle (default 0). */
+    uint32_t end_time_offset_sec;
     uint32_t max_sec;
     uint32_t min_sec;
     uint32_t step_sec;
