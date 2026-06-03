@@ -38,7 +38,7 @@ typedef enum {
     UI_WEDGE_CONFIRM,
     UI_WEDGE_NEXT,
     UI_WEDGE_SETTINGS,
-    /** Wide bottom bar (443x106); menu screen settings action. */
+    /** Wide bottom bar (443x106); TOD menu (theme primary / ring colour). */
     UI_WEDGE_MENU,
 } ui_wedge_type_t;
 
