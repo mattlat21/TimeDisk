@@ -11,6 +11,7 @@
 #include "ui_layout.h"
 #include "ui_assets.h"
 #include "ui_theme.h"
+#include <string.h>
 
 static const lv_image_dsc_t *shape_for_side(ui_wedge_side_t side)
 {
@@ -79,10 +80,19 @@ static lv_obj_t *wedge_shape_obj(const ui_wedge_button_t *btn)
     return lv_obj_get_child(btn, 0);
 }
 
-/** Second child when present: icon overlay. */
+/** Icon overlay image (not the shape mask at child 0, not text labels). */
 static lv_obj_t *wedge_icon_obj(const ui_wedge_button_t *btn)
 {
-    return (lv_obj_get_child_count(btn) > 1) ? lv_obj_get_child(btn, 1) : NULL;
+    lv_obj_t *shape = wedge_shape_obj(btn);
+    const uint32_t n = lv_obj_get_child_count(btn);
+
+    for (uint32_t i = 0; i < n; i++) {
+        lv_obj_t *ch = lv_obj_get_child(btn, i);
+        if (ch != shape && lv_obj_check_type(ch, &lv_image_class)) {
+            return ch;
+        }
+    }
+    return NULL;
 }
 
 static void apply_shape_color(lv_obj_t *shape, lv_color_t color)
@@ -313,6 +323,7 @@ struct ui_wedge {
     ui_wedge_type_t type;
     lv_event_cb_t cb;
     void *user_data;
+    char label_text[16];
 };
 
 static void apply_config_to_button(ui_wedge_button_t *btn, const ui_wedge_config_t *cfg)
@@ -348,6 +359,7 @@ ui_wedge_t *ui_wedge_create_overlay(lv_obj_t *screen, ui_wedge_type_t type)
     wedge->type = type;
     wedge->cb = NULL;
     wedge->user_data = NULL;
+    wedge->label_text[0] = '\0';
     lv_obj_move_foreground(wedge->btn);
     return wedge;
 }
@@ -404,17 +416,12 @@ void ui_wedge_refresh_theme(ui_wedge_t *wedge)
     if (wedge == NULL || wedge->btn == NULL) {
         return;
     }
+
     ui_wedge_config_t cfg = ui_wedge_config_from_type(wedge->type);
     apply_config_to_button(wedge->btn, &cfg);
-    if (wedge->type == UI_WEDGE_MENU) {
-        const uint32_t n = lv_obj_get_child_count(wedge->btn);
-        for (uint32_t i = 1; i < n; i++) {
-            lv_obj_t *ch = lv_obj_get_child(wedge->btn, i);
-            if (lv_obj_check_type(ch, &lv_label_class)) {
-                lv_obj_set_style_text_color(ch, ui_theme_get()->white, 0);
-                break;
-            }
-        }
+
+    if (wedge->label_text[0] != '\0') {
+        ui_wedge_button_set_label(wedge->btn, wedge->label_text);
     }
 }
 
@@ -422,6 +429,12 @@ void ui_wedge_set_label(ui_wedge_t *wedge, const char *text)
 {
     if (wedge == NULL || wedge->btn == NULL) {
         return;
+    }
+    if (text != NULL) {
+        strncpy(wedge->label_text, text, sizeof(wedge->label_text) - 1U);
+        wedge->label_text[sizeof(wedge->label_text) - 1U] = '\0';
+    } else {
+        wedge->label_text[0] = '\0';
     }
     ui_wedge_button_set_label(wedge->btn, text);
 }

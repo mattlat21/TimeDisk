@@ -24,6 +24,9 @@
 /** Visual refresh for ring/water (~60 Hz; water level + bob via cached layout). */
 #define TIMER_ANIM_PERIOD_MS 16
 
+/** Ring/water reach full progress this many seconds before the countdown hits zero. */
+#define TIMER_ANIM_FINISH_REMAINING_SEC 1
+
 /** Timer Set Duration: minimum and tiered +/- step sizes. */
 #define TIMER_DURATION_MIN_SEC 5
 
@@ -48,7 +51,7 @@ static uint32_t timer_duration_step_sec(uint32_t value_sec, void *user_data)
 #define TIMER_WATER_COLOR    lv_color_make(0x2E, 0x7A, 0xE8)
 #define TIMER_WATER_W        UI_SCREEN_W
 
-/** Water surface bobbing (pixels, milliseconds). Tune these. */
+/** Water surface bobbing at the top only (pixels, milliseconds). Bottom stays screen-anchored. */
 #define TIMER_WATER_BOB_AMP_PX     4.0f
 #define TIMER_WATER_BOB_PERIOD_MS 2500.0f
 
@@ -134,16 +137,23 @@ static float timer_smooth_progress(const app_runtime_t *rt)
     if (total_ms == 0) {
         return 1.0f;
     }
+
+    const uint32_t finish_early_ms = TIMER_ANIM_FINISH_REMAINING_SEC * 1000U;
+    if (total_ms <= finish_early_ms) {
+        return 1.0f;
+    }
+    const uint32_t anim_duration_ms = total_ms - finish_early_ms;
+
     const uint32_t now = timer_now_ms();
     const uint32_t start = rt->active_timer_anim_start_ms;
     if (now <= start) {
         return 0.0f;
     }
     const uint32_t elapsed_ms = now - start;
-    if (elapsed_ms >= total_ms) {
+    if (elapsed_ms >= anim_duration_ms) {
         return 1.0f;
     }
-    return (float)elapsed_ms / (float)total_ms;
+    return (float)elapsed_ms / (float)anim_duration_ms;
 }
 
 static void timer_layout_ring(timer_countdown_vis_t *vis, float progress)
@@ -186,15 +196,20 @@ static void timer_layout_water(timer_countdown_vis_t *vis, float progress)
         fill_h = (int)UI_SCREEN_H;
     }
 
-    if (fill_h != vis->cached_water_h) {
-        lv_obj_set_size(water, TIMER_WATER_W, fill_h);
-        vis->cached_water_h = fill_h;
-        lv_obj_align(water, LV_ALIGN_BOTTOM_MID, 0, 0);
+    const lv_coord_t bob_y = timer_water_bob_y();
+    int display_h = fill_h + (int)bob_y;
+    if (display_h < 1) {
+        display_h = 1;
+    }
+    if (display_h > (int)UI_SCREEN_H) {
+        display_h = (int)UI_SCREEN_H;
     }
 
-    const lv_coord_t bob_y = timer_water_bob_y();
-    if (bob_y != vis->cached_bob_y) {
-        lv_obj_set_style_translate_y(water, -bob_y, 0);
+    if (display_h != vis->cached_water_h || bob_y != vis->cached_bob_y) {
+        lv_obj_set_size(water, TIMER_WATER_W, display_h);
+        lv_obj_align(water, LV_ALIGN_BOTTOM_MID, 0, 0);
+        lv_obj_set_style_translate_y(water, 0, 0);
+        vis->cached_water_h = display_h;
         vis->cached_bob_y = bob_y;
     }
 }
