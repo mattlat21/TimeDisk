@@ -21,6 +21,7 @@ void app_config_apply_defaults(void)
 
     s_cfg.timeout_splash_sec = 3;
     s_cfg.timeout_tod_dim_sec = 600;
+    s_cfg.timeout_tod_menu_sec = 120;
     s_cfg.timeout_aa_sec = 60;
     s_cfg.timeout_main_menu_sec = 60;
     s_cfg.timeout_timer_dim_sec = 900;

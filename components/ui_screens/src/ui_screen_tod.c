@@ -109,13 +109,18 @@ static app_mode_t peek_next_mode(app_mode_t current)
     }
 }
 
-static void apply_mode_background(lv_obj_t *bg, app_mode_t mode, bool dim)
+static lv_opa_t dim_blend_opa(uint8_t blend)
+{
+    return (lv_opa_t)(LV_OPA_COVER - (uint32_t)(LV_OPA_COVER - LV_OPA_60) * blend / 255U);
+}
+
+static void apply_mode_background(lv_obj_t *bg, app_mode_t mode, uint8_t blend)
 {
     if (bg == NULL) {
         return;
     }
     lv_image_set_src(bg, mode_image(mode));
-    lv_obj_set_style_opa(bg, dim ? LV_OPA_60 : LV_OPA_COVER, 0);
+    lv_obj_set_style_opa(bg, dim_blend_opa(blend), 0);
 }
 
 static lv_obj_t *create_mode_background(lv_obj_t *scr)
@@ -133,8 +138,11 @@ static lv_obj_t *create_mode_background(lv_obj_t *scr)
 static void screen_tap_cb(lv_event_t *e)
 {
     (void)e;
-    if (ui_nav_current() == UI_SCREEN_TOD_DIM) {
-        ui_nav_go(UI_SCREEN_TOD_BRIGHT);
+    ui_screen_id_t cur = ui_nav_current();
+    if (cur == UI_SCREEN_TOD_DIM) {
+        ui_nav_tod_fade_to_bright();
+    } else if (cur == UI_SCREEN_TOD_BRIGHT) {
+        ui_nav_reset_idle_timer();
     }
 }
 
@@ -198,9 +206,9 @@ static void refresh_panel_remaining(const tod_mode_panel_t *p, app_mode_t mode)
     lv_obj_remove_flag(p->lbl_remaining, LV_OBJ_FLAG_HIDDEN);
 }
 
-static void apply_dim_styles(const tod_mode_panel_t *p, bool dim)
+static void apply_dim_styles(const tod_mode_panel_t *p, uint8_t blend)
 {
-    lv_opa_t opa = dim ? LV_OPA_60 : LV_OPA_COVER;
+    lv_opa_t opa = dim_blend_opa(blend);
     if (p->lbl_time != NULL) {
         lv_obj_set_style_text_opa(p->lbl_time, opa, 0);
     }
@@ -212,11 +220,11 @@ static void apply_dim_styles(const tod_mode_panel_t *p, bool dim)
     }
 }
 
-static void refresh_panel(const tod_mode_panel_t *p, app_mode_t mode, bool dim)
+static void refresh_panel(const tod_mode_panel_t *p, app_mode_t mode, uint8_t blend)
 {
     refresh_panel_time(p);
     refresh_panel_remaining(p, mode);
-    apply_dim_styles(p, dim);
+    apply_dim_styles(p, blend);
 }
 
 static void build_mode_panel(lv_obj_t *scr, tod_mode_panel_t *p, bool dim, app_mode_t mode)
@@ -280,8 +288,10 @@ static void apply_mode(bool dim)
         mode = APP_MODE_WAKE;
     }
 
-    apply_mode_background(s_bg_bright, mode, false);
-    apply_mode_background(s_bg_dim, mode, true);
+    uint8_t blend = dim ? 255U : 0U;
+
+    apply_mode_background(s_bg_bright, mode, blend);
+    apply_mode_background(s_bg_dim, mode, blend);
 
     tod_mode_panel_t *all = dim ? s_panels_dim : s_panels_bright;
 
@@ -291,17 +301,40 @@ static void apply_mode(bool dim)
         }
         if ((app_mode_t)i == mode) {
             lv_obj_remove_flag(all[i].root, LV_OBJ_FLAG_HIDDEN);
-            refresh_panel(&all[i], mode, dim);
+            refresh_panel(&all[i], mode, blend);
         } else {
             lv_obj_add_flag(all[i].root, LV_OBJ_FLAG_HIDDEN);
         }
     }
 
+    s_showing_dim = dim;
+}
+
+void ui_screen_tod_set_menu_visible(bool visible)
+{
     if (s_menu_wedge_bright != NULL) {
-        ui_wedge_set_visible(s_menu_wedge_bright, !dim);
+        ui_wedge_set_visible(s_menu_wedge_bright, visible);
+    }
+}
+
+void ui_screen_tod_apply_dim_blend(uint8_t blend, bool on_dim_screen)
+{
+    app_runtime_t *rt = app_runtime_get();
+    app_mode_t mode = rt->current_mode;
+    if (mode >= TOD_MODE_COUNT) {
+        mode = APP_MODE_WAKE;
     }
 
-    s_showing_dim = dim;
+    tod_mode_panel_t *p = panel_for(mode, on_dim_screen);
+    if (p->root != NULL && !lv_obj_has_flag(p->root, LV_OBJ_FLAG_HIDDEN)) {
+        apply_dim_styles(p, blend);
+    }
+
+    if (on_dim_screen) {
+        apply_mode_background(s_bg_dim, mode, blend);
+    } else {
+        apply_mode_background(s_bg_bright, mode, blend);
+    }
 }
 
 void ui_screen_tod_build(lv_obj_t *screens[UI_SCREEN_COUNT])

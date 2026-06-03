@@ -35,6 +35,9 @@ void ui_screen_loading_on_show(void);
 void ui_screen_loading_set_status(const char *text);
 void ui_screen_tod_on_show(bool dim);
 void ui_screen_tod_tick(void);
+void ui_screen_tod_set_menu_visible(bool visible);
+/** @p blend 0 = bright visuals, 255 = dim visuals (for cross-fade). */
+void ui_screen_tod_apply_dim_blend(uint8_t blend, bool on_dim_screen);
 void ui_screen_aa_on_show(void);
 void ui_screen_aa_show_pin(void);
 void ui_screen_aa_show_maths(void);

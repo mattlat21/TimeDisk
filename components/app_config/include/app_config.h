@@ -48,6 +48,8 @@ typedef struct {
 
     uint32_t timeout_splash_sec;
     uint32_t timeout_tod_dim_sec;
+    /** Idle on Time of Day (bright) before the Menu wedge is hidden. */
+    uint32_t timeout_tod_menu_sec;
     uint32_t timeout_aa_sec;
     uint32_t timeout_main_menu_sec;
     uint32_t timeout_timer_dim_sec;

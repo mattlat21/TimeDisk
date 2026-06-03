@@ -275,7 +275,7 @@ flowchart TB
 
 ## Notes
 
-- **Timeout config fields** (see [data_model.md](data_model.md)): `timeout_splash_sec`, `timeout_tod_dim_sec`, `timeout_aa_sec`, `timeout_main_menu_sec`, `timeout_timer_dim_sec`.
+- **Timeout config fields** (see [data_model.md](data_model.md)): `timeout_splash_sec`, `timeout_tod_dim_sec`, `timeout_tod_menu_sec`, `timeout_aa_sec`, `timeout_main_menu_sec`, `timeout_timer_dim_sec`.
 - **Boot** — Power Up → Splash (`timeout_splash_sec`) → optional theme wizard → optional WiFi **Startup Wizard** screens → **Loading / Startup** (WiFi + SNTP) → optional timezone wizard → Time of Day (Bright).
 - **Startup Wizard (theme)** — after splash if `theme_set` is false (see [data_model.md](data_model.md#theme)):
   - `startup_wizard_theme` — preset swatches for primary and secondary; live preview on screen ring and sample labels; **Next** writes colours, sets `theme_set`, then continues to WiFi wizards or Loading.

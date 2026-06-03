@@ -26,6 +26,7 @@ static const char *TAG = "app_nvs";
 #define KEY_TZ_ID               "tz_id"        /* string timezone_id */
 #define KEY_TO_SPLASH           "to_splash"    /* uint32 timeout_splash_sec */
 #define KEY_TO_TOD_DIM          "to_tod_dim"   /* uint32 timeout_tod_dim_sec */
+#define KEY_TO_TOD_MENU         "to_tod_menu"  /* uint32 timeout_tod_menu_sec */
 #define KEY_TO_AA               "to_aa"        /* uint32 timeout_aa_sec */
 #define KEY_TO_MENU             "to_menu"      /* uint32 timeout_main_menu_sec */
 #define KEY_TO_TIMER_DIM        "to_tm_dim"    /* uint32 timeout_timer_dim_sec */
@@ -243,6 +244,10 @@ esp_err_t app_nvs_load(void)
     if (err != ESP_OK) {
         goto out;
     }
+    err = get_u32(h, KEY_TO_TOD_MENU, &cfg->timeout_tod_menu_sec, 120);
+    if (err != ESP_OK) {
+        goto out;
+    }
     err = get_u32(h, KEY_TO_AA, &cfg->timeout_aa_sec, 60);
     if (err != ESP_OK) {
         goto out;
@@ -404,6 +409,7 @@ esp_err_t app_nvs_save_timeouts(void)
     }
     if ((err = set_u32(h, KEY_TO_SPLASH, cfg->timeout_splash_sec)) != ESP_OK ||
         (err = set_u32(h, KEY_TO_TOD_DIM, cfg->timeout_tod_dim_sec)) != ESP_OK ||
+        (err = set_u32(h, KEY_TO_TOD_MENU, cfg->timeout_tod_menu_sec)) != ESP_OK ||
         (err = set_u32(h, KEY_TO_AA, cfg->timeout_aa_sec)) != ESP_OK ||
         (err = set_u32(h, KEY_TO_MENU, cfg->timeout_main_menu_sec)) != ESP_OK ||
         (err = set_u32(h, KEY_TO_TIMER_DIM, cfg->timeout_timer_dim_sec)) != ESP_OK) {
@@ -531,6 +537,7 @@ esp_err_t app_nvs_save_all(void)
 
     if ((err = set_u32(h, KEY_TO_SPLASH, cfg->timeout_splash_sec)) != ESP_OK ||
         (err = set_u32(h, KEY_TO_TOD_DIM, cfg->timeout_tod_dim_sec)) != ESP_OK ||
+        (err = set_u32(h, KEY_TO_TOD_MENU, cfg->timeout_tod_menu_sec)) != ESP_OK ||
         (err = set_u32(h, KEY_TO_AA, cfg->timeout_aa_sec)) != ESP_OK ||
         (err = set_u32(h, KEY_TO_MENU, cfg->timeout_main_menu_sec)) != ESP_OK ||
         (err = set_u32(h, KEY_TO_TIMER_DIM, cfg->timeout_timer_dim_sec)) != ESP_OK) {

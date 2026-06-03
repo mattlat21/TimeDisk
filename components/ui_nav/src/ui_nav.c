@@ -32,6 +32,30 @@ static uint32_t s_loading_retry_at_ms;
 #define UI_NAV_BRIGHTNESS_BRIGHT  100
 #define UI_NAV_BRIGHTNESS_DIM     30
 
+#define TOD_FADE_TO_DIM_MS    10000U
+#define TOD_FADE_TO_BRIGHT_MS 1000U
+#define TOD_FADE_TICK_MS      16U
+
+static uint32_t s_tod_menu_deadline_ms;
+static bool s_tod_menu_timed_out;
+static lv_timer_t *s_tod_fade_timer;
+
+typedef struct {
+    bool active;
+    uint32_t start_ms;
+    uint32_t duration_ms;
+    uint8_t start_brightness;
+    uint8_t end_brightness;
+    ui_screen_id_t end_screen;
+    bool on_dim_screen;
+    bool to_dim;
+} tod_fade_t;
+
+static tod_fade_t s_tod_fade;
+
+static void idle_timer_cb(lv_timer_t *t);
+static void on_enter(ui_screen_id_t screen);
+
 static uint32_t now_ms(void)
 {
     return lv_tick_get();
@@ -46,6 +70,141 @@ void ui_nav_set_brightness(uint8_t pct)
 void ui_nav_apply_dim(bool dim)
 {
     ui_nav_set_brightness(dim ? UI_NAV_BRIGHTNESS_DIM : UI_NAV_BRIGHTNESS_BRIGHT);
+}
+
+static uint8_t brightness_lerp(uint8_t from, uint8_t to, uint32_t elapsed_ms, uint32_t duration_ms)
+{
+    if (duration_ms == 0 || elapsed_ms >= duration_ms) {
+        return to;
+    }
+    int32_t delta = (int32_t)to - (int32_t)from;
+    int32_t value = (int32_t)from + (delta * (int32_t)elapsed_ms) / (int32_t)duration_ms;
+    if (value < 0) {
+        return 0;
+    }
+    if (value > 100) {
+        return 100;
+    }
+    return (uint8_t)value;
+}
+
+static void tod_fade_cancel(void)
+{
+    if (s_tod_fade_timer != NULL) {
+        lv_timer_delete(s_tod_fade_timer);
+        s_tod_fade_timer = NULL;
+    }
+    memset(&s_tod_fade, 0, sizeof(s_tod_fade));
+}
+
+static void arm_tod_timers(void)
+{
+    const app_config_t *cfg = app_config_get();
+    uint32_t now = now_ms();
+
+    s_idle_deadline_ms = now + cfg->timeout_tod_dim_sec * 1000U;
+    s_tod_menu_deadline_ms = now + cfg->timeout_tod_menu_sec * 1000U;
+    s_tod_menu_timed_out = false;
+    ui_screen_tod_set_menu_visible(true);
+    if (s_idle_timer == NULL) {
+        s_idle_timer = lv_timer_create(idle_timer_cb, 200, NULL);
+    }
+}
+
+static void tod_fade_finish(ui_screen_id_t screen)
+{
+    if (screen >= UI_SCREEN_COUNT || s_screens[screen] == NULL) {
+        tod_fade_cancel();
+        return;
+    }
+
+    tod_fade_cancel();
+    s_current = screen;
+    lv_screen_load(s_screens[screen]);
+    on_enter(screen);
+    ui_nav_reset_idle_timer();
+    ESP_LOGI(TAG, "screen -> %d", (int)screen);
+}
+
+static void tod_fade_timer_cb(lv_timer_t *t)
+{
+    (void)t;
+    if (!s_tod_fade.active) {
+        return;
+    }
+
+    uint32_t duration = s_tod_fade.duration_ms;
+    uint32_t elapsed = now_ms() - s_tod_fade.start_ms;
+    if (elapsed > duration) {
+        elapsed = duration;
+    }
+
+    ui_nav_set_brightness(
+        brightness_lerp(s_tod_fade.start_brightness, s_tod_fade.end_brightness, elapsed, duration));
+
+    uint8_t blend;
+    if (duration == 0) {
+        blend = s_tod_fade.to_dim ? 255U : 0U;
+    } else if (s_tod_fade.to_dim) {
+        blend = (uint8_t)((uint32_t)elapsed * 255U / duration);
+    } else {
+        blend = (uint8_t)(255U - (uint32_t)elapsed * 255U / duration);
+    }
+    ui_screen_tod_apply_dim_blend(blend, s_tod_fade.on_dim_screen);
+
+    if (elapsed >= duration) {
+        tod_fade_finish(s_tod_fade.end_screen);
+    }
+}
+
+static void tod_fade_start(bool to_dim)
+{
+    tod_fade_cancel();
+
+    s_tod_fade.active = true;
+    s_tod_fade.start_ms = now_ms();
+    s_tod_fade.to_dim = to_dim;
+    s_tod_fade.duration_ms = to_dim ? TOD_FADE_TO_DIM_MS : TOD_FADE_TO_BRIGHT_MS;
+    s_tod_fade.end_screen = to_dim ? UI_SCREEN_TOD_DIM : UI_SCREEN_TOD_BRIGHT;
+    s_tod_fade.on_dim_screen = !to_dim;
+
+    if (to_dim) {
+        uint8_t current = app_runtime_get()->display_brightness;
+        s_tod_fade.start_brightness =
+            (current > UI_NAV_BRIGHTNESS_BRIGHT) ? UI_NAV_BRIGHTNESS_BRIGHT : current;
+        s_tod_fade.end_brightness = UI_NAV_BRIGHTNESS_DIM;
+        s_idle_deadline_ms = UINT32_MAX;
+        s_tod_menu_deadline_ms = 0;
+        ui_screen_tod_set_menu_visible(false);
+    } else {
+        uint8_t current = app_runtime_get()->display_brightness;
+        s_tod_fade.start_brightness =
+            (current < UI_NAV_BRIGHTNESS_DIM) ? UI_NAV_BRIGHTNESS_DIM : current;
+        s_tod_fade.end_brightness = UI_NAV_BRIGHTNESS_BRIGHT;
+    }
+
+    if (s_tod_fade_timer == NULL) {
+        s_tod_fade_timer = lv_timer_create(tod_fade_timer_cb, TOD_FADE_TICK_MS, NULL);
+    } else {
+        lv_timer_set_period(s_tod_fade_timer, TOD_FADE_TICK_MS);
+    }
+    tod_fade_timer_cb(s_tod_fade_timer);
+}
+
+void ui_nav_tod_fade_to_dim(void)
+{
+    if (s_current != UI_SCREEN_TOD_BRIGHT || s_tod_fade.active) {
+        return;
+    }
+    tod_fade_start(true);
+}
+
+void ui_nav_tod_fade_to_bright(void)
+{
+    if (s_current != UI_SCREEN_TOD_DIM || s_tod_fade.active) {
+        return;
+    }
+    tod_fade_start(false);
 }
 
 static void aa_generate_maths(void)
@@ -87,6 +246,13 @@ static void idle_timer_cb(lv_timer_t *t)
         }
     }
 
+    if (s_current == UI_SCREEN_TOD_BRIGHT && !s_tod_fade.active) {
+        if (!s_tod_menu_timed_out && s_tod_menu_deadline_ms != 0 && now >= s_tod_menu_deadline_ms) {
+            ui_screen_tod_set_menu_visible(false);
+            s_tod_menu_timed_out = true;
+        }
+    }
+
     if (now < s_idle_deadline_ms) {
         return;
     }
@@ -104,7 +270,7 @@ static void idle_timer_cb(lv_timer_t *t)
         }
         break;
     case UI_SCREEN_TOD_BRIGHT:
-        ui_nav_go(UI_SCREEN_TOD_DIM);
+        ui_nav_tod_fade_to_dim();
         break;
     case UI_SCREEN_MENU:
         ui_nav_go(UI_SCREEN_TOD_BRIGHT);
@@ -152,7 +318,7 @@ static void on_enter(ui_screen_id_t screen)
         break;
     case UI_SCREEN_TOD_BRIGHT:
         ui_screen_tod_on_show(false);
-        arm_idle_timer(cfg->timeout_tod_dim_sec);
+        arm_tod_timers();
         break;
     case UI_SCREEN_TOD_DIM:
         ui_screen_tod_on_show(true);
@@ -199,6 +365,8 @@ void ui_nav_go(ui_screen_id_t screen)
         return;
     }
 
+    tod_fade_cancel();
+
     if (s_current == UI_SCREEN_LOADING && screen != UI_SCREEN_LOADING) {
         app_network_cancel_boot_sync();
     }
@@ -236,7 +404,12 @@ void ui_nav_reset_idle_timer(void)
         arm_idle_timer(cfg->timeout_splash_sec);
         break;
     case UI_SCREEN_TOD_BRIGHT:
-        arm_idle_timer(cfg->timeout_tod_dim_sec);
+        if (s_tod_fade.active) {
+            tod_fade_cancel();
+            ui_screen_tod_on_show(false);
+            ui_nav_apply_dim(false);
+        }
+        arm_tod_timers();
         break;
     case UI_SCREEN_MENU:
         arm_idle_timer(cfg->timeout_main_menu_sec);
@@ -395,7 +568,8 @@ static void mode_engine_tick(void)
         break;
     }
 
-    if (s_current == UI_SCREEN_TOD_BRIGHT || s_current == UI_SCREEN_TOD_DIM) {
+    if (!s_tod_fade.active &&
+        (s_current == UI_SCREEN_TOD_BRIGHT || s_current == UI_SCREEN_TOD_DIM)) {
         ui_screen_tod_on_show(s_current == UI_SCREEN_TOD_DIM);
     }
 }
