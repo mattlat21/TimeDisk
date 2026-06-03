@@ -9,7 +9,6 @@
 #include "ui_nav.h"
 #include "app_config.h"
 #include <math.h>
-#include <stdio.h>
 
 #define TIMER_STYLE_TILE_W   200
 #define TIMER_STYLE_TILE_H   160
@@ -22,7 +21,7 @@
 #define TIMER_RING_VALUE_MAX 1000
 #define TIMER_RING_TRACK_COLOR lv_color_make(0x3D, 0x3D, 0x3D)
 
-/** Visual refresh for ring/water (~60 Hz). */
+/** Visual refresh for ring/water (~60 Hz; water level + bob via cached layout). */
 #define TIMER_ANIM_PERIOD_MS 16
 
 /** Timer Set Duration: minimum and tiered +/- step sizes. */
@@ -47,18 +46,34 @@ static uint32_t timer_duration_step_sec(uint32_t value_sec, void *user_data)
 }
 
 #define TIMER_WATER_COLOR    lv_color_make(0x2E, 0x7A, 0xE8)
-/** Wider than the LCD so circular clip still fills edge-to-edge horizontally. */
-#define TIMER_WATER_H_BLEED  96
-#define TIMER_WATER_W        (UI_SCREEN_W + 2 * TIMER_WATER_H_BLEED)
+#define TIMER_WATER_W        UI_SCREEN_W
 
 /** Water surface bobbing (pixels, milliseconds). Tune these. */
 #define TIMER_WATER_BOB_AMP_PX     4.0f
 #define TIMER_WATER_BOB_PERIOD_MS 2500.0f
 
 typedef struct {
+    lv_obj_t *water_clip;
     lv_obj_t *water_fill;
     lv_obj_t *ring_arc;
+    int cached_water_h;
+    int cached_arc_value;
+    lv_coord_t cached_bob_y;
+    uint8_t shown_style;
 } timer_countdown_vis_t;
+
+#define TIMER_STYLE_UNSET 0xFFU
+
+static void timer_vis_reset_cache(timer_countdown_vis_t *vis)
+{
+    if (vis == NULL) {
+        return;
+    }
+    vis->cached_water_h = -1;
+    vis->cached_arc_value = -1;
+    vis->cached_bob_y = (lv_coord_t)9999;
+    vis->shown_style = TIMER_STYLE_UNSET;
+}
 
 static lv_obj_t *s_scr_duration;
 static lv_obj_t *s_scr_style;
@@ -131,67 +146,92 @@ static float timer_smooth_progress(const app_runtime_t *rt)
     return (float)elapsed_ms / (float)total_ms;
 }
 
-static void timer_layout_ring(lv_obj_t *arc)
+static void timer_layout_ring(timer_countdown_vis_t *vis, float progress)
 {
-    lv_obj_set_size(arc, TIMER_RING_DIAMETER, TIMER_RING_DIAMETER);
-    lv_obj_align(arc, LV_ALIGN_CENTER, 0, 0);
-}
-
-static void timer_layout_water(lv_obj_t *water, float progress)
-{
-    float bob = 0.0f;
-    if (timer_total_sec(app_runtime_get()) >= 60) {
-        const uint32_t now = timer_now_ms();
-        const float phase = (TIMER_WATER_BOB_PERIOD_MS > 0.0f)
-                                ? (2.0f * (float)M_PI * ((float)now / TIMER_WATER_BOB_PERIOD_MS))
-                                : 0.0f;
-        bob = TIMER_WATER_BOB_AMP_PX * sinf(phase);
+    if (vis == NULL || vis->ring_arc == NULL) {
+        return;
     }
 
-    int fill_h = (int)((float)UI_SCREEN_H * progress + bob);
+    const int32_t value = (int32_t)(progress * (float)TIMER_RING_VALUE_MAX);
+    if (value != vis->cached_arc_value) {
+        lv_arc_set_value(vis->ring_arc, value);
+        vis->cached_arc_value = value;
+    }
+}
+
+static lv_coord_t timer_water_bob_y(void)
+{
+    if (timer_total_sec(app_runtime_get()) < 60) {
+        return 0;
+    }
+    const uint32_t now = timer_now_ms();
+    const float phase = (TIMER_WATER_BOB_PERIOD_MS > 0.0f)
+                            ? (2.0f * (float)M_PI * ((float)now / TIMER_WATER_BOB_PERIOD_MS))
+                            : 0.0f;
+    return (lv_coord_t)lroundf(TIMER_WATER_BOB_AMP_PX * sinf(phase));
+}
+
+static void timer_layout_water(timer_countdown_vis_t *vis, float progress)
+{
+    if (vis == NULL || vis->water_fill == NULL) {
+        return;
+    }
+
+    lv_obj_t *water = vis->water_fill;
+    int fill_h = (int)((float)UI_SCREEN_H * progress);
     if (fill_h < 1) {
         fill_h = 1;
     }
     if (fill_h > (int)UI_SCREEN_H) {
         fill_h = (int)UI_SCREEN_H;
     }
-    lv_obj_set_size(water, TIMER_WATER_W, fill_h);
 
-    /* Align to the physical LCD bottom (screen border sits outside content). */
-    lv_obj_t *screen = ui_layout_find_screen(water);
-    const int32_t border = ui_layout_screen_border(screen);
-    lv_obj_align(water, LV_ALIGN_BOTTOM_MID, 0, (int)border);
+    if (fill_h != vis->cached_water_h) {
+        lv_obj_set_size(water, TIMER_WATER_W, fill_h);
+        vis->cached_water_h = fill_h;
+        lv_obj_align(water, LV_ALIGN_BOTTOM_MID, 0, 0);
+    }
+
+    const lv_coord_t bob_y = timer_water_bob_y();
+    if (bob_y != vis->cached_bob_y) {
+        lv_obj_set_style_translate_y(water, -bob_y, 0);
+        vis->cached_bob_y = bob_y;
+    }
 }
 
 static void timer_update_countdown_visuals(timer_countdown_vis_t *vis, lv_obj_t *lbl, uint8_t style_id,
-                                         float progress)
+                                         float progress, bool raise_label)
 {
     const ui_theme_t *t = ui_theme_get();
+    const bool style_changed = vis->shown_style != style_id;
 
     if (style_id == APP_TIMER_STYLE_RING) {
-        if (vis->water_fill != NULL) {
+        if (vis->water_fill != NULL && style_changed) {
             lv_obj_add_flag(vis->water_fill, LV_OBJ_FLAG_HIDDEN);
         }
         if (vis->ring_arc != NULL) {
-            lv_obj_clear_flag(vis->ring_arc, LV_OBJ_FLAG_HIDDEN);
-            timer_layout_ring(vis->ring_arc);
-            const int32_t value = (int32_t)(progress * (float)TIMER_RING_VALUE_MAX);
-            lv_arc_set_value(vis->ring_arc, value);
-            lv_obj_set_style_arc_color(vis->ring_arc, TIMER_RING_TRACK_COLOR, LV_PART_MAIN);
-            lv_obj_set_style_arc_color(vis->ring_arc, t->ring, LV_PART_INDICATOR);
+            if (style_changed) {
+                lv_obj_clear_flag(vis->ring_arc, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_set_style_arc_color(vis->ring_arc, TIMER_RING_TRACK_COLOR, LV_PART_MAIN);
+                lv_obj_set_style_arc_color(vis->ring_arc, t->ring, LV_PART_INDICATOR);
+            }
+            timer_layout_ring(vis, progress);
         }
     } else {
-        if (vis->ring_arc != NULL) {
+        if (vis->ring_arc != NULL && style_changed) {
             lv_obj_add_flag(vis->ring_arc, LV_OBJ_FLAG_HIDDEN);
         }
         if (vis->water_fill != NULL) {
-            lv_obj_clear_flag(vis->water_fill, LV_OBJ_FLAG_HIDDEN);
-            timer_layout_water(vis->water_fill, progress);
-            lv_obj_set_style_bg_color(vis->water_fill, TIMER_WATER_COLOR, 0);
+            if (style_changed) {
+                lv_obj_clear_flag(vis->water_fill, LV_OBJ_FLAG_HIDDEN);
+            }
+            timer_layout_water(vis, progress);
         }
     }
 
-    if (lbl != NULL) {
+    vis->shown_style = style_id;
+
+    if (raise_label && lbl != NULL) {
         lv_obj_move_foreground(lbl);
     }
 }
@@ -203,10 +243,19 @@ static void timer_refresh_active_countdown_visuals(void)
     const float progress = timer_smooth_progress(rt);
     ui_screen_id_t cur = ui_nav_current();
 
+    if (style_id == APP_TIMER_STYLE_WATER) {
+        if (cur == UI_SCREEN_TIMER_BRIGHT) {
+            timer_layout_water(&s_vis_bright, progress);
+        } else if (cur == UI_SCREEN_TIMER_DIM) {
+            timer_layout_water(&s_vis_dim, progress);
+        }
+        return;
+    }
+
     if (cur == UI_SCREEN_TIMER_BRIGHT) {
-        timer_update_countdown_visuals(&s_vis_bright, lbl_countdown_bright, style_id, progress);
+        timer_update_countdown_visuals(&s_vis_bright, lbl_countdown_bright, style_id, progress, false);
     } else if (cur == UI_SCREEN_TIMER_DIM) {
-        timer_update_countdown_visuals(&s_vis_dim, lbl_countdown_dim, style_id, progress);
+        timer_update_countdown_visuals(&s_vis_dim, lbl_countdown_dim, style_id, progress, false);
     }
 }
 
@@ -216,8 +265,8 @@ static void timer_refresh_all_countdown_visuals(void)
     const uint8_t style_id = app_config_get()->timer_style_id;
     const float progress = timer_smooth_progress(rt);
 
-    timer_update_countdown_visuals(&s_vis_bright, lbl_countdown_bright, style_id, progress);
-    timer_update_countdown_visuals(&s_vis_dim, lbl_countdown_dim, style_id, progress);
+    timer_update_countdown_visuals(&s_vis_bright, lbl_countdown_bright, style_id, progress, true);
+    timer_update_countdown_visuals(&s_vis_dim, lbl_countdown_dim, style_id, progress, true);
 }
 
 static void timer_anim_cb(lv_timer_t *t)
@@ -496,9 +545,24 @@ static lv_obj_t *timer_create_ring_arc(lv_obj_t *parent)
     lv_obj_set_style_arc_rounded(arc, true, LV_PART_INDICATOR);
     lv_obj_remove_style(arc, NULL, LV_PART_KNOB);
     lv_obj_remove_flag(arc, LV_OBJ_FLAG_CLICKABLE);
-    timer_layout_ring(arc);
+    lv_obj_set_size(arc, TIMER_RING_DIAMETER, TIMER_RING_DIAMETER);
+    lv_obj_align(arc, LV_ALIGN_CENTER, 0, 0);
     lv_obj_add_flag(arc, LV_OBJ_FLAG_HIDDEN);
     return arc;
+}
+
+static lv_obj_t *timer_create_water_clip(lv_obj_t *parent)
+{
+    lv_obj_t *clip = lv_obj_create(parent);
+    lv_obj_set_size(clip, UI_DISP, UI_DISP);
+    lv_obj_set_pos(clip, 0, 0);
+    lv_obj_set_style_bg_opa(clip, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(clip, 0, 0);
+    lv_obj_set_style_pad_all(clip, 0, 0);
+    lv_obj_set_style_radius(clip, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_clip_corner(clip, true, 0);
+    lv_obj_remove_flag(clip, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
+    return clip;
 }
 
 static lv_obj_t *timer_create_water_fill(lv_obj_t *parent)
@@ -522,9 +586,11 @@ static void build_countdown(lv_obj_t **scr, lv_obj_t **lbl, timer_countdown_vis_
     *scr = ui_widgets_create_screen_no_ring();
     screens[id] = *scr;
 
-    vis->water_fill = timer_create_water_fill(*scr);
+    timer_vis_reset_cache(vis);
+    ui_widgets_attach_screen_edge_fill(*scr);
+    vis->water_clip = timer_create_water_clip(*scr);
+    vis->water_fill = timer_create_water_fill(vis->water_clip);
     vis->ring_arc = timer_create_ring_arc(*scr);
-    lv_obj_move_background(vis->water_fill);
 
     *lbl = lv_label_create(*scr);
     lv_obj_set_style_text_color(*lbl, t->white, 0);
@@ -544,7 +610,7 @@ static void build_countdown(lv_obj_t **scr, lv_obj_t **lbl, timer_countdown_vis_
     lv_obj_add_event_cb(end, timer_end_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_move_foreground(end);
 
-    ui_widgets_attach_screen_edge_fill(*scr);
+    ui_widgets_send_edge_fill_to_back(*scr);
 }
 
 static void build_triggered(lv_obj_t *screens[UI_SCREEN_COUNT])
@@ -626,12 +692,14 @@ void ui_screen_timer_on_show(ui_screen_id_t id)
     const uint8_t style_id = app_config_get()->timer_style_id;
 
     if (id == UI_SCREEN_TIMER_BRIGHT) {
+        timer_vis_reset_cache(&s_vis_bright);
         lv_label_set_text(lbl_countdown_bright, buf);
-        timer_update_countdown_visuals(&s_vis_bright, lbl_countdown_bright, style_id, progress);
+        timer_update_countdown_visuals(&s_vis_bright, lbl_countdown_bright, style_id, progress, true);
         ui_nav_apply_dim(false);
     } else if (id == UI_SCREEN_TIMER_DIM) {
+        timer_vis_reset_cache(&s_vis_dim);
         lv_label_set_text(lbl_countdown_dim, buf);
-        timer_update_countdown_visuals(&s_vis_dim, lbl_countdown_dim, style_id, progress);
+        timer_update_countdown_visuals(&s_vis_dim, lbl_countdown_dim, style_id, progress, true);
         ui_nav_apply_dim(true);
     }
 }
