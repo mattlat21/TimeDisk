@@ -62,26 +62,6 @@ static uint32_t s_last_backlight_duty = UINT32_MAX;
 static void idle_timer_cb(lv_timer_t *t);
 static void on_enter(ui_screen_id_t screen);
 
-// #region agent log
-static void dbg_fade_log(const char *hypothesis_id, const char *message, uint32_t lv_ms, uint32_t esp_ms,
-                         uint32_t elapsed, uint32_t duty, int applied)
-{
-    ESP_LOGI(
-        "dbg_fade",
-        "{\"sessionId\":\"9d7729\",\"hypothesisId\":\"%s\",\"location\":\"ui_nav.c:fade\","
-        "\"message\":\"%s\",\"timestamp\":%lu,\"data\":{\"lv_ms\":%lu,\"esp_ms\":%lu,"
-        "\"elapsed\":%lu,\"duty\":%lu,\"applied\":%d}}",
-        hypothesis_id,
-        message,
-        (unsigned long)esp_ms,
-        (unsigned long)lv_ms,
-        (unsigned long)esp_ms,
-        (unsigned long)elapsed,
-        (unsigned long)duty,
-        applied);
-}
-// #endregion
-
 /** Monotonic ms for timeouts and fades (not LVGL tick). */
 static uint32_t now_ms(void)
 {
@@ -183,7 +163,6 @@ static void tod_fade_timer_cb(lv_timer_t *t)
     }
 
     uint32_t duration = s_tod_fade.duration_ms;
-    uint32_t lv_ms = lv_tick_get();
     uint32_t esp_ms = now_ms();
     uint32_t elapsed = esp_ms - s_tod_fade.start_ms;
     if (elapsed > duration) {
@@ -192,17 +171,7 @@ static void tod_fade_timer_cb(lv_timer_t *t)
 
     uint32_t duty =
         backlight_duty_lerp(s_tod_fade.start_duty, s_tod_fade.end_duty, elapsed, duration);
-    uint32_t before = s_last_backlight_duty;
     backlight_apply_duty(duty, true);
-
-    // #region agent log
-    static uint32_t s_dbg_last_log_esp;
-    int applied = (before != s_last_backlight_duty) ? 1 : 0;
-    if (applied || (esp_ms - s_dbg_last_log_esp) >= 200U) {
-        dbg_fade_log("H1", "fade_tick", lv_ms, esp_ms, elapsed, duty, applied);
-        s_dbg_last_log_esp = esp_ms;
-    }
-    // #endregion
 
     uint8_t blend;
     if (duration == 0) {
@@ -249,10 +218,6 @@ static void tod_fade_start(bool to_dim)
         s_tod_fade.start_duty = backlight_percent_to_duty(current);
         s_tod_fade.end_duty = backlight_percent_to_duty(UI_NAV_BRIGHTNESS_BRIGHT);
     }
-
-    // #region agent log
-    dbg_fade_log("H2", "fade_start", lv_tick_get(), now_ms(), 0U, s_tod_fade.start_duty, 1);
-    // #endregion
 
     if (s_tod_fade_timer == NULL) {
         s_tod_fade_timer = lv_timer_create(tod_fade_timer_cb, TOD_FADE_TICK_MS, NULL);

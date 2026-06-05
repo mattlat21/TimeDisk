@@ -11,6 +11,7 @@
 #include "ui_theme.h"
 #include "ui_nav.h"
 #include "ui_assets.h"
+#include "app_config.h"
 #include <stdio.h>
 #include <string.h>
 
