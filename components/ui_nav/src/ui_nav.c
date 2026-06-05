@@ -10,10 +10,12 @@
 #include "app_time.h"
 #include "app_network.h"
 #include "bsp/esp-bsp.h"
+#include "driver/ledc.h"
+#include "esp_timer.h"
+#include "sdkconfig.h"
 #include <esp_err.h>
 #include <esp_log.h>
 #include <esp_random.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -32,9 +34,12 @@ static uint32_t s_loading_retry_at_ms;
 #define UI_NAV_BRIGHTNESS_BRIGHT  100
 #define UI_NAV_BRIGHTNESS_DIM     30
 
-#define TOD_FADE_TO_DIM_MS    10000U
+#define TOD_FADE_TO_DIM_MS    5000U
 #define TOD_FADE_TO_BRIGHT_MS 1000U
-#define TOD_FADE_TICK_MS      16U
+#define TOD_FADE_TICK_MS      8U
+
+/** Matches BSP LEDC_TIMER_10_BIT (see bsp_display_brightness_set). */
+#define BACKLIGHT_DUTY_MAX 1023U
 
 static uint32_t s_tod_menu_deadline_ms;
 static bool s_tod_menu_timed_out;
@@ -44,27 +49,71 @@ typedef struct {
     bool active;
     uint32_t start_ms;
     uint32_t duration_ms;
-    uint8_t start_brightness;
-    uint8_t end_brightness;
+    uint32_t start_duty;
+    uint32_t end_duty;
     ui_screen_id_t end_screen;
     bool on_dim_screen;
     bool to_dim;
 } tod_fade_t;
 
 static tod_fade_t s_tod_fade;
+static uint32_t s_last_backlight_duty = UINT32_MAX;
 
 static void idle_timer_cb(lv_timer_t *t);
 static void on_enter(ui_screen_id_t screen);
 
+// #region agent log
+static void dbg_fade_log(const char *hypothesis_id, const char *message, uint32_t lv_ms, uint32_t esp_ms,
+                         uint32_t elapsed, uint32_t duty, int applied)
+{
+    ESP_LOGI(
+        "dbg_fade",
+        "{\"sessionId\":\"9d7729\",\"hypothesisId\":\"%s\",\"location\":\"ui_nav.c:fade\","
+        "\"message\":\"%s\",\"timestamp\":%lu,\"data\":{\"lv_ms\":%lu,\"esp_ms\":%lu,"
+        "\"elapsed\":%lu,\"duty\":%lu,\"applied\":%d}}",
+        hypothesis_id,
+        message,
+        (unsigned long)esp_ms,
+        (unsigned long)lv_ms,
+        (unsigned long)esp_ms,
+        (unsigned long)elapsed,
+        (unsigned long)duty,
+        applied);
+}
+// #endregion
+
+/** Monotonic ms for timeouts and fades (not LVGL tick). */
 static uint32_t now_ms(void)
 {
-    return lv_tick_get();
+    return (uint32_t)(esp_timer_get_time() / 1000ULL);
+}
+
+static uint32_t backlight_percent_to_duty(uint8_t pct)
+{
+    if (pct > 100) {
+        pct = 100;
+    }
+    return (BACKLIGHT_DUTY_MAX * (uint32_t)pct) / 100U;
+}
+
+static void backlight_apply_duty(uint32_t duty, bool force_update)
+{
+    if (duty > BACKLIGHT_DUTY_MAX) {
+        duty = BACKLIGHT_DUTY_MAX;
+    }
+    if (!force_update && duty == s_last_backlight_duty) {
+        return;
+    }
+    s_last_backlight_duty = duty;
+    app_runtime_get()->display_brightness =
+        (uint8_t)((duty * 100U + BACKLIGHT_DUTY_MAX / 2U) / BACKLIGHT_DUTY_MAX);
+    ledc_set_duty(LEDC_LOW_SPEED_MODE, CONFIG_BSP_DISPLAY_BRIGHTNESS_LEDC_CH, duty);
+    ledc_update_duty(LEDC_LOW_SPEED_MODE, CONFIG_BSP_DISPLAY_BRIGHTNESS_LEDC_CH);
 }
 
 void ui_nav_set_brightness(uint8_t pct)
 {
-    app_runtime_get()->display_brightness = pct;
-    bsp_display_brightness_set(pct);
+    backlight_apply_duty(backlight_percent_to_duty(pct), false);
 }
 
 void ui_nav_apply_dim(bool dim)
@@ -72,7 +121,7 @@ void ui_nav_apply_dim(bool dim)
     ui_nav_set_brightness(dim ? UI_NAV_BRIGHTNESS_DIM : UI_NAV_BRIGHTNESS_BRIGHT);
 }
 
-static uint8_t brightness_lerp(uint8_t from, uint8_t to, uint32_t elapsed_ms, uint32_t duration_ms)
+static uint32_t backlight_duty_lerp(uint32_t from, uint32_t to, uint32_t elapsed_ms, uint32_t duration_ms)
 {
     if (duration_ms == 0 || elapsed_ms >= duration_ms) {
         return to;
@@ -82,10 +131,10 @@ static uint8_t brightness_lerp(uint8_t from, uint8_t to, uint32_t elapsed_ms, ui
     if (value < 0) {
         return 0;
     }
-    if (value > 100) {
-        return 100;
+    if (value > (int32_t)BACKLIGHT_DUTY_MAX) {
+        return BACKLIGHT_DUTY_MAX;
     }
-    return (uint8_t)value;
+    return (uint32_t)value;
 }
 
 static void tod_fade_cancel(void)
@@ -134,13 +183,26 @@ static void tod_fade_timer_cb(lv_timer_t *t)
     }
 
     uint32_t duration = s_tod_fade.duration_ms;
-    uint32_t elapsed = now_ms() - s_tod_fade.start_ms;
+    uint32_t lv_ms = lv_tick_get();
+    uint32_t esp_ms = now_ms();
+    uint32_t elapsed = esp_ms - s_tod_fade.start_ms;
     if (elapsed > duration) {
         elapsed = duration;
     }
 
-    ui_nav_set_brightness(
-        brightness_lerp(s_tod_fade.start_brightness, s_tod_fade.end_brightness, elapsed, duration));
+    uint32_t duty =
+        backlight_duty_lerp(s_tod_fade.start_duty, s_tod_fade.end_duty, elapsed, duration);
+    uint32_t before = s_last_backlight_duty;
+    backlight_apply_duty(duty, true);
+
+    // #region agent log
+    static uint32_t s_dbg_last_log_esp;
+    int applied = (before != s_last_backlight_duty) ? 1 : 0;
+    if (applied || (esp_ms - s_dbg_last_log_esp) >= 200U) {
+        dbg_fade_log("H1", "fade_tick", lv_ms, esp_ms, elapsed, duty, applied);
+        s_dbg_last_log_esp = esp_ms;
+    }
+    // #endregion
 
     uint8_t blend;
     if (duration == 0) {
@@ -161,6 +223,7 @@ static void tod_fade_start(bool to_dim)
 {
     tod_fade_cancel();
 
+    s_last_backlight_duty = UINT32_MAX;
     s_tod_fade.active = true;
     s_tod_fade.start_ms = now_ms();
     s_tod_fade.to_dim = to_dim;
@@ -170,18 +233,26 @@ static void tod_fade_start(bool to_dim)
 
     if (to_dim) {
         uint8_t current = app_runtime_get()->display_brightness;
-        s_tod_fade.start_brightness =
-            (current > UI_NAV_BRIGHTNESS_BRIGHT) ? UI_NAV_BRIGHTNESS_BRIGHT : current;
-        s_tod_fade.end_brightness = UI_NAV_BRIGHTNESS_DIM;
+        if (current > UI_NAV_BRIGHTNESS_BRIGHT) {
+            current = UI_NAV_BRIGHTNESS_BRIGHT;
+        }
+        s_tod_fade.start_duty = backlight_percent_to_duty(current);
+        s_tod_fade.end_duty = backlight_percent_to_duty(UI_NAV_BRIGHTNESS_DIM);
         s_idle_deadline_ms = UINT32_MAX;
         s_tod_menu_deadline_ms = 0;
         ui_screen_tod_set_menu_visible(false);
     } else {
         uint8_t current = app_runtime_get()->display_brightness;
-        s_tod_fade.start_brightness =
-            (current < UI_NAV_BRIGHTNESS_DIM) ? UI_NAV_BRIGHTNESS_DIM : current;
-        s_tod_fade.end_brightness = UI_NAV_BRIGHTNESS_BRIGHT;
+        if (current < UI_NAV_BRIGHTNESS_DIM) {
+            current = UI_NAV_BRIGHTNESS_DIM;
+        }
+        s_tod_fade.start_duty = backlight_percent_to_duty(current);
+        s_tod_fade.end_duty = backlight_percent_to_duty(UI_NAV_BRIGHTNESS_BRIGHT);
     }
+
+    // #region agent log
+    dbg_fade_log("H2", "fade_start", lv_tick_get(), now_ms(), 0U, s_tod_fade.start_duty, 1);
+    // #endregion
 
     if (s_tod_fade_timer == NULL) {
         s_tod_fade_timer = lv_timer_create(tod_fade_timer_cb, TOD_FADE_TICK_MS, NULL);

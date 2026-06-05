@@ -11,7 +11,6 @@
 #include "ui_theme.h"
 #include "ui_nav.h"
 #include "ui_assets.h"
-#include "app_config.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -20,7 +19,6 @@
 typedef struct {
     lv_obj_t *root;
     lv_obj_t *lbl_time;
-    lv_obj_t *lbl_subtitle;
     lv_obj_t *lbl_remaining;
 } tod_mode_panel_t;
 
@@ -54,58 +52,6 @@ static const lv_image_dsc_t *mode_image(app_mode_t mode)
         return &tod_rest;
     default:
         return &tod_wake;
-    }
-}
-
-static const char *mode_label(app_mode_t mode)
-{
-    switch (mode) {
-    case APP_MODE_WAKE:
-        return "Wake";
-    case APP_MODE_WIND_DOWN:
-        return "Wind Down";
-    case APP_MODE_SLEEP:
-        return "Sleep";
-    case APP_MODE_REST:
-        return "Rest";
-    default:
-        return "Wake";
-    }
-}
-
-static app_mode_t peek_next_mode(app_mode_t current)
-{
-    const app_config_t *cfg = app_config_get();
-
-    switch (current) {
-    case APP_MODE_WAKE:
-        if (cfg->wind_down_sec > 0) {
-            return APP_MODE_WIND_DOWN;
-        }
-        if (cfg->sleep_sec > 0) {
-            return APP_MODE_SLEEP;
-        }
-        if (cfg->rest_sec > 0) {
-            return APP_MODE_REST;
-        }
-        return APP_MODE_WAKE;
-    case APP_MODE_WIND_DOWN:
-        if (cfg->sleep_sec > 0) {
-            return APP_MODE_SLEEP;
-        }
-        if (cfg->rest_sec > 0) {
-            return APP_MODE_REST;
-        }
-        return APP_MODE_WAKE;
-    case APP_MODE_SLEEP:
-        if (cfg->rest_sec > 0) {
-            return APP_MODE_REST;
-        }
-        return APP_MODE_WAKE;
-    case APP_MODE_REST:
-        return APP_MODE_WAKE;
-    default:
-        return APP_MODE_WAKE;
     }
 }
 
@@ -196,13 +142,10 @@ static void refresh_panel_remaining(const tod_mode_panel_t *p, app_mode_t mode)
         return;
     }
 
-    app_mode_t next = peek_next_mode(mode);
     char time_buf[16];
-    char buf[48];
 
     ui_format_mm_ss(time_buf, sizeof(time_buf), rt->mode_remaining_sec);
-    snprintf(buf, sizeof(buf), "%s in %s", mode_label(next), time_buf);
-    lv_label_set_text(p->lbl_remaining, buf);
+    lv_label_set_text(p->lbl_remaining, time_buf);
     lv_obj_remove_flag(p->lbl_remaining, LV_OBJ_FLAG_HIDDEN);
 }
 
@@ -211,9 +154,6 @@ static void apply_dim_styles(const tod_mode_panel_t *p, uint8_t blend)
     lv_opa_t opa = dim_blend_opa(blend);
     if (p->lbl_time != NULL) {
         lv_obj_set_style_text_opa(p->lbl_time, opa, 0);
-    }
-    if (p->lbl_subtitle != NULL) {
-        lv_obj_set_style_text_opa(p->lbl_subtitle, opa, 0);
     }
     if (p->lbl_remaining != NULL) {
         lv_obj_set_style_text_opa(p->lbl_remaining, opa, 0);
@@ -227,18 +167,11 @@ static void refresh_panel(const tod_mode_panel_t *p, app_mode_t mode, uint8_t bl
     apply_dim_styles(p, blend);
 }
 
-static void build_mode_panel(lv_obj_t *scr, tod_mode_panel_t *p, bool dim, app_mode_t mode)
+static void build_mode_panel(lv_obj_t *scr, tod_mode_panel_t *p)
 {
     const ui_theme_t *t = ui_theme_get();
 
-    (void)dim;
     p->root = create_panel_root(scr);
-
-    p->lbl_subtitle = lv_label_create(p->root);
-    lv_label_set_text(p->lbl_subtitle, mode_label(mode));
-    lv_obj_set_style_text_color(p->lbl_subtitle, t->secondary, 0);
-    lv_obj_set_style_text_font(p->lbl_subtitle, &lv_font_montserrat_20, 0);
-    lv_obj_align(p->lbl_subtitle, LV_ALIGN_CENTER, 0, -80);
 
     p->lbl_time = lv_label_create(p->root);
     lv_obj_set_style_text_color(p->lbl_time, t->white, 0);
@@ -257,7 +190,7 @@ static void build_screen(lv_obj_t **scr, lv_obj_t **bg, tod_mode_panel_t *panels
     *bg = create_mode_background(*scr);
 
     for (int i = 0; i < TOD_MODE_COUNT; i++) {
-        build_mode_panel(*scr, &panels[i], dim, (app_mode_t)i);
+        build_mode_panel(*scr, &panels[i]);
     }
 
     for (int i = 0; i < TOD_MODE_COUNT; i++) {
@@ -370,9 +303,6 @@ static void apply_theme_to_panel(tod_mode_panel_t *p)
 {
     const ui_theme_t *t = ui_theme_get();
 
-    if (p->lbl_subtitle != NULL) {
-        lv_obj_set_style_text_color(p->lbl_subtitle, t->secondary, 0);
-    }
     if (p->lbl_time != NULL) {
         lv_obj_set_style_text_color(p->lbl_time, t->white, 0);
     }

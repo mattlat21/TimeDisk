@@ -84,7 +84,7 @@ All values are **`uint32`**, unit **seconds**, stored in NVS.
 | Field | Default | Description |
 | ----- | ------- | ----------- |
 | `timeout_splash_sec` | `3` | How long the splash screen is shown after power up |
-| `timeout_tod_dim_sec` | `600` | Idle time on Time of Day (bright) with no user input before the display dims (10 s fade) |
+| `timeout_tod_dim_sec` | `600` | Idle time on Time of Day (bright) with no user input before the display dims (5 s fade) |
 | `timeout_tod_menu_sec` | `120` | Idle time on Time of Day (bright) before the Menu wedge is hidden |
 | `timeout_aa_sec` | `60` | Idle time on any Adult Authentication screen before returning to the previous screen |
 | `timeout_main_menu_sec` | `60` | Idle time on Main Menu with no input before returning to Time of Day |

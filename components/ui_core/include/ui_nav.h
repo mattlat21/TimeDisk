@@ -73,7 +73,7 @@ void ui_nav_aa_new_maths(void);
 void ui_nav_set_brightness(uint8_t pct);
 void ui_nav_apply_dim(bool dim);
 
-/** Fade TOD to dim over 10 s (from bright idle timeout). */
+/** Fade TOD to dim over 5 s (from bright idle timeout). */
 void ui_nav_tod_fade_to_dim(void);
 /** Fade TOD to bright over 1 s (tap on dim screen). */
 void ui_nav_tod_fade_to_bright(void);
