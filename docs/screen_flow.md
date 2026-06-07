@@ -166,7 +166,7 @@ flowchart TB
 
     Firmware (`ui_screen_settings.c`): single `UI_SCREEN_SETTINGS` with hidden sub-panels (Colours, **Networking**, Timezone, Schedule, Timeouts, Adult Authentication). Hub **Cancel wedge** returns to menu when time is known, else loading. Sub-panels **Save** persist via `app_nvs_save_*` and return to hub; **Cancel** restores that section from the snapshot taken on `ui_screen_settings_on_show()`.
 
-    **Networking** sub-panel: list of **Wi‑Fi Name**, **Wi‑Fi Password**, and **NTP** → per-field edit (wizard-style keyboard, purple field bar, **Cancel** / **Save** wedges). Field **Save** writes that value to NVS via `app_config_save_network()` and returns to the list; list **Save** returns to the settings hub (draft already persisted per field).
+    **Networking** sub-panel: list of saved **Wi‑Fi networks** (tap to edit name/password or delete), **Add Wi‑Fi**, and **NTP** → per-field edit (wizard-style keyboard, purple field bar, **Cancel** / **Save** wedges). List **Save** persists all networks via `app_config_save_network()` and returns to the settings hub.
 
 ### Settings: Networking (sub-panel pages)
 
@@ -185,8 +185,8 @@ flowchart TB
 
 | Page | User actions | Persistence |
 | ---- | ------------ | ------------- |
-| Networking list | Pick a field; **Cancel** / **Save** wedges → settings hub | **Save** on list is optional (draft already saved per field); **Cancel** reverts all network fields from snapshot |
-| Field edit | On-screen keyboard; **Cancel** discards edits for that field; **Save** writes field → NVS (`app_config_save_network`) → list | Same fields as [startup Wi‑Fi wizard](data_model.md#startup-wizard-boot-only) plus `ntp_server` |
+| Networking list | Tap a network → detail (name, password, delete); **Add Wi‑Fi**; **NTP**; **Cancel** / **Save** wedges → settings hub | **Save** writes full network list + NTP to NVS; **Cancel** reverts from snapshot |
+| Network detail / field edit | On-screen keyboard; **Cancel** back; **Save** applies to draft | Up to 5 networks; boot tries each in order ([data_model.md](data_model.md#network)) |
 
     %% Time of Day Setup
     subgraph Set Sleep Time

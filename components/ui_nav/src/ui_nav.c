@@ -660,6 +660,10 @@ static void loading_screen_tick(void)
         return;
     }
 
+    if (app_network_setup_ap_active()) {
+        return;
+    }
+
     if (s_loading_retry_at_ms != 0 && now_ms() < s_loading_retry_at_ms) {
         return;
     }

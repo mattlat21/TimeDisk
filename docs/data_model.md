@@ -22,26 +22,43 @@ Canonical schema for persisted settings and runtime state. Firmware: `components
 
 | Field | Type | Max length | Default | Notes |
 | ----- | ---- | ---------- | ------- | ----- |
-| `wifi_ssid` | string | 32 | *(unset)* | Network to join on boot |
-| `wifi_password` | string | 64 | *(unset)* | WPA passphrase; may be empty string after user configures |
+| `wifi_network_count` | uint8 | — | `0` | Number of saved networks (max 5) |
+| `wifi_networks[]` | array | 5 entries | *(empty)* | Ordered list; firmware tries each in order on boot |
+| `wifi_networks[].ssid` | string | 32 | *(unset)* | Network name |
+| `wifi_networks[].password` | string | 64 | *(unset)* | WPA passphrase; may be empty string |
+| `wifi_networks[].password_set` | bool | — | `false` | `false` until user completes password wizard or Settings saves password for that network |
 | `ntp_server` | string | 128 | `pool.ntp.org` | Hostname or IP for SNTP |
 
-### Unset vs empty
+NVS schema v2 stores networks as a single `wifi_list` blob. Devices on schema v1 are migrated automatically (legacy `wifi_ssid` / `wifi_pass` → first list entry).
+
+### Setup access point (fallback)
+
+If no saved network connects during boot, the device starts an **open** soft-AP:
+
+| Setting | Value |
+| ------- | ----- |
+| SSID | `TimeDisk-Setup` |
+| IP | `192.168.4.1` |
+| Web UI | `http://192.168.4.1/` (no authentication) |
+
+The web UI lists saved networks (add, edit, delete) and a **Connect** button to retry STA + SNTP. The HTTP server stays running on the LAN after Wi‑Fi connects (`http://<sta-ip>/` from any device on the same network). During setup AP fallback it is also reachable at `http://192.168.4.1/` while joined to **TimeDisk-Setup**.
+
+---
 
 | Field | Unset (null / missing in NVS) | Empty string `""` |
 | ----- | ------------------------------ | ------------------- |
-| `wifi_ssid` | Show [startup_wizard_ssid](screen_flow.md) on boot | Invalid for connect until user sets a non-blank SSID |
-| `wifi_password` | Show [startup_wizard_password](screen_flow.md) on boot | Valid — open network or no passphrase |
+| `wifi_network_count == 0` | Show [startup_wizard_ssid](screen_flow.md) on boot | — |
+| `wifi_networks[0].password_set == false` | Show [startup_wizard_password](screen_flow.md) on boot (first network only) | Valid — open network or no passphrase |
 
-**Blank SSID:** treat as unset (same as null) → startup wizard.
+**Blank SSID:** invalid; entry is dropped on load. **Settings → Networking** supports add, edit, and delete for up to five networks.
 
 ### Startup wizard (boot only)
 
 After splash, before Loading — see [screen_flow.md](screen_flow.md) Boot subgraph:
 
 0. **`startup_wizard_theme`** — if `theme_set` is false; user picks primary and secondary from preset swatches; **Next** saves `ui_primary_color`, `ui_secondary_color`, sets `theme_set = true`.
-1. **`startup_wizard_ssid`** — if `wifi_ssid` is blank or null; **Next** saves non-blank SSID to NVS.
-2. **`startup_wizard_password`** — if `wifi_password` is null only; **Next** saves to NVS (password may be left blank → store `""`).
+1. **`startup_wizard_ssid`** — if no networks are saved; **Next** saves non-blank SSID as the first list entry.
+2. **`startup_wizard_password`** — if the first network’s `password_set` is false; **Next** saves to NVS (password may be left blank → store `""`).
 
 Theme wizard runs before WiFi SSID. SSID wizard runs before password wizard. Settings can change these later from **Settings → Networking** (submenu: Wi‑Fi Name, Wi‑Fi Password, NTP) without using the startup screens.
 
@@ -242,8 +259,8 @@ Full behaviour: [adult_authentication.md](adult_authentication.md).
 
 | Name | Type | Unit | NVS | Default | Used by |
 | ---- | ---- | ---- | --- | ------- | ------- |
-| `wifi_ssid` | string | — | yes | empty | Boot, WiFi |
-| `wifi_password` | string | — | yes | empty | Boot, WiFi |
+| `wifi_network_count` | uint8 | — | yes | `0` | Boot, WiFi |
+| `wifi_networks[]` | array | — | yes | empty | Boot, WiFi (try in order) |
 | `ntp_server` | string | — | yes | `pool.ntp.org` | Boot, SNTP |
 | `timezone_set` | bool | — | yes | `false` | Boot, local time |
 | `timezone_id` | string | — | yes | empty | Boot, local time |

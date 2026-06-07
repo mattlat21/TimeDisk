@@ -12,6 +12,7 @@
 #include "ui_keyboard.h"
 #include "ui_nav.h"
 #include "app_config.h"
+#include "app_network.h"
 #include "app_time.h"
 #include <stdio.h>
 #include <string.h>
@@ -89,6 +90,7 @@ int ui_settings_wf_x(lv_obj_t *parent, int x_wf)
 }
 
 static ui_wedge_t *s_hub_cancel_wedge;
+static lv_obj_t *s_hub_web_lbl;
 static ui_wedge_t *s_panel_cancel_wedge[PANEL_COUNT];
 static ui_wedge_t *s_panel_save_wedge[PANEL_COUNT];
 
@@ -151,9 +153,8 @@ static void panel_cancel_cb(lv_event_t *e)
         s_draft.ui_secondary_color = s_saved.ui_secondary_color;
         break;
     case PANEL_NETWORK:
-        memcpy(s_draft.wifi_ssid, s_saved.wifi_ssid, sizeof(s_draft.wifi_ssid));
-        memcpy(s_draft.wifi_password, s_saved.wifi_password, sizeof(s_draft.wifi_password));
-        s_draft.wifi_password_set = s_saved.wifi_password_set;
+        app_config_wifi_networks_copy(s_draft.wifi_networks, &s_draft.wifi_network_count,
+                                      s_saved.wifi_networks, s_saved.wifi_network_count);
         memcpy(s_draft.ntp_server, s_saved.ntp_server, sizeof(s_draft.ntp_server));
         ui_settings_network_sync_from_draft();
         break;
@@ -284,6 +285,9 @@ static void show_panel(settings_panel_t panel)
     settings_wedges_show_for_panel(panel);
 
     switch (panel) {
+    case PANEL_HUB:
+        ui_settings_refresh_web_ui_label();
+        break;
     case PANEL_COLOURS:
         ui_settings_colours_sync_from_draft();
         break;
@@ -342,6 +346,63 @@ void ui_settings_idle_cb(void *user_data)
     ui_nav_reset_idle_timer();
 }
 
+void ui_settings_refresh_web_ui_label(void)
+{
+    char ip[40];
+    char url[64];
+    char text[160];
+
+    if (s_hub_web_lbl == NULL) {
+        return;
+    }
+
+    if (app_network_get_device_ip(ip, sizeof(ip)) && app_network_get_web_ui_url(url, sizeof(url))) {
+        if (app_network_setup_ap_active()) {
+            snprintf(text, sizeof(text), "IP: %s\nWeb: %s\nJoin Wi-Fi: " APP_NETWORK_SETUP_AP_SSID, ip,
+                     url);
+        } else {
+            snprintf(text, sizeof(text), "IP: %s\nWeb: %s", ip, url);
+        }
+        lv_label_set_text(s_hub_web_lbl, text);
+        lv_obj_clear_flag(s_hub_web_lbl, LV_OBJ_FLAG_HIDDEN);
+        return;
+    }
+
+    if (app_network_get_web_ui_url(url, sizeof(url))) {
+        if (app_network_setup_ap_active()) {
+            snprintf(text, sizeof(text), "Web: %s\nJoin Wi-Fi: " APP_NETWORK_SETUP_AP_SSID, url);
+        } else {
+            snprintf(text, sizeof(text), "Web: %s", url);
+        }
+        lv_label_set_text(s_hub_web_lbl, text);
+        lv_obj_clear_flag(s_hub_web_lbl, LV_OBJ_FLAG_HIDDEN);
+        return;
+    }
+
+    if (app_network_get_device_ip(ip, sizeof(ip))) {
+        snprintf(text, sizeof(text), "IP: %s", ip);
+        lv_label_set_text(s_hub_web_lbl, text);
+        lv_obj_clear_flag(s_hub_web_lbl, LV_OBJ_FLAG_HIDDEN);
+        return;
+    }
+
+    lv_obj_add_flag(s_hub_web_lbl, LV_OBJ_FLAG_HIDDEN);
+}
+
+static lv_obj_t *settings_create_web_ui_label(lv_obj_t *parent)
+{
+    const ui_theme_t *t = ui_theme_get();
+    lv_obj_t *lbl = lv_label_create(parent);
+    lv_label_set_text(lbl, "");
+    lv_obj_set_style_text_color(lbl, t->secondary, 0);
+    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_18, 0);
+    lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_width(lbl, 560);
+    lv_obj_align(lbl, LV_ALIGN_TOP_MID, 0, 58);
+    lv_obj_add_flag(lbl, LV_OBJ_FLAG_HIDDEN);
+    return lbl;
+}
+
 static void build_hub_panel(void)
 {
     int32_t cw = 0;
@@ -354,6 +415,7 @@ static void build_hub_panel(void)
     ui_settings_panel_layout(s_panels[PANEL_HUB]);
 
     ui_widgets_create_title(s_panels[PANEL_HUB], "Settings");
+    s_hub_web_lbl = settings_create_web_ui_label(s_panels[PANEL_HUB]);
 
     ui_layout_get_content_size(s_scr, &cw, &ch);
     (void)cw;
@@ -419,6 +481,7 @@ void ui_screen_settings_on_show(void)
     ui_settings_timeouts_show_list();
     ui_settings_adult_auth_sync_from_draft();
 
+    ui_settings_refresh_web_ui_label();
     show_panel(PANEL_HUB);
 }
 

@@ -39,7 +39,7 @@ void app_config_apply_defaults(void)
     s_cfg.aa_methods = 0x00;
     snprintf(s_cfg.aa_pin, sizeof(s_cfg.aa_pin), "%s", "0000");
 
-    s_cfg.wifi_password_set = false;
+    s_cfg.wifi_network_count = 0;
     s_cfg.timezone_set = false;
     s_cfg.timezone_id[0] = '\0';
     s_cfg.theme_set = false;
@@ -88,12 +88,88 @@ app_runtime_t *app_runtime_get(void)
 
 bool app_config_wifi_ssid_missing(void)
 {
-    return s_cfg.wifi_ssid[0] == '\0';
+    return s_cfg.wifi_network_count == 0;
 }
 
 bool app_config_wifi_password_unset(void)
 {
-    return !s_cfg.wifi_password_set;
+    return app_config_wifi_network_password_unset(0);
+}
+
+int app_config_wifi_network_count(void)
+{
+    return (int)s_cfg.wifi_network_count;
+}
+
+const app_wifi_network_t *app_config_wifi_network_get(int index)
+{
+    if (index < 0 || index >= (int)s_cfg.wifi_network_count) {
+        return NULL;
+    }
+    return &s_cfg.wifi_networks[index];
+}
+
+bool app_config_wifi_network_password_unset(int index)
+{
+    const app_wifi_network_t *net = app_config_wifi_network_get(index);
+    if (net == NULL) {
+        return true;
+    }
+    return !net->password_set;
+}
+
+void app_config_wifi_networks_copy(app_wifi_network_t *dst, uint8_t *dst_count,
+                                   const app_wifi_network_t *src, uint8_t src_count)
+{
+    if (dst == NULL || dst_count == NULL) {
+        return;
+    }
+    if (src_count > APP_WIFI_NETWORK_MAX) {
+        src_count = APP_WIFI_NETWORK_MAX;
+    }
+    *dst_count = src_count;
+    if (src_count > 0 && src != NULL) {
+        memcpy(dst, src, (size_t)src_count * sizeof(app_wifi_network_t));
+    }
+}
+
+esp_err_t app_config_wifi_network_set(int index, const char *ssid, const char *password, bool password_set)
+{
+    if (ssid == NULL || ssid[0] == '\0') {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (index < 0 || index > (int)s_cfg.wifi_network_count) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (index == (int)s_cfg.wifi_network_count) {
+        if (s_cfg.wifi_network_count >= APP_WIFI_NETWORK_MAX) {
+            return ESP_ERR_NO_MEM;
+        }
+        index = (int)s_cfg.wifi_network_count;
+        s_cfg.wifi_network_count++;
+    }
+
+    app_wifi_network_t *net = &s_cfg.wifi_networks[index];
+    snprintf(net->ssid, sizeof(net->ssid), "%s", ssid);
+    if (password != NULL) {
+        snprintf(net->password, sizeof(net->password), "%s", password);
+        net->password_set = password_set;
+    }
+    return ESP_OK;
+}
+
+esp_err_t app_config_wifi_network_delete(int index)
+{
+    if (index < 0 || index >= (int)s_cfg.wifi_network_count) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    for (int i = index; i < (int)s_cfg.wifi_network_count - 1; i++) {
+        s_cfg.wifi_networks[i] = s_cfg.wifi_networks[i + 1];
+    }
+    memset(&s_cfg.wifi_networks[s_cfg.wifi_network_count - 1], 0, sizeof(app_wifi_network_t));
+    s_cfg.wifi_network_count--;
+    return ESP_OK;
 }
 
 bool app_config_timezone_unset(void)

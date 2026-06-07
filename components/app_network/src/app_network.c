@@ -63,6 +63,12 @@ app_network_state_t app_network_get_state(void)
 
 const char *app_network_get_status_text(void)
 {
+    if (app_network_setup_ap_active()) {
+        const char *setup = app_network_setup_status_text();
+        if (setup != NULL && setup[0] != '\0') {
+            return setup;
+        }
+    }
     return s_status;
 }
 
@@ -108,6 +114,7 @@ static void ip_event_handler(void *arg, esp_event_base_t base, int32_t id, void 
         ESP_LOGI(TAG, "got IP: " IPSTR, IP2STR(&ev->ip_info.ip));
         set_state(APP_NETWORK_STATE_GOT_IP, "Connected");
         xEventGroupSetBits(s_wifi_events, WIFI_CONNECTED_BIT);
+        app_network_web_ui_start();
     }
 }
 
@@ -166,6 +173,39 @@ esp_err_t app_network_init(void)
     return ensure_stack();
 }
 
+static bool netif_ip_to_str(esp_netif_t *netif, char *out, size_t out_len)
+{
+    if (netif == NULL || out == NULL || out_len == 0) {
+        return false;
+    }
+
+    esp_netif_ip_info_t ip = {0};
+    if (esp_netif_get_ip_info(netif, &ip) != ESP_OK || ip.ip.addr == 0) {
+        return false;
+    }
+
+    snprintf(out, out_len, IPSTR, IP2STR(&ip.ip));
+    return true;
+}
+
+bool app_network_get_device_ip(char *out, size_t out_len)
+{
+    if (out == NULL || out_len == 0) {
+        return false;
+    }
+    out[0] = '\0';
+
+    if (app_network_setup_ap_active()) {
+        esp_netif_t *ap = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
+        if (netif_ip_to_str(ap, out, out_len)) {
+            return true;
+        }
+    }
+
+    esp_netif_t *sta = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+    return netif_ip_to_str(sta, out, out_len);
+}
+
 static bool wifi_already_connected(const char *ssid)
 {
     esp_netif_t *sta = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
@@ -186,17 +226,14 @@ static bool wifi_already_connected(const char *ssid)
     return strncmp((const char *)ap.ssid, ssid, sizeof(ap.ssid)) == 0;
 }
 
-static esp_err_t wifi_connect_from_config(void)
+static esp_err_t wifi_try_network(const char *ssid, const char *password)
 {
-    const app_config_t *cfg = app_config_get();
-
-    if (app_config_wifi_ssid_missing()) {
-        set_state(APP_NETWORK_STATE_FAILED, "No Wi-Fi network");
-        return ESP_ERR_INVALID_STATE;
+    if (ssid == NULL || ssid[0] == '\0') {
+        return ESP_ERR_INVALID_ARG;
     }
 
-    if (wifi_already_connected(cfg->wifi_ssid)) {
-        ESP_LOGI(TAG, "already on %s, skipping reconnect", cfg->wifi_ssid);
+    if (wifi_already_connected(ssid)) {
+        ESP_LOGI(TAG, "already on %s, skipping reconnect", ssid);
         set_state(APP_NETWORK_STATE_GOT_IP, "Connected");
         return ESP_OK;
     }
@@ -204,16 +241,16 @@ static esp_err_t wifi_connect_from_config(void)
     xEventGroupClearBits(s_wifi_events, WIFI_CONNECTED_BIT | WIFI_FAIL_BIT);
 
     wifi_config_t wc = {0};
-    snprintf((char *)wc.sta.ssid, sizeof(wc.sta.ssid), "%s", cfg->wifi_ssid);
-    snprintf((char *)wc.sta.password, sizeof(wc.sta.password), "%s", cfg->wifi_password);
+    snprintf((char *)wc.sta.ssid, sizeof(wc.sta.ssid), "%s", ssid);
+    if (password != NULL) {
+        snprintf((char *)wc.sta.password, sizeof(wc.sta.password), "%s", password);
+    }
 
-    if (cfg->wifi_password[0] == '\0') {
+    if (password == NULL || password[0] == '\0') {
         wc.sta.threshold.authmode = WIFI_AUTH_OPEN;
     } else {
         wc.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
     }
-
-    set_state(APP_NETWORK_STATE_CONNECTING, "Connecting...");
 
     s_wifi_teardown_in_progress = true;
     esp_wifi_disconnect();
@@ -251,8 +288,54 @@ static esp_err_t wifi_connect_from_config(void)
         return ESP_OK;
     }
 
+    return ESP_FAIL;
+}
+
+static esp_err_t wifi_prepare_sta_mode(void)
+{
+    esp_err_t err = esp_wifi_set_mode(WIFI_MODE_STA);
+    if (err != ESP_OK) {
+        return err;
+    }
+    return ESP_OK;
+}
+
+static esp_err_t wifi_connect_from_config(void)
+{
+    if (app_config_wifi_ssid_missing()) {
+        set_state(APP_NETWORK_STATE_FAILED, "No Wi-Fi network");
+        return ESP_FAIL;
+    }
+
+    const int count = app_config_wifi_network_count();
+    for (int i = 0; i < count; i++) {
+        const app_wifi_network_t *net = app_config_wifi_network_get(i);
+        if (net == NULL) {
+            continue;
+        }
+
+        char status[64];
+        snprintf(status, sizeof(status), "Connecting to %s...", net->ssid);
+        set_state(APP_NETWORK_STATE_CONNECTING, status);
+
+        esp_err_t err = wifi_try_network(net->ssid, net->password);
+        if (err == ESP_OK) {
+            return ESP_OK;
+        }
+    }
+
     set_state(APP_NETWORK_STATE_FAILED, "Wi-Fi failed");
     return ESP_FAIL;
+}
+
+static esp_err_t start_setup_ap_fallback(void)
+{
+    esp_err_t err = app_network_setup_ap_start();
+    if (err != ESP_OK) {
+        return err;
+    }
+    set_state(APP_NETWORK_STATE_SETUP_AP, app_network_setup_status_text());
+    return ESP_OK;
 }
 
 static void sntp_stop(void)
@@ -313,6 +396,9 @@ static void boot_task(void *arg)
 
     err = wifi_connect_from_config();
     if (err != ESP_OK || s_boot_cancel) {
+        if (!s_boot_cancel) {
+            start_setup_ap_fallback();
+        }
         goto done;
     }
 
@@ -339,15 +425,45 @@ void app_network_cancel_boot_sync(void)
     s_boot_cancel = true;
 }
 
+void app_network_reconnect_sta(void)
+{
+    if (app_network_setup_ap_active()) {
+        app_network_setup_ap_stop();
+    }
+
+    if (s_boot_task_running) {
+        s_boot_cancel = true;
+        return;
+    }
+
+    app_network_start_boot_sync();
+}
+
 void app_network_start_boot_sync(void)
 {
     if (s_boot_task_running) {
         return;
     }
 
+    if (app_network_setup_ap_active()) {
+        app_network_setup_ap_stop();
+    }
+
     s_boot_cancel = false;
     s_boot_task_running = true;
     set_state(APP_NETWORK_STATE_IDLE, "Starting...");
+
+    esp_err_t err = wifi_prepare_sta_mode();
+    if (err != ESP_OK) {
+        s_boot_task_running = false;
+        set_state(APP_NETWORK_STATE_FAILED, "Wi-Fi init failed");
+        if (start_setup_ap_fallback() == ESP_OK) {
+            notify_boot_done(false);
+        } else {
+            notify_boot_done(false);
+        }
+        return;
+    }
 
     BaseType_t ok = xTaskCreate(boot_task, "app_net_boot", BOOT_TASK_STACK, NULL, BOOT_TASK_PRIO, NULL);
     if (ok != pdPASS) {

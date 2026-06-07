@@ -18,9 +18,10 @@ static const char *TAG = "app_nvs";
 
 /* Logical field              NVS key        Type */
 #define KEY_CFG_VER             "cfg_ver"      /* uint32 schema version */
-#define KEY_WIFI_SSID           "wifi_ssid"    /* string wifi_ssid */
-#define KEY_WIFI_PASSWORD       "wifi_pass"    /* string wifi_password */
-#define KEY_WIFI_PW_SET         "wifi_pw_set"  /* uint8  wifi_password_set flag */
+#define KEY_WIFI_SSID           "wifi_ssid"    /* string v1 primary SSID */
+#define KEY_WIFI_PASSWORD       "wifi_pass"    /* string v1 primary password */
+#define KEY_WIFI_PW_SET         "wifi_pw_set"  /* uint8  v1 wifi_password_set */
+#define KEY_WIFI_LIST           "wifi_list"    /* blob   wifi_networks[] + count */
 #define KEY_NTP_SERVER          "ntp_server"   /* string ntp_server */
 #define KEY_TZ_SET              "tz_set"       /* uint8  timezone_set */
 #define KEY_TZ_ID               "tz_id"        /* string timezone_id */
@@ -116,8 +117,103 @@ static esp_err_t touch_cfg_ver(nvs_handle_t h)
     return set_u32(h, KEY_CFG_VER, APP_NVS_CFG_VERSION);
 }
 
+typedef struct {
+    uint8_t count;
+    uint8_t reserved[3];
+    app_wifi_network_t entries[APP_WIFI_NETWORK_MAX];
+} wifi_nvs_blob_t;
+
+static void sanitize_wifi_networks(app_config_t *cfg)
+{
+    if (cfg->wifi_network_count > APP_WIFI_NETWORK_MAX) {
+        ESP_LOGW(TAG, "wifi_network_count %u out of range, clamping", (unsigned)cfg->wifi_network_count);
+        cfg->wifi_network_count = APP_WIFI_NETWORK_MAX;
+    }
+
+    for (uint8_t i = 0; i < cfg->wifi_network_count; i++) {
+        app_wifi_network_t *net = &cfg->wifi_networks[i];
+        net->ssid[sizeof(net->ssid) - 1] = '\0';
+        net->password[sizeof(net->password) - 1] = '\0';
+        if (net->ssid[0] == '\0') {
+            ESP_LOGW(TAG, "blank wifi entry at %u, truncating list", (unsigned)i);
+            cfg->wifi_network_count = i;
+            break;
+        }
+    }
+}
+
+static esp_err_t load_wifi_v1(nvs_handle_t h, app_config_t *cfg)
+{
+    char ssid[APP_WIFI_SSID_MAX];
+    char password[APP_WIFI_PASSWORD_MAX];
+    esp_err_t err = get_str(h, KEY_WIFI_SSID, ssid, sizeof(ssid), NULL);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    uint8_t pw_set = 0;
+    err = get_u8(h, KEY_WIFI_PW_SET, &pw_set, 0);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    err = get_str(h, KEY_WIFI_PASSWORD, password, sizeof(password), "");
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    cfg->wifi_network_count = 0;
+    if (ssid[0] != '\0') {
+        cfg->wifi_network_count = 1;
+        snprintf(cfg->wifi_networks[0].ssid, sizeof(cfg->wifi_networks[0].ssid), "%s", ssid);
+        snprintf(cfg->wifi_networks[0].password, sizeof(cfg->wifi_networks[0].password), "%s", password);
+        cfg->wifi_networks[0].password_set = (pw_set != 0);
+    }
+    return ESP_OK;
+}
+
+static esp_err_t load_wifi_v2(nvs_handle_t h, app_config_t *cfg)
+{
+    wifi_nvs_blob_t blob;
+    size_t len = sizeof(blob);
+    esp_err_t err = nvs_get_blob(h, KEY_WIFI_LIST, &blob, &len);
+    if (err == ESP_ERR_NVS_NOT_FOUND) {
+        cfg->wifi_network_count = 0;
+        return ESP_OK;
+    }
+    if (err != ESP_OK) {
+        return err;
+    }
+    if (len < sizeof(uint8_t)) {
+        return ESP_ERR_INVALID_SIZE;
+    }
+
+    cfg->wifi_network_count = blob.count;
+    if (cfg->wifi_network_count > APP_WIFI_NETWORK_MAX) {
+        cfg->wifi_network_count = APP_WIFI_NETWORK_MAX;
+    }
+    if (cfg->wifi_network_count > 0) {
+        memcpy(cfg->wifi_networks, blob.entries,
+               (size_t)cfg->wifi_network_count * sizeof(app_wifi_network_t));
+    }
+    return ESP_OK;
+}
+
+static esp_err_t save_wifi_list(nvs_handle_t h, const app_config_t *cfg)
+{
+    wifi_nvs_blob_t blob = {0};
+    blob.count = cfg->wifi_network_count;
+    if (blob.count > 0) {
+        memcpy(blob.entries, cfg->wifi_networks,
+               (size_t)blob.count * sizeof(app_wifi_network_t));
+    }
+    return nvs_set_blob(h, KEY_WIFI_LIST, &blob, sizeof(blob));
+}
+
 static void sanitize_loaded_config(app_config_t *cfg)
 {
+    sanitize_wifi_networks(cfg);
+
     if (cfg->timer_style_id >= APP_TIMER_STYLE_COUNT) {
         ESP_LOGW(TAG, "timer_style_id %u out of range, clamping to 0", (unsigned)cfg->timer_style_id);
         cfg->timer_style_id = 0;
@@ -195,26 +291,18 @@ esp_err_t app_nvs_load(void)
         nvs_close(h);
         return err;
     }
-    if (cfg_ver != APP_NVS_CFG_VERSION) {
-        ESP_LOGW(TAG, "cfg_ver %lu != expected %d, using defaults for now",
-                 (unsigned long)cfg_ver, APP_NVS_CFG_VERSION);
+    if (cfg_ver != APP_NVS_CFG_VERSION && cfg_ver != 1) {
+        ESP_LOGW(TAG, "cfg_ver %lu unsupported, using defaults",
+                 (unsigned long)cfg_ver);
         nvs_close(h);
         return ESP_OK;
     }
 
-    err = get_str(h, KEY_WIFI_SSID, cfg->wifi_ssid, sizeof(cfg->wifi_ssid), NULL);
-    if (err != ESP_OK) {
-        goto out;
+    if (cfg_ver == 1) {
+        err = load_wifi_v1(h, cfg);
+    } else {
+        err = load_wifi_v2(h, cfg);
     }
-
-    uint8_t pw_set = 0;
-    err = get_u8(h, KEY_WIFI_PW_SET, &pw_set, 0);
-    if (err != ESP_OK) {
-        goto out;
-    }
-    cfg->wifi_password_set = (pw_set != 0);
-
-    err = get_str(h, KEY_WIFI_PASSWORD, cfg->wifi_password, sizeof(cfg->wifi_password), "");
     if (err != ESP_OK) {
         goto out;
     }
@@ -322,15 +410,14 @@ out:
 
 static esp_err_t save_network_keys(nvs_handle_t h, const app_config_t *cfg)
 {
-    esp_err_t err = set_str(h, KEY_WIFI_SSID, cfg->wifi_ssid);
+    esp_err_t err = save_wifi_list(h, cfg);
     if (err != ESP_OK) {
         return err;
     }
-    err = set_str(h, KEY_WIFI_PASSWORD, cfg->wifi_password);
-    if (err != ESP_OK) {
-        return err;
-    }
-    return set_u8(h, KEY_WIFI_PW_SET, cfg->wifi_password_set ? 1 : 0);
+    nvs_erase_key(h, KEY_WIFI_SSID);
+    nvs_erase_key(h, KEY_WIFI_PASSWORD);
+    nvs_erase_key(h, KEY_WIFI_PW_SET);
+    return ESP_OK;
 }
 
 static esp_err_t save_network_keys_and_ntp(nvs_handle_t h, const app_config_t *cfg)

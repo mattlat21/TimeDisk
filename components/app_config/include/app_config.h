@@ -17,6 +17,7 @@
 
 #define APP_WIFI_SSID_MAX     33
 #define APP_WIFI_PASSWORD_MAX 65
+#define APP_WIFI_NETWORK_MAX  5
 #define APP_NTP_SERVER_MAX    129
 #define APP_TIMEZONE_ID_MAX   48
 #define APP_AA_PIN_LEN        5
@@ -33,12 +34,18 @@ typedef enum {
     APP_MODE_REST,
 } app_mode_t;
 
+/** One saved Wi-Fi network (SSID + optional WPA passphrase). */
+typedef struct {
+    char ssid[APP_WIFI_SSID_MAX];
+    /** false until user completes startup password wizard or Settings saves password. */
+    bool password_set;
+    char password[APP_WIFI_PASSWORD_MAX];
+} app_wifi_network_t;
+
 /** Persistent settings (NVS-backed). */
 typedef struct {
-    char wifi_ssid[APP_WIFI_SSID_MAX];
-    /** false until user completes startup password wizard or Settings saves password. */
-    bool wifi_password_set;
-    char wifi_password[APP_WIFI_PASSWORD_MAX];
+    uint8_t wifi_network_count;
+    app_wifi_network_t wifi_networks[APP_WIFI_NETWORK_MAX];
     char ntp_server[APP_NTP_SERVER_MAX];
     /** false until user completes timezone startup wizard. */
     bool timezone_set;
@@ -101,6 +108,16 @@ bool app_config_wifi_ssid_missing(void);
 bool app_config_wifi_password_unset(void);
 bool app_config_timezone_unset(void);
 bool app_config_theme_unset(void);
+
+int app_config_wifi_network_count(void);
+const app_wifi_network_t *app_config_wifi_network_get(int index);
+bool app_config_wifi_network_password_unset(int index);
+
+/** Add or update network at index (index may equal count to append). */
+esp_err_t app_config_wifi_network_set(int index, const char *ssid, const char *password, bool password_set);
+esp_err_t app_config_wifi_network_delete(int index);
+void app_config_wifi_networks_copy(app_wifi_network_t *dst, uint8_t *dst_count,
+                                   const app_wifi_network_t *src, uint8_t src_count);
 
 /** Convenience wrappers around app_nvs_save_* (see app_nvs.h). */
 static inline esp_err_t app_config_save_all(void)

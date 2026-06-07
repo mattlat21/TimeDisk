@@ -16,7 +16,7 @@
 #define APP_NVS_NAMESPACE "timedisk_cfg"
 
 /** Schema version written on save; bump when keys or semantics change. */
-#define APP_NVS_CFG_VERSION 1
+#define APP_NVS_CFG_VERSION 2
 
 /** Number of timer styles (ring, water). */
 #define APP_TIMER_STYLE_COUNT 2

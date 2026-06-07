@@ -96,8 +96,7 @@ static void ssid_next_cb(lv_event_t *e)
     if (s_ssid_buf[0] == '\0') {
         return;
     }
-    app_config_t *cfg = app_config_get();
-    snprintf(cfg->wifi_ssid, sizeof(cfg->wifi_ssid), "%s", s_ssid_buf);
+    app_config_wifi_network_set(0, s_ssid_buf, NULL, false);
     app_config_save_network();
     if (app_config_wifi_password_unset()) {
         ui_nav_go(UI_SCREEN_STARTUP_PASSWORD);
@@ -109,9 +108,10 @@ static void ssid_next_cb(lv_event_t *e)
 static void pw_next_cb(lv_event_t *e)
 {
     (void)e;
-    app_config_t *cfg = app_config_get();
-    snprintf(cfg->wifi_password, sizeof(cfg->wifi_password), "%s", s_pw_buf);
-    cfg->wifi_password_set = true;
+    const app_wifi_network_t *net = app_config_wifi_network_get(0);
+    if (net != NULL) {
+        app_config_wifi_network_set(0, net->ssid, s_pw_buf, true);
+    }
     app_config_save_network();
     ui_nav_go(UI_SCREEN_LOADING);
 }

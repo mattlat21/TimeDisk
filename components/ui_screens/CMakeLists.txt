@@ -22,6 +22,7 @@ idf_component_register(
     REQUIRES
         ui_core
         app_config
+        app_network
         app_time
         ui_theme
         ui_layout

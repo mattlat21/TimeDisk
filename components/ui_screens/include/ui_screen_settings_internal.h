@@ -27,6 +27,7 @@ lv_obj_t *ui_settings_create_sub_panel(const char *title);
 void ui_settings_attach_panel_wedges(lv_obj_t *panel, settings_panel_t panel_id, lv_event_cb_t save_cb);
 void ui_settings_show_panel(settings_panel_t panel);
 void ui_settings_idle_cb(void *user_data);
+void ui_settings_refresh_web_ui_label(void);
 void ui_settings_register_overlay_obj(lv_obj_t *obj);
 
 /* Panel-specific helpers needed by shared cancel plumbing. */
