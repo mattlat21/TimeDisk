@@ -35,6 +35,7 @@ typedef enum {
     UI_SCREEN_SLEEP_WIND_DOWN,
     UI_SCREEN_REST_REST_END,
     UI_SCREEN_REST_WIND_DOWN,
+    UI_SCREEN_CONFIRM_SWITCH_WAKE,
     UI_SCREEN_COUNT,
 } ui_screen_id_t;
 
@@ -80,3 +81,6 @@ void ui_nav_tod_fade_to_bright(void);
 
 /** Begin automatic Wake→… mode cycle after Sleep/Rest schedule wizard. */
 void mode_engine_start_cycle(void);
+
+/** Stop the automatic cycle and return to Wake mode. */
+void mode_engine_switch_to_wake(void);

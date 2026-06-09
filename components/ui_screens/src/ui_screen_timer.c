@@ -691,6 +691,7 @@ void ui_screen_timer_on_show(ui_screen_id_t id)
     if (id == UI_SCREEN_TIMER_DURATION) {
         s_duration_sec = app_config_get()->timer_duration_sec;
         timer_duration_clamp();
+        s_duration_bundle.cfg.show_end_time = rt->time_valid;
         ui_duration_editor_refresh(&s_duration_bundle.editor, &s_duration_bundle.cfg);
     }
 

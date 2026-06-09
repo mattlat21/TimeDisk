@@ -8,7 +8,10 @@
 #include "ui_nav.h"
 #include "app_config.h"
 
+#include <esp_log.h>
 #include <stdint.h>
+
+static const char *TAG = "ui_schedule";
 
 #define SCHEDULE_EDITOR_BOX_W  400
 #define SCHEDULE_EDITOR_BOX_H  80
@@ -17,6 +20,8 @@
 
 typedef struct {
     lv_obj_t *scr;
+    lv_obj_t *lbl_title;
+    lv_obj_t *lbl_subtitle;
     ui_screen_id_t id;
     ui_duration_editor_bundle_t bundle;
     ui_time_editor_bundle_t time_bundle;
@@ -25,6 +30,26 @@ typedef struct {
 
 static schedule_screen_t s_screens[5];
 static uint32_t s_wizard_vals[5];
+
+static schedule_screen_t *schedule_screen_at(int idx)
+{
+    if (idx < 0 || idx >= 5) {
+        return NULL;
+    }
+    return &s_screens[idx];
+}
+
+/** Wind-down uses 60 s steps; 1–59 s are step-alignment leftovers and mean zero. */
+static void snap_wind_down(int idx)
+{
+    if (idx != 2 && idx != 4) {
+        return;
+    }
+    uint32_t *val = &s_wizard_vals[idx];
+    if (*val > 0 && *val < UI_DURATION_EDITOR_STEP_SEC) {
+        *val = 0;
+    }
+}
 
 static ui_screen_id_t s_sleep_ids[3] = {
     UI_SCREEN_SLEEP_WAKE,
@@ -53,6 +78,22 @@ static const char *s_rest_subtitles[2] = {
     "Wind Down Time",
 };
 
+static const char *s_sleep_titles_duration[3] = {
+    "Sleep: Wake Duration",
+    "Sleep: Rest Duration",
+    "Sleep: Wind Down Duration",
+};
+
+static const char *s_rest_subtitles_duration[2] = {
+    "Duration",
+    "Wind Down Duration",
+};
+
+static bool schedule_time_available(void)
+{
+    return app_runtime_get()->time_valid;
+}
+
 static int screen_index(ui_screen_id_t id)
 {
     for (int i = 0; i < 3; i++) {
@@ -78,7 +119,11 @@ static uint32_t wind_down_max_sec(uint32_t gross_next_sec)
 
 static void clamp_wizard_val(int idx)
 {
-    ui_duration_editor_cfg_t *cfg = &s_screens[idx].bundle.cfg;
+    schedule_screen_t *ss = schedule_screen_at(idx);
+    if (ss == NULL) {
+        return;
+    }
+    ui_duration_editor_cfg_t *cfg = &ss->bundle.cfg;
     uint32_t *val = cfg->value_sec;
 
     if (val == NULL) {
@@ -94,8 +139,12 @@ static void clamp_wizard_val(int idx)
 
 static void apply_editor_constraints(int idx)
 {
-    ui_duration_editor_cfg_t *dcfg = &s_screens[idx].bundle.cfg;
-    ui_time_editor_cfg_t *tcfg = s_screens[idx].has_time_editor ? &s_screens[idx].time_bundle.cfg : NULL;
+    schedule_screen_t *ss = schedule_screen_at(idx);
+    if (ss == NULL) {
+        return;
+    }
+    ui_duration_editor_cfg_t *dcfg = &ss->bundle.cfg;
+    ui_time_editor_cfg_t *tcfg = ss->has_time_editor ? &ss->time_bundle.cfg : NULL;
 
     dcfg->end_time_offset_sec = 0;
     dcfg->max_sec = UI_DURATION_EDITOR_MAX_SEC;
@@ -124,6 +173,7 @@ static void apply_editor_constraints(int idx)
     }
 
     clamp_wizard_val(idx);
+    snap_wind_down(idx);
 
     if (tcfg != NULL) {
         tcfg->end_time_offset_sec = dcfg->end_time_offset_sec;
@@ -132,13 +182,49 @@ static void apply_editor_constraints(int idx)
     }
 }
 
+static void apply_schedule_labels(int idx)
+{
+    schedule_screen_t *ss = schedule_screen_at(idx);
+    if (ss == NULL) {
+        return;
+    }
+    const bool use_time = schedule_time_available();
+
+    if (ss->lbl_title != NULL) {
+        if (idx < 3) {
+            lv_label_set_text(ss->lbl_title, use_time ? s_sleep_titles[idx] : s_sleep_titles_duration[idx]);
+        } else {
+            lv_label_set_text(ss->lbl_title, s_rest_titles[idx - 3]);
+        }
+    }
+    if (ss->lbl_subtitle != NULL) {
+        const int rest_idx = idx - 3;
+        lv_label_set_text(ss->lbl_subtitle,
+                          use_time ? s_rest_subtitles[rest_idx] : s_rest_subtitles_duration[rest_idx]);
+    }
+}
+
 static void refresh_schedule_editors(int idx)
 {
-    apply_editor_constraints(idx);
-    ui_duration_editor_refresh(&s_screens[idx].bundle.editor, &s_screens[idx].bundle.cfg);
-    if (s_screens[idx].has_time_editor) {
-        ui_time_editor_refresh(&s_screens[idx].time_bundle.editor, &s_screens[idx].time_bundle.cfg);
+    schedule_screen_t *ss = schedule_screen_at(idx);
+    if (ss == NULL) {
+        return;
     }
+    const bool use_time = schedule_time_available();
+
+    apply_editor_constraints(idx);
+    ss->bundle.cfg.show_end_time = use_time && !ss->has_time_editor;
+    if (idx == 2 || idx == 4) {
+        ss->bundle.cfg.display = UI_DURATION_DISPLAY_HUMAN;
+    }
+    ui_duration_editor_refresh(&ss->bundle.editor, &ss->bundle.cfg);
+    if (ss->has_time_editor) {
+        ui_time_editor_set_visible(&ss->time_bundle.editor, use_time);
+        if (use_time) {
+            ui_time_editor_refresh(&ss->time_bundle.editor, &ss->time_bundle.cfg);
+        }
+    }
+    apply_schedule_labels(idx);
 }
 
 static bool sleep_wake_step_valid(void)
@@ -186,6 +272,13 @@ static void finish_sleep_wizard(void)
     cfg->sleep_sec = s_wizard_vals[0] - gross_wd;
     cfg->rest_sec = s_wizard_vals[1];
     app_config_save_schedule();
+    ESP_LOGI(TAG,
+             "Sleep cycle: gross_wake=%lus gross_rest_end=%lus gross_wind_down=%lus -> "
+             "wind_down=%lus sleep=%lus rest=%lus (time_valid=%d)",
+             (unsigned long)s_wizard_vals[0], (unsigned long)s_wizard_vals[1],
+             (unsigned long)gross_wd, (unsigned long)cfg->wind_down_sec,
+             (unsigned long)cfg->sleep_sec, (unsigned long)cfg->rest_sec,
+             schedule_time_available());
     mode_engine_start_cycle();
     ui_nav_go(UI_SCREEN_TOD_BRIGHT);
 }
@@ -203,6 +296,12 @@ static void finish_rest_wizard(void)
     cfg->rest_sec = s_wizard_vals[3] - gross_wd;
     cfg->sleep_sec = 0;
     app_config_save_schedule();
+    ESP_LOGI(TAG,
+             "Rest cycle: gross_rest_end=%lus gross_wind_down=%lus -> "
+             "wind_down=%lus rest=%lus sleep=0 (time_valid=%d)",
+             (unsigned long)s_wizard_vals[3], (unsigned long)gross_wd,
+             (unsigned long)cfg->wind_down_sec, (unsigned long)cfg->rest_sec,
+             schedule_time_available());
     mode_engine_start_cycle();
     ui_nav_go(UI_SCREEN_TOD_BRIGHT);
 }
@@ -269,9 +368,9 @@ static void build_wizard_screen(lv_obj_t *screens[UI_SCREEN_COUNT], ui_screen_id
     ss->scr = ui_widgets_create_screen();
     screens[id] = ss->scr;
 
-    ui_widgets_create_title(ss->scr, title);
+    ss->lbl_title = ui_widgets_create_title(ss->scr, title);
     if (subtitle != NULL) {
-        ui_widgets_create_subtitle(ss->scr, subtitle);
+        ss->lbl_subtitle = ui_widgets_create_subtitle(ss->scr, subtitle);
     }
 
     const int box_y = show_time_editor ? SCHEDULE_EDITOR_BOX_Y : 220;

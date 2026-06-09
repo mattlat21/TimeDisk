@@ -309,6 +309,7 @@ static void idle_timer_cb(lv_timer_t *t)
         ui_nav_tod_fade_to_dim();
         break;
     case UI_SCREEN_MENU:
+    case UI_SCREEN_CONFIRM_SWITCH_WAKE:
         ui_nav_go(UI_SCREEN_TOD_BRIGHT);
         break;
     case UI_SCREEN_TIMER_BRIGHT:
@@ -365,6 +366,10 @@ static void on_enter(ui_screen_id_t screen)
         arm_idle_timer(cfg->timeout_aa_sec);
         break;
     case UI_SCREEN_MENU:
+        ui_screen_menu_on_show();
+        arm_idle_timer(cfg->timeout_main_menu_sec);
+        break;
+    case UI_SCREEN_CONFIRM_SWITCH_WAKE:
         arm_idle_timer(cfg->timeout_main_menu_sec);
         break;
     case UI_SCREEN_TIMER_BRIGHT:
@@ -448,6 +453,7 @@ void ui_nav_reset_idle_timer(void)
         arm_tod_timers();
         break;
     case UI_SCREEN_MENU:
+    case UI_SCREEN_CONFIRM_SWITCH_WAKE:
         arm_idle_timer(cfg->timeout_main_menu_sec);
         break;
     case UI_SCREEN_TIMER_BRIGHT:
@@ -544,6 +550,15 @@ void mode_engine_start_cycle(void)
     rt->mode_remaining_sec = 0;
 }
 
+void mode_engine_switch_to_wake(void)
+{
+    app_runtime_t *rt = app_runtime_get();
+
+    rt->cycle_active = false;
+    rt->current_mode = APP_MODE_WAKE;
+    rt->mode_remaining_sec = 0;
+}
+
 static void mode_engine_tick(void)
 {
     app_runtime_t *rt = app_runtime_get();
@@ -633,6 +648,8 @@ static void loading_boot_async_cb(void *user_data)
             app_time_apply_from_config();
             ui_nav_go(UI_SCREEN_TOD_BRIGHT);
         }
+    } else if (app_network_setup_ap_active()) {
+        ui_nav_go(UI_SCREEN_TOD_BRIGHT);
     } else {
         s_loading_retry_at_ms = now_ms() + LOADING_RETRY_MS;
         ui_screen_loading_set_status(app_network_get_status_text());

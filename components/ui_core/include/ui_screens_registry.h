@@ -19,6 +19,7 @@ void ui_screen_loading_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
 void ui_screen_tod_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
 void ui_screen_aa_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
 void ui_screen_menu_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
+void ui_screen_menu_on_show(void);
 void ui_screen_timer_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
 void ui_screen_schedule_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
 void ui_screen_schedule_on_show(ui_screen_id_t id);

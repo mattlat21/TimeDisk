@@ -123,13 +123,14 @@ static void refresh_panel_time(const tod_mode_panel_t *p)
         return;
     }
     app_runtime_t *rt = app_runtime_get();
-    char tbuf[16];
-    if (rt->time_valid) {
-        ui_format_hh_mm_now(tbuf, sizeof(tbuf));
-    } else {
-        snprintf(tbuf, sizeof(tbuf), "--:--");
+    if (!rt->time_valid) {
+        lv_obj_add_flag(p->lbl_time, LV_OBJ_FLAG_HIDDEN);
+        return;
     }
+    char tbuf[16];
+    ui_format_hh_mm_now(tbuf, sizeof(tbuf));
     lv_label_set_text(p->lbl_time, tbuf);
+    lv_obj_remove_flag(p->lbl_time, LV_OBJ_FLAG_HIDDEN);
 }
 
 static void refresh_panel_remaining(const tod_mode_panel_t *p, app_mode_t mode)
