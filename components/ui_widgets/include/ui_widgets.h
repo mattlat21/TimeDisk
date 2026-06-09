@@ -32,6 +32,7 @@ void ui_widgets_attach_screen_edge_fill(lv_obj_t *screen);
 void ui_widgets_send_edge_fill_to_back(lv_obj_t *screen);
 
 lv_obj_t *ui_widgets_create_title(lv_obj_t *parent, const char *text);
+lv_obj_t *ui_widgets_create_subtitle(lv_obj_t *parent, const char *text);
 lv_obj_t *ui_widgets_create_purple_box(lv_obj_t *parent, int w, int h, int x, int y, bool outline_only);
 lv_obj_t *ui_widgets_create_side_btn(lv_obj_t *parent, bool is_back, int x, int y, const char *label);
 lv_obj_t *ui_widgets_create_side_next(lv_obj_t *parent, int x, int y);

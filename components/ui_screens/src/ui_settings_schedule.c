@@ -72,6 +72,7 @@ lv_obj_t *ui_settings_schedule_build(void)
             .box_w = 400,
             .box_h = box_h,
             .show_end_time = false,
+            .max_sec = (i == 2) ? UI_SCHEDULE_REST_MAX_SEC : UI_DURATION_EDITOR_MAX_SEC,
             .on_change = ui_settings_idle_cb,
         };
         ui_duration_editor_create(s_panel, &s_sched_bundles[i]);

@@ -105,6 +105,17 @@ lv_obj_t *ui_widgets_create_title(lv_obj_t *parent, const char *text)
     return lbl;
 }
 
+lv_obj_t *ui_widgets_create_subtitle(lv_obj_t *parent, const char *text)
+{
+    const ui_theme_t *t = ui_theme_get();
+    lv_obj_t *lbl = lv_label_create(parent);
+    lv_label_set_text(lbl, text);
+    lv_obj_set_style_text_color(lbl, t->secondary, 0);
+    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_20, 0);
+    lv_obj_align(lbl, LV_ALIGN_TOP_MID, 0, 58);
+    return lbl;
+}
+
 lv_obj_t *ui_widgets_create_purple_box(lv_obj_t *parent, int w, int h, int x, int y, bool outline_only)
 {
     const ui_theme_t *t = ui_theme_get();

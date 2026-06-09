@@ -18,6 +18,8 @@
 #define UI_DURATION_EDITOR_GAP       20
 #define UI_DURATION_EDITOR_STEP_SEC  60
 #define UI_DURATION_EDITOR_MAX_SEC   3600
+/** Max gross/net rest duration in schedule wizards and Settings → Schedule. */
+#define UI_SCHEDULE_REST_MAX_SEC     (24U * 3600U)
 
 typedef void (*ui_duration_editor_cb_t)(void *user_data);
 
