@@ -30,7 +30,7 @@ idf_component_register(
         ui_layout
         ui_widgets
         ui_wedge
-        ui_lines
+        ui_wireframe_guides
         ui_keyboard
         ui_format
         ui_assets

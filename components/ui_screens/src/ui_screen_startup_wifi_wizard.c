@@ -25,7 +25,7 @@
 #include "ui_widgets.h"
 #include "ui_screen_ring.h"
 #include "ui_wedge.h"
-#include "ui_lines.h"
+#include "ui_wireframe_guides.h"
 #include "ui_theme.h"
 #include "ui_keyboard.h"
 #include "ui_nav.h"
@@ -86,7 +86,7 @@ static lv_obj_t *wifi_create_ssid_field(lv_obj_t *parent, lv_obj_t **label_out)
 static lv_obj_t *wifi_create_screen(void)
 {
     lv_obj_t *scr = ui_widgets_create_screen();
-    ui_lines_reset();
+    ui_wireframe_guides_reset();
     return scr;
 }
 

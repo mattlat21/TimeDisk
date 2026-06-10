@@ -2,6 +2,7 @@
 #include "ui_layout.h"
 #include "ui_widgets.h"
 #include "ui_wedge.h"
+#include "ui_wireframe_guides.h"
 #include "ui_theme.h"
 #include "ui_nav.h"
 #include "app_config.h"
@@ -181,6 +182,8 @@ void ui_screen_menu_build(lv_obj_t *screens[UI_SCREEN_COUNT])
 
     lv_obj_move_foreground(back);
     lv_obj_move_foreground(settings);
+
+    ui_wireframe_guides_add_center_crosshair(s_scr);
 
     build_confirm_switch_wake(screens);
 }
