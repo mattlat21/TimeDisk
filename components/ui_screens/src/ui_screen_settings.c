@@ -54,6 +54,10 @@ void ui_settings_timeouts_show_list(void);
 lv_obj_t *ui_settings_adult_auth_build(void);
 void ui_settings_adult_auth_sync_from_draft(void);
 
+lv_obj_t *ui_settings_update_build(void);
+void ui_settings_update_sync_from_draft(void);
+void ui_settings_update_apply_theme(void);
+
 lv_obj_t *ui_settings_screen(void)
 {
     return s_scr;
@@ -241,7 +245,7 @@ static void settings_wedges_show_for_panel(settings_panel_t panel)
         return;
     }
 
-    if (panel == PANEL_NETWORK) {
+    if (panel == PANEL_NETWORK || panel == PANEL_UPDATE) {
         return;
     }
 
@@ -305,6 +309,9 @@ static void show_panel(settings_panel_t panel)
         break;
     case PANEL_AA:
         ui_settings_adult_auth_sync_from_draft();
+        break;
+    case PANEL_UPDATE:
+        ui_settings_update_sync_from_draft();
         break;
     default:
         break;
@@ -420,10 +427,6 @@ static void build_hub_panel(void)
     ui_layout_get_content_size(s_scr, &cw, &ch);
     (void)cw;
     const int grid_w = HUB_BTN_COLS * HUB_BTN_W + (HUB_BTN_COLS - 1) * HUB_BTN_GAP_X;
-    const int rows = 6 / HUB_BTN_COLS;
-    const int total_h = rows * HUB_BTN_H + (rows - 1) * HUB_BTN_GAP_Y;
-    const int y0 = (int)((ch - total_h) / 2) - 16;
-    const int x0 = ui_layout_parent_center_x_wf(s_panels[PANEL_HUB], grid_w);
 
     static const char *labels[] = {
         "Colours",
@@ -432,14 +435,21 @@ static void build_hub_panel(void)
         "Schedule",
         "Timeouts",
         "Adult Auth",
+        "Update",
     };
 
-    for (int i = 0; i < 6; i++) {
+    const int hub_btn_count = (int)(sizeof(labels) / sizeof(labels[0]));
+    const int rows = (hub_btn_count + HUB_BTN_COLS - 1) / HUB_BTN_COLS;
+    const int total_h = rows * HUB_BTN_H + (rows - 1) * HUB_BTN_GAP_Y;
+    const int y0_hub = (int)((ch - total_h) / 2) - 16;
+    const int x0_hub = ui_layout_parent_center_x_wf(s_panels[PANEL_HUB], grid_w);
+
+    for (int i = 0; i < hub_btn_count; i++) {
         const int col = i % HUB_BTN_COLS;
         const int row = i / HUB_BTN_COLS;
         hub_create_btn(s_panels[PANEL_HUB], labels[i],
-                       x0 + col * (HUB_BTN_W + HUB_BTN_GAP_X),
-                       y0 + row * (HUB_BTN_H + HUB_BTN_GAP_Y),
+                       x0_hub + col * (HUB_BTN_W + HUB_BTN_GAP_X),
+                       y0_hub + row * (HUB_BTN_H + HUB_BTN_GAP_Y),
                        (settings_panel_t)(PANEL_COLOURS + i));
     }
 
@@ -463,6 +473,7 @@ void ui_screen_settings_build(lv_obj_t *screens[UI_SCREEN_COUNT])
     s_panels[PANEL_SCHEDULE] = ui_settings_schedule_build();
     s_panels[PANEL_TIMEOUTS] = ui_settings_timeouts_build();
     s_panels[PANEL_AA] = ui_settings_adult_auth_build();
+    s_panels[PANEL_UPDATE] = ui_settings_update_build();
 
     show_panel(PANEL_HUB);
 }
@@ -507,4 +518,5 @@ void ui_screen_settings_apply_theme(void)
     ui_settings_colours_apply_theme();
     ui_settings_network_apply_theme();
     ui_settings_timezone_apply_theme();
+    ui_settings_update_apply_theme();
 }

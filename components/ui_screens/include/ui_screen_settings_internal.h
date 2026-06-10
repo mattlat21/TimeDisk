@@ -11,6 +11,7 @@ typedef enum {
     PANEL_SCHEDULE,
     PANEL_TIMEOUTS,
     PANEL_AA,
+    PANEL_UPDATE,
     PANEL_COUNT,
 } settings_panel_t;
 
