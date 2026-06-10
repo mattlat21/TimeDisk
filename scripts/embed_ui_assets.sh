@@ -8,9 +8,10 @@ OUT_DIR="${ROOT}/components/ui_assets/src"
 LVGL_IMAGE="${ROOT}/managed_components/lvgl__lvgl/scripts/LVGLImage.py"
 VENV="${ROOT}/.venv-assets"
 
-WEDGE_W=209
-WEDGE_H=106
+WEDGE_W=200
+WEDGE_H=100
 WEDGE_WIDE_W=443
+WEDGE_WIDE_H=106
 
 die() { echo "embed_ui_assets: $*" >&2; exit 1; }
 
@@ -48,7 +49,7 @@ for src in "${ASSETS_DIR}"/*; do
       png="${TMP}/${stem}.png"
       case "${stem}" in
         wedge_shape_wide)
-          rsvg-convert -w "${WEDGE_WIDE_W}" -h "${WEDGE_H}" "${src}" -o "${png}"
+          rsvg-convert -w "${WEDGE_WIDE_W}" -h "${WEDGE_WIDE_H}" "${src}" -o "${png}"
           embed_png "${stem}" A8 "${png}"
           ;;
         wedge_shape_*)
@@ -56,7 +57,7 @@ for src in "${ASSETS_DIR}"/*; do
           embed_png "${stem}" A8 "${png}"
           ;;
         icon_wedge_menu_wide)
-          rsvg-convert -w "${WEDGE_WIDE_W}" -h "${WEDGE_H}" "${src}" -o "${png}"
+          rsvg-convert -w "${WEDGE_WIDE_W}" -h "${WEDGE_WIDE_H}" "${src}" -o "${png}"
           embed_png "${stem}" RGB565A8 "${png}"
           ;;
         icon_wedge_*)

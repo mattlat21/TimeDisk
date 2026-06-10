@@ -10,6 +10,8 @@
 #define UI_WIREFRAME_GUIDES_CROSSHAIR_CIRCLE_D_OUTER 690
 #define UI_WIREFRAME_GUIDES_CROSSHAIR_CIRCLE_D_INNER 660
 #define UI_WIREFRAME_GUIDES_CROSSHAIR_OFFSET_X     10
+#define UI_WIREFRAME_GUIDES_SIDE_OFFSET_X         210
+#define UI_WIREFRAME_GUIDES_BELOW_CENTER_OFFSET_Y 230
 
 static lv_point_precise_t s_line_pt_pool[UI_WIREFRAME_GUIDES_PT_SLOTS][2];
 static int s_line_pt_pool_next;
@@ -135,9 +137,11 @@ void ui_wireframe_guides_add_center_crosshair(lv_obj_t *parent)
     }
 
     static const int vertical_x[] = {
+        center - UI_WIREFRAME_GUIDES_SIDE_OFFSET_X,
         center - UI_WIREFRAME_GUIDES_CROSSHAIR_OFFSET_X,
         center,
         center + UI_WIREFRAME_GUIDES_CROSSHAIR_OFFSET_X,
+        center + UI_WIREFRAME_GUIDES_SIDE_OFFSET_X,
     };
     for (size_t i = 0; i < sizeof(vertical_x) / sizeof(vertical_x[0]); i++) {
         lv_point_precise_t *vpts = line_points_alloc();
@@ -151,12 +155,19 @@ void ui_wireframe_guides_add_center_crosshair(lv_obj_t *parent)
         add_line_internal(overlay, vpts, t->white);
     }
 
-    lv_point_precise_t *hpts = line_points_alloc();
-    if (hpts != NULL) {
+    static const int horizontal_y[] = {
+        center,
+        center + UI_WIREFRAME_GUIDES_BELOW_CENTER_OFFSET_Y,
+    };
+    for (size_t i = 0; i < sizeof(horizontal_y) / sizeof(horizontal_y[0]); i++) {
+        lv_point_precise_t *hpts = line_points_alloc();
+        if (hpts == NULL) {
+            continue;
+        }
         hpts[0].x = 0;
-        hpts[0].y = center;
+        hpts[0].y = horizontal_y[i];
         hpts[1].x = UI_SCREEN_W;
-        hpts[1].y = center;
+        hpts[1].y = horizontal_y[i];
         add_line_internal(overlay, hpts, t->white);
     }
 

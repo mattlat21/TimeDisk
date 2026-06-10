@@ -15,7 +15,8 @@ lv_obj_t *ui_wireframe_guides_add_vertical(lv_obj_t *parent, int x);
 lv_obj_t *ui_wireframe_guides_add_horizontal(lv_obj_t *parent, int y);
 
 /**
- * Debug overlay on @p parent screen: 1px white crosshair (±10px vertical guides) + 700px/680px
+ * Debug overlay on @p parent screen: 1px white crosshair (±10px and ±200px vertical guides, horizontal
+ * centre + 250px below) + 700px/680px
  * circles, centered on the
  * full LCD (720×720). Placed above all screen children, including wedges and the theme ring.
  */

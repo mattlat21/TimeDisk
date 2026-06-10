@@ -22,7 +22,7 @@ typedef enum {
     UI_WEDGE_SIDE_WIDE,
 } ui_wedge_side_t;
 
-/** Built-in white icon overlays (same 209×106 canvas as the wedge). */
+/** Built-in white icon overlays (same 200×100 canvas as the wedge). */
 typedef enum {
     UI_WEDGE_ICON_NONE = 0,
     UI_WEDGE_ICON_CANCEL_X,
@@ -49,10 +49,10 @@ typedef struct {
 } ui_wedge_config_t;
 
 /** Wireframe placement and size (startup_wizard_ssid.svg). */
-#define UI_WEDGE_W_WF 209
-#define UI_WEDGE_H_WF 106
-#define UI_WEDGE_CANCEL_X_WF 142
-#define UI_WEDGE_CANCEL_Y_WF 589
+#define UI_WEDGE_W_WF 200
+#define UI_WEDGE_H_WF 100
+#define UI_WEDGE_CANCEL_X_WF 150
+#define UI_WEDGE_CANCEL_Y_WF 590
 #define UI_WEDGE_CONFIRM_X_WF 376
 #define UI_WEDGE_CONFIRM_Y_WF 590
 

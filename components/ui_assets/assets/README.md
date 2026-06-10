@@ -19,7 +19,7 @@ The script needs `rsvg-convert` (e.g. `brew install librsvg`) and creates a loca
 
 | Filename pattern | LVGL format | Typical size |
 |------------------|-------------|--------------|
-| `wedge_shape_left.svg`, `wedge_shape_right.svg` | A8 (alpha mask, tinted in code) | 209×106 |
+| `wedge_shape_left.svg`, `wedge_shape_right.svg` | A8 (alpha mask, tinted in code) | 200×100 |
 | `wedge_shape_wide.svg` | A8 | 443×106 |
 | `icon_wedge_*.svg` | RGB565A8 (white icon on transparent) | 209×106 |
 | `icon_wedge_menu_wide.svg` | RGB565A8 | 443×106 |
