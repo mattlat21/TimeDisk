@@ -1,6 +1,10 @@
 idf_component_register(
     SRCS
         # BEGIN GENERATED ASSETS
+        "src/btn_start_rest.c"
+        "src/btn_start_sleep.c"
+        "src/btn_start_timer.c"
+        "src/btn_start_wake.c"
         "src/icon_wedge_cancel.c"
         "src/icon_wedge_confirm.c"
         "src/icon_wedge_menu_wide.c"

@@ -2,9 +2,10 @@
 #include "ui_layout.h"
 #include "ui_widgets.h"
 #include "ui_wedge.h"
-#include "ui_wireframe_guides.h"
+#include "ui_screen_ring.h"
 #include "ui_theme.h"
 #include "ui_nav.h"
+#include "ui_assets.h"
 #include "app_config.h"
 
 static lv_obj_t *s_scr;
@@ -13,62 +14,97 @@ static lv_obj_t *s_btn_rest;
 static lv_obj_t *s_btn_sleep;
 static lv_obj_t *s_btn_switch_wake;
 static lv_obj_t *s_btn_timer;
+static lv_obj_t *s_lbl_switch_wake;
+static lv_obj_t *s_wedge_back;
+static lv_obj_t *s_wedge_settings;
 
-#define MENU_BTN_W       560
-#define MENU_BTN_H       112
-#define MENU_BTN_GAP     20
-#define MENU_BTN_RADIUS  24
+#define MENU_BTN_REST_W       320
+#define MENU_BTN_REST_H       320
+#define MENU_BTN_SLEEP_W      320
+#define MENU_BTN_SLEEP_H      320
+#define MENU_BTN_WAKE_W       660
+#define MENU_BTN_WAKE_H       320
+#define MENU_BTN_TIMER_W      660
+#define MENU_BTN_TIMER_H      200
 
-static lv_obj_t *menu_create_action_btn(lv_obj_t *parent, const char *text, int x, int y,
-                                        lv_event_cb_t cb)
+#define MENU_BTN_REST_X_WF    30
+#define MENU_BTN_REST_Y_WF    30
+#define MENU_BTN_SLEEP_X_WF   370
+#define MENU_BTN_SLEEP_Y_WF   30
+#define MENU_BTN_WAKE_X_WF    30
+#define MENU_BTN_WAKE_Y_WF    30
+#define MENU_BTN_TIMER_X_WF   30
+#define MENU_BTN_TIMER_Y_WF   370
+
+static lv_obj_t *menu_create_image_btn(lv_obj_t *parent, const lv_image_dsc_t *src, int w, int h,
+                                       int x_wf, int y_wf, const char *label_text,
+                                       lv_obj_t **label_out, lv_event_cb_t cb)
 {
-    const ui_theme_t *t = ui_theme_get();
-    lv_obj_t *btn = lv_button_create(parent);
-    lv_obj_set_size(btn, MENU_BTN_W, MENU_BTN_H);
-    lv_obj_set_pos(btn, x, y);
-    lv_obj_set_style_radius(btn, MENU_BTN_RADIUS, 0);
-    lv_obj_set_style_bg_color(btn, t->menu_petal, 0);
-    lv_obj_set_style_bg_opa(btn, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_width(btn, 0, 0);
-    lv_obj_set_style_shadow_width(btn, 0, 0);
+    int x = 0;
+    int y = 0;
 
-    lv_obj_t *lbl = lv_label_create(btn);
-    lv_label_set_text(lbl, text);
-    lv_obj_set_style_text_color(lbl, t->white, 0);
-    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_26, 0);
-    lv_obj_center(lbl);
+    ui_layout_screen_pos_from_wf(parent, x_wf, y_wf, &x, &y);
+
+    lv_obj_t *btn = lv_obj_create(parent);
+    lv_obj_set_size(btn, w, h);
+    lv_obj_set_pos(btn, x, y);
+    lv_obj_remove_flag(btn, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(btn, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_style_bg_opa(btn, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(btn, 0, 0);
+    lv_obj_set_style_pad_all(btn, 0, 0);
+
+    lv_obj_t *img = lv_image_create(btn);
+    lv_image_set_src(img, src);
+    lv_obj_set_size(img, w, h);
+    lv_obj_set_pos(img, 0, 0);
+    lv_obj_remove_flag(img, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+
+    if (label_text != NULL && label_text[0] != '\0') {
+        lv_obj_t *lbl = lv_label_create(btn);
+        lv_label_set_text(lbl, label_text);
+        lv_obj_set_width(lbl, w);
+        lv_obj_set_style_text_color(lbl, ui_theme_get()->white, 0);
+        lv_obj_set_style_text_font(lbl, &lv_font_montserrat_26, 0);
+        lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_remove_flag(lbl, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_center(lbl);
+        lv_obj_move_foreground(lbl);
+        if (label_out != NULL) {
+            *label_out = lbl;
+        }
+    } else if (label_out != NULL) {
+        *label_out = NULL;
+    }
 
     lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, NULL);
     return btn;
 }
 
+static const char *switch_wake_label_for_mode(app_mode_t mode)
+{
+    switch (mode) {
+    case APP_MODE_REST:
+        return "End Rest";
+    case APP_MODE_SLEEP:
+        return "End Sleep";
+    case APP_MODE_WIND_DOWN:
+        return "End Wind Down";
+    default:
+        return "End Rest";
+    }
+}
+
 static void menu_layout_buttons(bool in_wake_mode)
 {
-    int32_t cw = 0;
-    int32_t ch = 0;
-
-    ui_layout_get_content_size(s_scr, &cw, &ch);
-    const int x0 = (int)((cw - MENU_BTN_W) / 2);
-
     if (in_wake_mode) {
         lv_obj_remove_flag(s_btn_rest, LV_OBJ_FLAG_HIDDEN);
         lv_obj_remove_flag(s_btn_sleep, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(s_btn_switch_wake, LV_OBJ_FLAG_HIDDEN);
-
-        const int total_h = 3 * MENU_BTN_H + 2 * MENU_BTN_GAP;
-        const int y0 = (int)((ch - total_h) / 2) - 36;
-        lv_obj_set_pos(s_btn_rest, x0, y0);
-        lv_obj_set_pos(s_btn_sleep, x0, y0 + MENU_BTN_H + MENU_BTN_GAP);
-        lv_obj_set_pos(s_btn_timer, x0, y0 + 2 * (MENU_BTN_H + MENU_BTN_GAP));
     } else {
         lv_obj_add_flag(s_btn_rest, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(s_btn_sleep, LV_OBJ_FLAG_HIDDEN);
         lv_obj_remove_flag(s_btn_switch_wake, LV_OBJ_FLAG_HIDDEN);
-
-        const int total_h = 2 * MENU_BTN_H + MENU_BTN_GAP;
-        const int y0 = (int)((ch - total_h) / 2) - 36;
-        lv_obj_set_pos(s_btn_switch_wake, x0, y0);
-        lv_obj_set_pos(s_btn_timer, x0, y0 + MENU_BTN_H + MENU_BTN_GAP);
     }
 }
 
@@ -159,31 +195,32 @@ void ui_screen_menu_build(lv_obj_t *screens[UI_SCREEN_COUNT])
     s_scr = ui_widgets_create_screen();
     screens[UI_SCREEN_MENU] = s_scr;
 
-    int32_t cw = 0;
-    int32_t ch = 0;
-    ui_layout_get_content_size(s_scr, &cw, &ch);
+    /* Raise ring overlay before layout so wf→content uses a consistent border (0). */
+    ui_screen_ring_raise_overlay(s_scr);
 
-    const int total_h = 3 * MENU_BTN_H + 2 * MENU_BTN_GAP;
-    const int y0 = (int)((ch - total_h) / 2) - 36;
-    const int x0 = (int)((cw - MENU_BTN_W) / 2);
-
-    s_btn_rest = menu_create_action_btn(s_scr, "Start Rest", x0, y0, rest_cb);
-    s_btn_sleep = menu_create_action_btn(s_scr, "Start Sleep", x0, y0 + MENU_BTN_H + MENU_BTN_GAP, sleep_cb);
-    s_btn_switch_wake = menu_create_action_btn(s_scr, "Switch to Wake Mode", x0, y0, switch_wake_cb);
-    s_btn_timer = menu_create_action_btn(s_scr, "Start Timer", x0, y0 + 2 * (MENU_BTN_H + MENU_BTN_GAP), timer_cb);
+    s_btn_rest = menu_create_image_btn(s_scr, &btn_start_rest, MENU_BTN_REST_W, MENU_BTN_REST_H,
+                                       MENU_BTN_REST_X_WF, MENU_BTN_REST_Y_WF, "Start Rest", NULL, rest_cb);
+    s_btn_sleep = menu_create_image_btn(s_scr, &btn_start_sleep, MENU_BTN_SLEEP_W, MENU_BTN_SLEEP_H,
+                                        MENU_BTN_SLEEP_X_WF, MENU_BTN_SLEEP_Y_WF, "Start Sleep", NULL, sleep_cb);
+    s_btn_switch_wake = menu_create_image_btn(s_scr, &btn_start_wake, MENU_BTN_WAKE_W, MENU_BTN_WAKE_H,
+                                              MENU_BTN_WAKE_X_WF, MENU_BTN_WAKE_Y_WF, "End Rest",
+                                              &s_lbl_switch_wake, switch_wake_cb);
+    s_btn_timer = menu_create_image_btn(s_scr, &btn_start_timer, MENU_BTN_TIMER_W, MENU_BTN_TIMER_H,
+                                        MENU_BTN_TIMER_X_WF, MENU_BTN_TIMER_Y_WF, "Start Timer", NULL, timer_cb);
 
     lv_obj_add_flag(s_btn_switch_wake, LV_OBJ_FLAG_HIDDEN);
 
-    lv_obj_t *back = ui_wedge_create(s_scr, UI_WEDGE_CANCEL);
-    lv_obj_add_event_cb(back, back_cb, LV_EVENT_CLICKED, NULL);
+    /* Ring above buttons; wedge positions unchanged (created after, raised last). */
+    ui_screen_ring_raise_overlay(s_scr);
 
-    lv_obj_t *settings = ui_wedge_create(s_scr, UI_WEDGE_SETTINGS);
-    lv_obj_add_event_cb(settings, settings_cb, LV_EVENT_CLICKED, NULL);
+    s_wedge_back = ui_wedge_create(s_scr, UI_WEDGE_CANCEL);
+    lv_obj_add_event_cb(s_wedge_back, back_cb, LV_EVENT_CLICKED, NULL);
 
-    lv_obj_move_foreground(back);
-    lv_obj_move_foreground(settings);
+    s_wedge_settings = ui_wedge_create(s_scr, UI_WEDGE_SETTINGS);
+    lv_obj_add_event_cb(s_wedge_settings, settings_cb, LV_EVENT_CLICKED, NULL);
 
-    ui_wireframe_guides_add_center_crosshair(s_scr);
+    lv_obj_move_foreground(s_wedge_back);
+    lv_obj_move_foreground(s_wedge_settings);
 
     build_confirm_switch_wake(screens);
 }
@@ -192,12 +229,23 @@ void ui_screen_menu_on_show(void)
 {
     app_runtime_t *rt = app_runtime_get();
     menu_layout_buttons(rt->current_mode == APP_MODE_WAKE);
+    if (s_lbl_switch_wake != NULL) {
+        lv_label_set_text(s_lbl_switch_wake, switch_wake_label_for_mode(rt->current_mode));
+    }
 }
 
 void ui_screen_menu_apply_theme(void)
 {
     if (s_scr != NULL) {
         ui_widgets_style_circle_panel(s_scr);
+        ui_screen_ring_raise_overlay(s_scr);
+        ui_screen_ring_refresh(s_scr);
+        if (s_wedge_back != NULL) {
+            lv_obj_move_foreground(s_wedge_back);
+        }
+        if (s_wedge_settings != NULL) {
+            lv_obj_move_foreground(s_wedge_settings);
+        }
     }
     if (s_scr_confirm != NULL) {
         ui_widgets_style_circle_panel(s_scr_confirm);

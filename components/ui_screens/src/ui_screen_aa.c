@@ -3,7 +3,6 @@
 #include "ui_widgets.h"
 #include "ui_format.h"
 #include "ui_wedge.h"
-#include "ui_wireframe_guides.h"
 #include "ui_theme.h"
 #include "ui_nav.h"
 #include "ui_numeric_keypad.h"

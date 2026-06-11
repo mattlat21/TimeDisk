@@ -1,0 +1,5 @@
+source=btn_start_rest.png
+format=RGB565
+width=320
+height=320
+description=Button to start a rest

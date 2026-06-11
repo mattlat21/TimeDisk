@@ -7,6 +7,18 @@
 
 #include "lvgl.h"
 
+/** Button to start a rest */
+extern const lv_image_dsc_t btn_start_rest;
+
+/** Button to start a sleep */
+extern const lv_image_dsc_t btn_start_sleep;
+
+/** Button to start timer */
+extern const lv_image_dsc_t btn_start_timer;
+
+/** Button to end sleep / rest */
+extern const lv_image_dsc_t btn_start_wake;
+
 /** White icon overlays, composed on top of a wedge button. */
 /** White cancel icon overlay for wedge buttons */
 extern const lv_image_dsc_t icon_wedge_cancel;

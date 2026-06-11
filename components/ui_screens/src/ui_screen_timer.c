@@ -4,7 +4,6 @@
 #include "ui_duration_editor.h"
 #include "ui_format.h"
 #include "ui_wedge.h"
-#include "ui_wireframe_guides.h"
 #include "ui_theme.h"
 #include "ui_nav.h"
 #include "app_config.h"

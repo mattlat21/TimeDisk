@@ -15,3 +15,9 @@ void ui_screen_ring_clear(lv_obj_t *screen);
 
 /** Re-apply ring colour after theme change (border width unchanged). */
 void ui_screen_ring_refresh(lv_obj_t *screen);
+
+/**
+ * Draw the theme ring above screen children (e.g. menu buttons under the bezel band).
+ * Clears the screen object's own border so the ring is not drawn twice.
+ */
+void ui_screen_ring_raise_overlay(lv_obj_t *screen);

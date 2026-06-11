@@ -4,7 +4,6 @@
 #include "ui_duration_editor.h"
 #include "ui_time_editor.h"
 #include "ui_wedge.h"
-#include "ui_wireframe_guides.h"
 #include "ui_theme.h"
 #include "ui_nav.h"
 #include "app_config.h"
@@ -401,10 +400,6 @@ static void build_wizard_screen(lv_obj_t *screens[UI_SCREEN_COUNT], ui_screen_id
     }
 
     attach_wedges(ss->scr, id);
-
-    if (id == UI_SCREEN_SLEEP_WAKE || id == UI_SCREEN_SLEEP_REST_END || id == UI_SCREEN_REST_REST_END) {
-        ui_wireframe_guides_add_center_crosshair(ss->scr);
-    }
 }
 
 void ui_screen_schedule_build(lv_obj_t *screens[UI_SCREEN_COUNT])
