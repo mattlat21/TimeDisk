@@ -38,6 +38,7 @@ static lv_obj_t *s_wedge_settings;
 
 static lv_obj_t *menu_create_image_btn(lv_obj_t *parent, const lv_image_dsc_t *src, int w, int h,
                                        int x_wf, int y_wf, const char *label_text,
+                                       const lv_font_t *label_font, int label_ofs_x, int label_ofs_y,
                                        lv_obj_t **label_out, lv_event_cb_t cb)
 {
     int x = 0;
@@ -65,10 +66,10 @@ static lv_obj_t *menu_create_image_btn(lv_obj_t *parent, const lv_image_dsc_t *s
         lv_label_set_text(lbl, label_text);
         lv_obj_set_width(lbl, w);
         lv_obj_set_style_text_color(lbl, ui_theme_get()->white, 0);
-        lv_obj_set_style_text_font(lbl, &lv_font_montserrat_26, 0);
+        lv_obj_set_style_text_font(lbl, label_font != NULL ? label_font : &lv_font_montserrat_26, 0);
         lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_remove_flag(lbl, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_center(lbl);
+        lv_obj_align(lbl, LV_ALIGN_CENTER, label_ofs_x, label_ofs_y);
         lv_obj_move_foreground(lbl);
         if (label_out != NULL) {
             *label_out = lbl;
@@ -199,14 +200,17 @@ void ui_screen_menu_build(lv_obj_t *screens[UI_SCREEN_COUNT])
     ui_screen_ring_raise_overlay(s_scr);
 
     s_btn_rest = menu_create_image_btn(s_scr, &btn_start_rest, MENU_BTN_REST_W, MENU_BTN_REST_H,
-                                       MENU_BTN_REST_X_WF, MENU_BTN_REST_Y_WF, "Start Rest", NULL, rest_cb);
+                                       MENU_BTN_REST_X_WF, MENU_BTN_REST_Y_WF, "Start\nRest",
+                                       &lv_font_montserrat_48, 30, 60, NULL, rest_cb);
     s_btn_sleep = menu_create_image_btn(s_scr, &btn_start_sleep, MENU_BTN_SLEEP_W, MENU_BTN_SLEEP_H,
-                                        MENU_BTN_SLEEP_X_WF, MENU_BTN_SLEEP_Y_WF, "Start Sleep", NULL, sleep_cb);
+                                        MENU_BTN_SLEEP_X_WF, MENU_BTN_SLEEP_Y_WF, "Start\nSleep",
+                                        &lv_font_montserrat_48, -30, 60, NULL, sleep_cb);
     s_btn_switch_wake = menu_create_image_btn(s_scr, &btn_start_wake, MENU_BTN_WAKE_W, MENU_BTN_WAKE_H,
                                               MENU_BTN_WAKE_X_WF, MENU_BTN_WAKE_Y_WF, "End Rest",
-                                              &s_lbl_switch_wake, switch_wake_cb);
+                                              &lv_font_montserrat_48, 0, 60, &s_lbl_switch_wake, switch_wake_cb);
     s_btn_timer = menu_create_image_btn(s_scr, &btn_start_timer, MENU_BTN_TIMER_W, MENU_BTN_TIMER_H,
-                                        MENU_BTN_TIMER_X_WF, MENU_BTN_TIMER_Y_WF, "Start Timer", NULL, timer_cb);
+                                        MENU_BTN_TIMER_X_WF, MENU_BTN_TIMER_Y_WF, "Start Timer",
+                                        &lv_font_montserrat_48, 0, 60, NULL, timer_cb);
 
     lv_obj_add_flag(s_btn_switch_wake, LV_OBJ_FLAG_HIDDEN);
 
