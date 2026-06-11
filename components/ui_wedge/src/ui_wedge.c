@@ -2,9 +2,8 @@
  * @file ui_wedge.c
  * @brief Corner wedge buttons: recoloured A8 shape + optional icon image overlay.
  *
- * Regenerate assets:
- *   rsvg-convert → PNG; managed_components/lvgl__lvgl/scripts/LVGLImage.py
- *   (see components/ui_assets/assets/wedge_shape_*.svg, icon_wedge_*.svg)
+ * Regenerate assets: ./scripts/embed_ui_assets.sh
+ *   (see components/ui_assets/assets/wedge_shape_<side>/ and icon_wedge_<name>/)
  */
 
 #include "ui_wedge.h"

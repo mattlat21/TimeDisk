@@ -1,0 +1,5 @@
+source=icon_wedge_next.svg
+format=RGB565A8
+width=200
+height=100
+description=White next-arrow icon overlay for wedge buttons

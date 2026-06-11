@@ -1,18 +1,20 @@
 idf_component_register(
     SRCS
+        # BEGIN GENERATED ASSETS
+        "src/icon_wedge_cancel.c"
+        "src/icon_wedge_confirm.c"
+        "src/icon_wedge_menu_wide.c"
+        "src/icon_wedge_next.c"
+        "src/icon_wedge_settings.c"
         "src/splash.c"
+        "src/tod_rest.c"
+        "src/tod_sleep.c"
+        "src/tod_wake.c"
+        "src/tod_winddown.c"
         "src/wedge_shape_left.c"
         "src/wedge_shape_right.c"
         "src/wedge_shape_wide.c"
-        "src/icon_wedge_cancel.c"
-        "src/icon_wedge_confirm.c"
-        "src/icon_wedge_next.c"
-        "src/icon_wedge_settings.c"
-        "src/icon_wedge_menu_wide.c"
-        "src/tod_wake.c"
-        "src/tod_winddown.c"
-        "src/tod_sleep.c"
-        "src/tod_rest.c"
+        # END GENERATED ASSETS
     INCLUDE_DIRS "include"
     REQUIRES lvgl
 )

@@ -1,41 +1,63 @@
-# UI assets (source files)
+# UI assets (source folders)
 
-Files in this folder are **not** loaded by the firmware at runtime. They are design sources that get compiled into embedded C bitmaps under `../src/`.
+Each asset lives in its own subfolder. The embed script reads **only** `embed.txt` in each folder — no asset-specific rules in the script.
+
+## Folder layout
+
+```
+assets/
+  wedge_shape_left/
+    wedge_shape_left.af       # optional Affinity design source
+    wedge_shape_left.svg      # export used for embedding
+    embed.txt                 # conversion spec
+  splash/
+    splash.png
+    embed.txt
+  ...
+```
+
+Generated firmware blobs: `../src/<name>.c`  
+Generated declarations: `../include/ui_assets.h`  
+Generated build list: `../CMakeLists.txt` (between `# BEGIN GENERATED ASSETS` / `# END GENERATED ASSETS`)
 
 ## After editing an asset
 
-From the **repository root**, run:
+From the **repository root**:
 
 ```bash
 ./scripts/embed_ui_assets.sh
 idf.py build
 ```
 
-Then flash as usual (`idf.py flash`).
+Requires `rsvg-convert` (`brew install librsvg`), `sips` (macOS), and a local venv at `.venv-assets` for `LVGLImage.py` (vendored at `scripts/LVGLImage.py`; falls back to `managed_components/lvgl__lvgl/scripts/LVGLImage.py` after `idf.py reconfigure`).
 
-The script needs `rsvg-convert` (e.g. `brew install librsvg`) and creates a local Python venv at `.venv-assets` for `LVGLImage.py` dependencies.
+## embed.txt format
 
-## Naming rules
+Simple `key=value` lines. Lines starting with `#` are comments.
 
-| Filename pattern | LVGL format | Typical size |
-|------------------|-------------|--------------|
-| `wedge_shape_left.svg`, `wedge_shape_right.svg` | A8 (alpha mask, tinted in code) | 200×100 |
-| `wedge_shape_wide.svg` | A8 | 443×106 |
-| `icon_wedge_*.svg` | RGB565A8 (white icon on transparent) | 209×106 |
-| `icon_wedge_menu_wide.svg` | RGB565A8 | 443×106 |
-| `splash.png` or `splash.svg` | RGB565 | 720×720 |
-| `tod_*.png` (e.g. `tod_wake.png`) | RGB565 | scaled to 720×720 at embed |
+| Key | Required | Meaning |
+|-----|----------|---------|
+| `source` | yes | Export filename in this folder (`.svg` or `.png`) |
+| `format` | yes | LVGL color format: `A8`, `RGB565`, or `RGB565A8` |
+| `width` | no | Raster width in px (must pair with `height`) |
+| `height` | no | Raster height in px (must pair with `width`) |
+| `name` | no | C symbol / output basename; defaults to folder name |
+| `description` | no | Comment in generated `ui_assets.h` |
 
-The output `.c` file name matches the source basename (e.g. `icon_wedge_settings.svg` → `../src/icon_wedge_settings.c`).
+**Rasterization (driven by spec + source type):**
+
+- SVG + `width`/`height` → `rsvg-convert -w W -h H`
+- SVG, no dimensions → native SVG size
+- PNG + `width`/`height` → resize via `sips`
+- PNG, no dimensions → embed as-is
 
 ## Adding a new asset
 
-1. Add the `.svg` or `.png` here using one of the naming patterns above (or extend `scripts/embed_ui_assets.sh`).
-2. Run `./scripts/embed_ui_assets.sh`.
-3. Add `extern const lv_image_dsc_t your_name;` to `../include/ui_assets.h`.
-4. Add `src/your_name.c` to `../CMakeLists.txt` `SRCS`.
-5. Reference `&your_name` from UI code.
+1. Create `assets/my_asset/`
+2. Add design source (e.g. `my_asset.af`), export (`my_asset.svg` or `.png`), and `embed.txt`
+3. Run `./scripts/embed_ui_assets.sh`
+4. Reference `&my_asset` from UI code — header and CMake update automatically
 
 ## Wireframes
 
-Full-screen layouts live in `docs/wireframes/`. Corner wedges are derived from `docs/wireframes/startup_wizard_ssid.svg`.
+Full-screen layouts live in `docs/wireframes/`. Individual wedge assets are maintained in their own folders here.

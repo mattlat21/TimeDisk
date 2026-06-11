@@ -2,8 +2,8 @@
  * @file ui_wedge.h
  * @brief Bottom-corner wedge buttons with runtime colour and icon overlay.
  *
- * Shape masks: components/ui_assets/assets/wedge_shape_{left,right}.svg (A8)
- * Icons:       components/ui_assets/assets/icon_wedge_*.svg (RGB565A8)
+ * Shape masks: components/ui_assets/assets/wedge_shape_{left,right}/ (A8)
+ * Icons:       components/ui_assets/assets/icon_wedge_<name>/ (RGB565A8)
  *
  * Default placement: startup_wizard_ssid.svg / Wi-Fi password screen (LCD wireframe coords).
  * Wedges are always children of the root screen at the same absolute content position.
@@ -38,7 +38,7 @@ typedef enum {
     UI_WEDGE_CONFIRM,
     UI_WEDGE_NEXT,
     UI_WEDGE_SETTINGS,
-    /** Wide bottom bar (443x106); TOD menu (theme primary / ring colour). */
+    /** Wide bar (420×100); TOD menu (theme primary / ring colour). */
     UI_WEDGE_MENU,
 } ui_wedge_type_t;
 
@@ -53,13 +53,13 @@ typedef struct {
 #define UI_WEDGE_H_WF 100
 #define UI_WEDGE_CANCEL_X_WF 150
 #define UI_WEDGE_CANCEL_Y_WF 590
-#define UI_WEDGE_CONFIRM_X_WF 376
+#define UI_WEDGE_CONFIRM_X_WF 370
 #define UI_WEDGE_CONFIRM_Y_WF 590
 
-#define UI_WEDGE_WIDE_W_WF 443
-#define UI_WEDGE_WIDE_H_WF 106
-#define UI_WEDGE_WIDE_X_WF   142
-#define UI_WEDGE_WIDE_Y_WF   589
+#define UI_WEDGE_WIDE_W_WF 420
+#define UI_WEDGE_WIDE_H_WF 100
+#define UI_WEDGE_WIDE_X_WF 150
+#define UI_WEDGE_WIDE_Y_WF 590
 
 /** Opaque handle returned by ui_wedge_button_create (clickable container). */
 typedef lv_obj_t ui_wedge_button_t;

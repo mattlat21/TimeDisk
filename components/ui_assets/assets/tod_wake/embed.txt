@@ -1,0 +1,5 @@
+source=tod_wake.png
+format=RGB565
+width=720
+height=720
+description=Time of Day background — wake

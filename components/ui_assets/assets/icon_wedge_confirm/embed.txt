@@ -1,0 +1,5 @@
+source=icon_wedge_confirm.svg
+format=RGB565A8
+width=200
+height=100
+description=White confirm icon overlay for wedge buttons

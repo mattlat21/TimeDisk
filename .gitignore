@@ -1,6 +1,10 @@
 # ESP-IDF build output
 build/
 
+# Release binaries and deploy secrets
+binaries/
+.env
+
 # SDK configuration backup (menuconfig)
 sdkconfig.old
 sdkconfig.old.*

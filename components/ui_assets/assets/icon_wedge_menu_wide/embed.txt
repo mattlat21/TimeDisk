@@ -1,0 +1,5 @@
+source=icon_wedge_menu_wide.svg
+format=RGB565A8
+width=420
+height=100
+description=White menu icon overlay for wide wedge button

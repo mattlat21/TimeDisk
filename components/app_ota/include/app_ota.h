@@ -9,8 +9,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-/** Default firmware URL placeholder — replace with your OTA server. */
-#define APP_UPDATE_DEFAULT_FIRMWARE_URL "http://192.168.1.100/firmware/timedisk.bin"
+/** Default OTA firmware URL (Settings → Update). */
+#define APP_UPDATE_DEFAULT_FIRMWARE_URL "http://latimer.net/files/tdisk/latest.bin"
 
 #define APP_UPDATE_URL_MAX 256
 

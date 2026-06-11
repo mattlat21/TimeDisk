@@ -1,0 +1,3 @@
+source=splash.png
+format=RGB565
+description=Splash screen (720×720 RGB565)

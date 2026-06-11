@@ -1,23 +1,33 @@
 #!/usr/bin/env bash
-# Embed all images under components/ui_assets/assets into src/*.c for firmware.
+# Embed UI assets from per-folder specs (assets/<name>/embed.txt) into src/*.c.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ASSETS_DIR="${ROOT}/components/ui_assets/assets"
 OUT_DIR="${ROOT}/components/ui_assets/src"
-LVGL_IMAGE="${ROOT}/managed_components/lvgl__lvgl/scripts/LVGLImage.py"
+HEADER="${ROOT}/components/ui_assets/include/ui_assets.h"
+CMAKE="${ROOT}/components/ui_assets/CMakeLists.txt"
 VENV="${ROOT}/.venv-assets"
-
-WEDGE_W=200
-WEDGE_H=100
-WEDGE_WIDE_W=443
-WEDGE_WIDE_H=106
 
 die() { echo "embed_ui_assets: $*" >&2; exit 1; }
 
-command -v rsvg-convert >/dev/null 2>&1 || die "rsvg-convert not found (brew install librsvg)"
+resolve_lvgl_image() {
+  local candidate
+  for candidate in \
+    "${ROOT}/scripts/LVGLImage.py" \
+    "${ROOT}/managed_components/lvgl__lvgl/scripts/LVGLImage.py"; do
+    if [[ -f "${candidate}" ]]; then
+      printf '%s' "${candidate}"
+      return 0
+    fi
+  done
+  return 1
+}
 
-[[ -f "${LVGL_IMAGE}" ]] || die "LVGLImage.py not found at ${LVGL_IMAGE}"
+command -v rsvg-convert >/dev/null 2>&1 || die "rsvg-convert not found (brew install librsvg)"
+command -v sips >/dev/null 2>&1 || die "sips not found (macOS required for PNG resize)"
+
+LVGL_IMAGE="$(resolve_lvgl_image)" || die "LVGLImage.py not found — expected scripts/LVGLImage.py (vendored) or managed_components/lvgl__lvgl/scripts/LVGLImage.py (run idf.py reconfigure)"
 
 if [[ ! -d "${VENV}" ]]; then
   python3 -m venv "${VENV}"
@@ -38,73 +48,196 @@ embed_png() {
   python "${LVGL_IMAGE}" --ofmt C --cf "${cf}" -o "${OUT_DIR}" --name "${name}" "${png}"
 }
 
-for src in "${ASSETS_DIR}"/*; do
-  [[ -e "${src}" ]] || continue
-  base="$(basename "${src}")"
-  stem="${base%.*}"
-  ext="${base##*.}"
+parse_embed_txt() {
+  local spec="$1"
+  NAME=""
+  SOURCE=""
+  FORMAT=""
+  WIDTH=""
+  HEIGHT=""
+  DESCRIPTION=""
+
+  while IFS= read -r line || [[ -n "${line}" ]]; do
+    line="${line%%#*}"
+    line="${line#"${line%%[![:space:]]*}"}"
+    line="${line%"${line##*[![:space:]]}"}"
+    [[ -z "${line}" ]] && continue
+    [[ "${line}" != *"="* ]] && die "invalid line in ${spec}: ${line}"
+
+    local key="${line%%=*}"
+    local value="${line#*=}"
+    key="${key%"${key##*[![:space:]]}"}"
+    value="${value#"${value%%[![:space:]]*}"}"
+
+    case "${key}" in
+      name) NAME="${value}" ;;
+      source) SOURCE="${value}" ;;
+      format) FORMAT="${value}" ;;
+      width) WIDTH="${value}" ;;
+      height) HEIGHT="${value}" ;;
+      description) DESCRIPTION="${value}" ;;
+      *) die "unknown key '${key}' in ${spec}" ;;
+    esac
+  done < "${spec}"
+}
+
+rasterize_asset() {
+  local asset_dir="$1"
+  local src_path="${asset_dir}/${SOURCE}"
+  local ext="${SOURCE##*.}"
+  local png="${TMP}/${NAME}.png"
+
+  ext="$(printf '%s' "${ext}" | tr '[:upper:]' '[:lower:]')"
 
   case "${ext}" in
-    svg|SVG)
-      png="${TMP}/${stem}.png"
-      case "${stem}" in
-        wedge_shape_wide)
-          rsvg-convert -w "${WEDGE_WIDE_W}" -h "${WEDGE_WIDE_H}" "${src}" -o "${png}"
-          embed_png "${stem}" A8 "${png}"
-          ;;
-        wedge_shape_*)
-          rsvg-convert -w "${WEDGE_W}" -h "${WEDGE_H}" "${src}" -o "${png}"
-          embed_png "${stem}" A8 "${png}"
-          ;;
-        icon_wedge_menu_wide)
-          rsvg-convert -w "${WEDGE_WIDE_W}" -h "${WEDGE_WIDE_H}" "${src}" -o "${png}"
-          embed_png "${stem}" RGB565A8 "${png}"
-          ;;
-        icon_wedge_*)
-          rsvg-convert -w "${WEDGE_W}" -h "${WEDGE_H}" "${src}" -o "${png}"
-          embed_png "${stem}" RGB565A8 "${png}"
-          ;;
-        splash)
-          rsvg-convert "${src}" -o "${png}"
-          embed_png "${stem}" RGB565 "${png}"
-          ;;
-        *)
-          die "unknown SVG '${base}' — use wedge_shape_*, icon_wedge_*, or splash.svg"
-          ;;
-      esac
+    svg)
+      if [[ -n "${WIDTH}" && -n "${HEIGHT}" ]]; then
+        rsvg-convert -w "${WIDTH}" -h "${HEIGHT}" "${src_path}" -o "${png}"
+      else
+        rsvg-convert "${src_path}" -o "${png}"
+      fi
       ;;
-    png|PNG)
-      case "${stem}" in
-        splash)
-          embed_png "${stem}" RGB565 "${src}"
-          ;;
-        tod_*)
-          png="${TMP}/${stem}.png"
-          sips -z 720 720 "${src}" --out "${png}" >/dev/null
-          embed_png "${stem}" RGB565 "${png}"
-          ;;
-        wedge_shape_wide)
-          embed_png "${stem}" A8 "${src}"
-          ;;
-        wedge_shape_*)
-          embed_png "${stem}" A8 "${src}"
-          ;;
-        icon_wedge_menu_wide)
-          embed_png "${stem}" RGB565A8 "${src}"
-          ;;
-        icon_wedge_*)
-          embed_png "${stem}" RGB565A8 "${src}"
-          ;;
-        *)
-          die "unknown PNG '${base}' — use wedge_shape_*, icon_wedge_*, splash.png, or tod_*.png"
-          ;;
-      esac
+    png)
+      if [[ -n "${WIDTH}" && -n "${HEIGHT}" ]]; then
+        sips -z "${HEIGHT}" "${WIDTH}" "${src_path}" --out "${png}" >/dev/null
+      else
+        cp "${src_path}" "${png}"
+      fi
       ;;
     *)
-      echo "embed_ui_assets: skipping ${base} (not .svg or .png)"
+      die "unsupported source extension '.${ext}' for ${SOURCE}"
       ;;
   esac
+
+  printf '%s' "${png}"
+}
+
+asset_group() {
+  local n="$1"
+  case "${n}" in
+    splash) printf 'splash' ;;
+    tod_*) printf 'tod' ;;
+    wedge_shape_*) printf 'wedge_shape' ;;
+    icon_wedge_*) printf 'icon_wedge' ;;
+    *) printf '' ;;
+  esac
+}
+
+generate_header() {
+  local names_file="$1"
+  local desc_file="$2"
+  local prev_group=""
+  local i=0
+
+  {
+    echo "/**"
+    echo " * @file ui_assets.h"
+    echo " * @brief Embedded LVGL image descriptors (generated by scripts/embed_ui_assets.sh)."
+    echo " */"
+    echo
+    echo "#pragma once"
+    echo
+    echo "#include \"lvgl.h\""
+    echo
+
+    while IFS= read -r name; do
+      i=$((i + 1))
+      desc="$(sed -n "${i}p" "${desc_file}")"
+      group="$(asset_group "${name}")"
+
+      if [[ -n "${group}" && "${group}" != "${prev_group}" ]]; then
+        case "${group}" in
+          tod) echo "/** Full-screen Time of Day backgrounds (720×720 RGB565). */" ;;
+          wedge_shape) echo "/** A8 wedge silhouettes — tint at runtime via image_recolor. */" ;;
+          icon_wedge) echo "/** White icon overlays, composed on top of a wedge button. */" ;;
+        esac
+        prev_group="${group}"
+      fi
+
+      if [[ -n "${desc}" ]]; then
+        echo "/** ${desc} */"
+      fi
+      echo "extern const lv_image_dsc_t ${name};"
+      echo
+    done < "${names_file}"
+  } > "${HEADER}"
+}
+
+generate_cmake_srcs() {
+  local names_file="$1"
+  local tmp_cmake="${TMP}/CMakeLists.txt"
+  local block_file="${TMP}/generated_srcs.txt"
+
+  awk '
+    /# BEGIN GENERATED ASSETS/ { print; in_block=1; next }
+    /# END GENERATED ASSETS/ { in_block=0 }
+    in_block { next }
+    { print }
+  ' "${CMAKE}" > "${tmp_cmake}"
+
+  : > "${block_file}"
+  while IFS= read -r name; do
+    printf '        "src/%s.c"\n' "${name}" >> "${block_file}"
+  done < "${names_file}"
+
+  awk -v block_file="${block_file}" '
+    /# BEGIN GENERATED ASSETS/ {
+      print
+      while ((getline line < block_file) > 0) print line
+      close(block_file)
+      skip=1
+      next
+    }
+    /# END GENERATED ASSETS/ { skip=0; print; next }
+    skip { next }
+    { print }
+  ' "${tmp_cmake}" > "${CMAKE}"
+}
+
+NAMES_FILE="${TMP}/asset_names.txt"
+DESCS_FILE="${TMP}/asset_descs.txt"
+: > "${NAMES_FILE}"
+: > "${DESCS_FILE}"
+
+asset_dirs=()
+while IFS= read -r dir; do
+  asset_dirs+=("${dir}")
+done < <(find "${ASSETS_DIR}" -mindepth 1 -maxdepth 1 -type d | sort)
+
+[[ ${#asset_dirs[@]} -gt 0 ]] || die "no asset folders found under ${ASSETS_DIR}"
+
+for asset_dir in "${asset_dirs[@]}"; do
+  folder="$(basename "${asset_dir}")"
+  spec="${asset_dir}/embed.txt"
+
+  [[ -f "${spec}" ]] || die "missing embed.txt in ${folder}/"
+
+  parse_embed_txt "${spec}"
+  [[ -n "${NAME}" ]] || NAME="${folder}"
+  [[ -n "${SOURCE}" ]] || die "missing source= in ${folder}/embed.txt"
+  [[ -n "${FORMAT}" ]] || die "missing format= in ${folder}/embed.txt"
+  [[ -f "${asset_dir}/${SOURCE}" ]] || die "missing source file ${folder}/${SOURCE}"
+
+  case "${FORMAT}" in
+    A8|RGB565|RGB565A8) ;;
+    *) die "unknown format '${FORMAT}' in ${folder}/embed.txt" ;;
+  esac
+
+  if [[ ( -n "${WIDTH}" && -z "${HEIGHT}" ) || ( -z "${WIDTH}" && -n "${HEIGHT}" ) ]]; then
+    die "width and height must both be set or both omitted in ${folder}/embed.txt"
+  fi
+
+  echo "${folder}/"
+  png="$(rasterize_asset "${asset_dir}")"
+  embed_png "${NAME}" "${FORMAT}" "${png}"
+
+  printf '%s\n' "${NAME}" >> "${NAMES_FILE}"
+  printf '%s\n' "${DESCRIPTION}" >> "${DESCS_FILE}"
 done
 
+generate_header "${NAMES_FILE}" "${DESCS_FILE}"
+generate_cmake_srcs "${NAMES_FILE}"
+
 echo "Done. Embedded C files written to ${OUT_DIR}"
+echo "Generated ${HEADER} and updated ${CMAKE}"
 echo "Rebuild firmware: idf.py build"

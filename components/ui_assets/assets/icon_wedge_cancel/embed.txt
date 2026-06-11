@@ -1,0 +1,5 @@
+source=icon_wedge_cancel.svg
+format=RGB565A8
+width=200
+height=100
+description=White cancel icon overlay for wedge buttons

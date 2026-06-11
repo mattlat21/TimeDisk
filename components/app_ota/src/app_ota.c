@@ -4,8 +4,8 @@
  */
 
 #include "app_ota.h"
+#include "app_version.h"
 
-#include <esp_app_format.h>
 #include <stdlib.h>
 #include <esp_https_ota.h>
 #include <esp_log.h>
@@ -63,9 +63,11 @@ static void ota_task(void *arg)
 
     err = esp_https_ota_begin(&ota_cfg, &handle);
     if (err != ESP_OK) {
+        char fail_msg[96];
         ESP_LOGE(TAG, "OTA begin failed: %s", esp_err_to_name(err));
+        snprintf(fail_msg, sizeof(fail_msg), "Update failed: %s", esp_err_to_name(err));
         s_state = APP_UPDATE_STATE_FAILED;
-        report_done(job, err, "Failed to start update");
+        report_done(job, err, fail_msg);
         goto cleanup;
     }
 
@@ -121,8 +123,7 @@ cleanup:
 
 const char *app_update_get_version(void)
 {
-    const esp_app_desc_t *desc = esp_app_get_description();
-    return (desc != NULL && desc->version[0] != '\0') ? desc->version : "unknown";
+    return app_version_string();
 }
 
 app_update_state_t app_update_get_state(void)

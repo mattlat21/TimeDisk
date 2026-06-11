@@ -1,0 +1,5 @@
+source=wedge_shape_left.svg
+format=A8
+width=200
+height=100
+description=A8 wedge silhouette (left) — tint at runtime via image_recolor

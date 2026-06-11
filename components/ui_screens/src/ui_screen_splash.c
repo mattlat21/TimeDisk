@@ -10,9 +10,8 @@
  *
  * Graphics are baked into firmware as an LVGL image descriptor (RGB565):
  *   - Source SVG:  docs/wireframes/splash.svg
- *   - Raster:      rsvg-convert (or similar) → components/ui_assets/assets/splash.png
- *   - Embed:       LVGLImage.py → components/ui_assets/src/splash.c  (symbol: splash)
- *   - Build:       components/ui_assets/CMakeLists.txt
+ *   - Asset folder: components/ui_assets/assets/splash/ (embed.txt + splash.png)
+ *   - Embed:        ./scripts/embed_ui_assets.sh → src/splash.c (symbol: splash)
  *
  * Navigation (see ui_nav.c):
  *   - ui_nav_init() loads UI_SCREEN_SPLASH first.

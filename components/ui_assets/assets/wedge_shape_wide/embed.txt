@@ -1,0 +1,5 @@
+source=wedge_shape_wide.svg
+format=A8
+width=420
+height=100
+description=A8 wide bottom wedge silhouette — tint at runtime via image_recolor
