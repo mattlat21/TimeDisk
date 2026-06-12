@@ -1,11 +1,27 @@
-**TimeDisk** — ESP-IDF + LVGL app for the **Waveshare ESP32-P4 WiFi6 Touch LCD** (3.4" or 4"; set panel size in `sdkconfig` under **Board Support Package → Display**).
+**TimeDisk** — circular touch UI for kids' sleep/rest scheduling on the Waveshare ESP32-P4 display.
 
-Circular touch UI: enter a 4-digit PIN, then solve a simple arithmetic challenge on the keypad.
+## Repository layout
 
-Build and flash:
+| Path | Contents |
+|------|----------|
+| [`firmware/esp32-p4/`](firmware/esp32-p4/) | ESP-IDF firmware (LVGL UI, NVS settings, Wi‑Fi, OTA) |
+| [`docs/`](docs/) | Screen flows, data model, wireframes |
+| [`binaries/`](binaries/) | Release firmware artifacts (gitignored) |
+| [`scripts/`](scripts/) | Convenience wrappers → `firmware/esp32-p4/scripts/` |
+
+## Firmware
+
+See [`firmware/esp32-p4/README.md`](firmware/esp32-p4/README.md). Quick start:
 
 ```bash
+cd firmware/esp32-p4
 idf.py build flash
+```
+
+Or from the repo root:
+
+```bash
+./scripts/build_firmware.sh
 ```
 
 ## Documentation
@@ -16,6 +32,6 @@ idf.py build flash
 - [Mode flow](docs/mode_flow.md) — Wake / Wind Down / Sleep / Rest cycling
 - [Adult authentication](docs/adult_authentication.md) — PIN, maths, and `aa_methods` bitmask
 - [Data flow](docs/data_flow.md) — boot, NVS, and runtime data paths
-- [Wireframes](docs/wireframes/README.md) — 720×720 SVG screens for Figma (splash, menu, AA, timer, …)
+- [Wireframes](docs/wireframes/README.md) — 720×720 SVG screens for Figma
 
 Code is free to use and modify as you like, but not for commercial use — **CC BY-NC** (Attribution-NonCommercial).

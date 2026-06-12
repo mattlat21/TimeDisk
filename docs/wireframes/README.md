@@ -2,7 +2,7 @@
 
 Low-fi **SVG** wireframes for the circular Waveshare 4″ display (`720×720`). Import into Figma, refine, then implement in LVGL.
 
-**Related:** [screen_flow.md](../screen_flow.md) · [adult_authentication.md](../adult_authentication.md) · [data_model.md](../data_model.md) · [main/ui_screens.cpp](../../main/ui_screens.cpp)
+**Related:** [screen_flow.md](../screen_flow.md) · [adult_authentication.md](../adult_authentication.md) · [data_model.md](../data_model.md) · [ui_screens](../../firmware/esp32-p4/components/ui_screens/)
 
 ---
 

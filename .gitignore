@@ -1,5 +1,8 @@
 # ESP-IDF build output
 build/
+firmware/esp32-p4/build/
+firmware/esp32-p4/managed_components/
+firmware/esp32-p4/.venv-assets/
 
 # Release binaries and deploy secrets
 binaries/
@@ -11,6 +14,8 @@ sdkconfig.old.*
 
 # Component manager (fetched from idf_component.yml + dependencies.lock)
 managed_components/
+firmware/esp32-p4/sdkconfig.old
+firmware/esp32-p4/sdkconfig.old.*
 
 # Python
 __pycache__/

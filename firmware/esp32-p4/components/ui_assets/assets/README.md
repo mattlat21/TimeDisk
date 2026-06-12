@@ -22,14 +22,14 @@ Generated build list: `../CMakeLists.txt` (between `# BEGIN GENERATED ASSETS` / 
 
 ## After editing an asset
 
-From the **repository root**:
+From the **firmware project** (`firmware/esp32-p4/`) or repo root:
 
 ```bash
 ./scripts/embed_ui_assets.sh
 idf.py build
 ```
 
-Requires `rsvg-convert` (`brew install librsvg`), `sips` (macOS), and a local venv at `.venv-assets` for `LVGLImage.py` (vendored at `scripts/LVGLImage.py`; falls back to `managed_components/lvgl__lvgl/scripts/LVGLImage.py` after `idf.py reconfigure`).
+Requires `rsvg-convert` (`brew install librsvg`), `sips` (macOS), and a local venv at `firmware/esp32-p4/.venv-assets` for `LVGLImage.py` (vendored at `firmware/esp32-p4/scripts/LVGLImage.py`; falls back to `managed_components/lvgl__lvgl/scripts/LVGLImage.py` after `idf.py reconfigure`).
 
 ## embed.txt format
 

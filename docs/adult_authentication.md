@@ -163,5 +163,5 @@ Each maths session presents one question at a time: `A + B = ?`
 ## Out of scope
 
 - NVS key names
-- LVGL layout for PIN / maths screens (see existing prototype in `main/ui_screens.cpp`)
+- LVGL layout for PIN / maths screens (see `firmware/esp32-p4/components/ui_screens/`)
 - Factory reset / forgotten PIN policy

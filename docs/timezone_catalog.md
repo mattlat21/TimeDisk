@@ -1,6 +1,6 @@
 # Timezone catalog
 
-Embedded read-only list for the timezone startup wizard. Firmware: `components/app_time` (`timezone_catalog.c`).
+Embedded read-only list for the timezone startup wizard. Firmware: `firmware/esp32-p4/components/app_time` (`timezone_catalog.c`).
 
 **Related:** [data_model.md](data_model.md#timezone) · [screen_flow.md](screen_flow.md)
 

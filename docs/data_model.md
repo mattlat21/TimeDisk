@@ -1,6 +1,6 @@
 # TimeDisk data model
 
-Canonical schema for persisted settings and runtime state. Firmware: `components/app_config` (`app_nvs.c`, namespace `timedisk_cfg`).
+Canonical schema for persisted settings and runtime state. Firmware: `firmware/esp32-p4/components/app_config` (`app_nvs.c`, namespace `timedisk_cfg`).
 
 **Related docs:** [mode_flow.md](mode_flow.md) · [adult_authentication.md](adult_authentication.md) · [data_flow.md](data_flow.md) · [screen_flow.md](screen_flow.md)
 
@@ -14,7 +14,7 @@ Canonical schema for persisted settings and runtime state. Firmware: `components
 | **Runtime** | RAM | Current session | Active mode, countdowns, UI session state |
 | **Assets (future)** | SPIFFS (`storage` partition) | Survives reboot | Timer style assets, optional large blobs |
 
-[`partitions.csv`](../partitions.csv) provides ~24 KB NVS and 7 MB SPIFFS. All fields below are intended for **NVS** unless noted.
+[`partitions.csv`](../firmware/esp32-p4/partitions.csv) provides ~24 KB NVS and 7 MB SPIFFS. All fields below are intended for **NVS** unless noted.
 
 ---
 
