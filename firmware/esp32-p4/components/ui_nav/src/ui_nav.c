@@ -541,38 +541,22 @@ void ui_nav_aa_cancel(void)
     ui_nav_go(dest);
 }
 
-void mode_engine_start_cycle(void)
+static void mode_engine_refresh_tod_if_visible(void)
 {
-    app_runtime_t *rt = app_runtime_get();
-
-    rt->cycle_active = true;
-    rt->current_mode = APP_MODE_WAKE;
-    rt->mode_remaining_sec = 0;
+    if (!s_tod_fade.active &&
+        (s_current == UI_SCREEN_TOD_BRIGHT || s_current == UI_SCREEN_TOD_DIM)) {
+        ui_screen_tod_on_show(s_current == UI_SCREEN_TOD_DIM);
+    }
 }
 
-void mode_engine_switch_to_wake(void)
-{
-    app_runtime_t *rt = app_runtime_get();
-
-    rt->cycle_active = false;
-    rt->current_mode = APP_MODE_WAKE;
-    rt->mode_remaining_sec = 0;
-}
-
-static void mode_engine_tick(void)
+/** Advance when mode_remaining_sec hits zero (see docs/mode_flow.md). */
+static void mode_engine_advance_if_expired(void)
 {
     app_runtime_t *rt = app_runtime_get();
     app_config_t *cfg = app_config_get();
 
-    if (!rt->cycle_active) {
+    if (!rt->cycle_active || rt->mode_remaining_sec > 0) {
         return;
-    }
-
-    if (rt->mode_remaining_sec > 0) {
-        rt->mode_remaining_sec--;
-        if (rt->mode_remaining_sec > 0) {
-            return;
-        }
     }
 
     switch (rt->current_mode) {
@@ -619,10 +603,45 @@ static void mode_engine_tick(void)
         break;
     }
 
-    if (!s_tod_fade.active &&
-        (s_current == UI_SCREEN_TOD_BRIGHT || s_current == UI_SCREEN_TOD_DIM)) {
-        ui_screen_tod_on_show(s_current == UI_SCREEN_TOD_DIM);
+    mode_engine_refresh_tod_if_visible();
+}
+
+void mode_engine_start_cycle(void)
+{
+    app_runtime_t *rt = app_runtime_get();
+
+    rt->cycle_active = true;
+    rt->current_mode = APP_MODE_WAKE;
+    rt->mode_remaining_sec = 0;
+    /* Skip the transient Wake frame before TOD loads (mode_flow.md auto-advance). */
+    mode_engine_advance_if_expired();
+}
+
+void mode_engine_switch_to_wake(void)
+{
+    app_runtime_t *rt = app_runtime_get();
+
+    rt->cycle_active = false;
+    rt->current_mode = APP_MODE_WAKE;
+    rt->mode_remaining_sec = 0;
+}
+
+static void mode_engine_tick(void)
+{
+    app_runtime_t *rt = app_runtime_get();
+
+    if (!rt->cycle_active) {
+        return;
     }
+
+    if (rt->mode_remaining_sec > 0) {
+        rt->mode_remaining_sec--;
+        if (rt->mode_remaining_sec > 0) {
+            return;
+        }
+    }
+
+    mode_engine_advance_if_expired();
 }
 
 typedef struct {

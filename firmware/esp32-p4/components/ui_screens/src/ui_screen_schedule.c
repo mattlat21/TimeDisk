@@ -62,10 +62,18 @@ static ui_screen_id_t s_rest_ids[2] = {
     UI_SCREEN_REST_WIND_DOWN,
 };
 
-static const char *s_sleep_titles[3] = {
-    "Sleep: Wake up Time",
-    "Sleep: Rest End Time",
-    "Sleep: Set Wind Down Time",
+static const char *const s_sleep_title = "Start a Sleep";
+
+static const char *s_sleep_subtitles[3] = {
+    "Wake up Time",
+    "Rest End Time",
+    "Wind Down Time",
+};
+
+static const char *s_sleep_subtitles_duration[3] = {
+    "Sleep Duration",
+    "Rest Duration",
+    "Wind Down Duration",
 };
 
 static const char *s_rest_titles[2] = {
@@ -76,12 +84,6 @@ static const char *s_rest_titles[2] = {
 static const char *s_rest_subtitles[2] = {
     "End Time",
     "Wind Down Time",
-};
-
-static const char *s_sleep_titles_duration[3] = {
-    "Sleep: Wake Duration",
-    "Sleep: Rest Duration",
-    "Sleep: Wind Down Duration",
 };
 
 static const char *s_rest_subtitles_duration[2] = {
@@ -192,15 +194,20 @@ static void apply_schedule_labels(int idx)
 
     if (ss->lbl_title != NULL) {
         if (idx < 3) {
-            lv_label_set_text(ss->lbl_title, use_time ? s_sleep_titles[idx] : s_sleep_titles_duration[idx]);
+            lv_label_set_text(ss->lbl_title, s_sleep_title);
         } else {
             lv_label_set_text(ss->lbl_title, s_rest_titles[idx - 3]);
         }
     }
     if (ss->lbl_subtitle != NULL) {
-        const int rest_idx = idx - 3;
-        lv_label_set_text(ss->lbl_subtitle,
-                          use_time ? s_rest_subtitles[rest_idx] : s_rest_subtitles_duration[rest_idx]);
+        if (idx < 3) {
+            lv_label_set_text(ss->lbl_subtitle,
+                              use_time ? s_sleep_subtitles[idx] : s_sleep_subtitles_duration[idx]);
+        } else {
+            const int rest_idx = idx - 3;
+            lv_label_set_text(ss->lbl_subtitle,
+                              use_time ? s_rest_subtitles[rest_idx] : s_rest_subtitles_duration[rest_idx]);
+        }
     }
 }
 
@@ -404,9 +411,9 @@ static void build_wizard_screen(lv_obj_t *screens[UI_SCREEN_COUNT], ui_screen_id
 
 void ui_screen_schedule_build(lv_obj_t *screens[UI_SCREEN_COUNT])
 {
-    build_wizard_screen(screens, UI_SCREEN_SLEEP_WAKE, s_sleep_titles[0], NULL, false, 0);
-    build_wizard_screen(screens, UI_SCREEN_SLEEP_REST_END, s_sleep_titles[1], NULL, false, 1);
-    build_wizard_screen(screens, UI_SCREEN_SLEEP_WIND_DOWN, s_sleep_titles[2], NULL, false, 2);
+    build_wizard_screen(screens, UI_SCREEN_SLEEP_WAKE, s_sleep_title, s_sleep_subtitles_duration[0], false, 0);
+    build_wizard_screen(screens, UI_SCREEN_SLEEP_REST_END, s_sleep_title, s_sleep_subtitles_duration[1], false, 1);
+    build_wizard_screen(screens, UI_SCREEN_SLEEP_WIND_DOWN, s_sleep_title, s_sleep_subtitles_duration[2], false, 2);
     build_wizard_screen(screens, UI_SCREEN_REST_REST_END, s_rest_titles[0], s_rest_subtitles[0], true, 3);
     build_wizard_screen(screens, UI_SCREEN_REST_WIND_DOWN, s_rest_titles[1], s_rest_subtitles[1], true, 4);
 }
