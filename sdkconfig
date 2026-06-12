@@ -2254,6 +2254,13 @@ CONFIG_WIFI_PROV_STA_ALL_CHANNEL_SCAN=y
 # end of Wi-Fi Provisioning Manager
 
 #
+# TimeDisk UI Display
+#
+# CONFIG_UI_DISPLAY_INVERT is not set
+CONFIG_UI_DISPLAY_ROTATE_180=y
+# end of TimeDisk UI Display
+
+#
 # Audio playback
 #
 CONFIG_AUDIO_PLAYER_ENABLE_MP3=y

@@ -1,0 +1,17 @@
+menu "TimeDisk UI Display"
+
+    config UI_DISPLAY_INVERT
+        bool "Invert display colors"
+        default n
+        help
+            Invert all LCD colors via the panel driver. The Waveshare BSP enables
+            invert during init; leave this disabled for normal colors.
+
+    config UI_DISPLAY_ROTATE_180
+        bool "Rotate display and touch 180 degrees"
+        default y
+        help
+            Flip the entire UI upside down. Uses hardware panel mirroring for the
+            LCD and LVGL's display rotation so touch coordinates stay aligned.
+
+endmenu
