@@ -1,5 +1,7 @@
 source=btn_start_timer.png
 format=RGB565
+storage=spiffs
+compress=auto
 width=660
 height=200
 description=Button to start timer

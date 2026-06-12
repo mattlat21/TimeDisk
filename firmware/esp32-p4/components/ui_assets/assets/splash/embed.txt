@@ -1,3 +1,5 @@
 source=splash.png
 format=RGB565
+storage=spiffs
+compress=auto
 description=Splash screen (720×720 RGB565)

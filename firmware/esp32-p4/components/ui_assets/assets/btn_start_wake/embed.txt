@@ -1,5 +1,7 @@
 source=btn_start_wake.png
 format=RGB565
+storage=spiffs
+compress=auto
 width=660
 height=320
 description=Button to end sleep / rest

@@ -1,5 +1,7 @@
 source=tod_rest.png
 format=RGB565
+storage=spiffs
+compress=auto
 width=720
 height=720
 description=Time of Day background — rest

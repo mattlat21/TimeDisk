@@ -1,5 +1,7 @@
 source=btn_start_sleep.png
 format=RGB565
+storage=spiffs
+compress=auto
 width=320
 height=320
 description=Button to start a sleep

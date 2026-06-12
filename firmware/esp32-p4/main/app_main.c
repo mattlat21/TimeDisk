@@ -8,6 +8,7 @@
 #include "lvgl.h"
 #include "bsp/display.h"
 #include "bsp/esp-bsp.h"
+#include "ui_assets.h"
 #include "ui_display.h"
 #include "ui_nav.h"
 
@@ -32,6 +33,8 @@ void app_main(void)
 
     ESP_LOGI(TAG, "ESP Hosted init (after display)");
     ESP_ERROR_CHECK(esp_hosted_init());
+
+    ESP_ERROR_CHECK(ui_assets_init());
 
     bsp_display_lock(0);
     ui_nav_init();

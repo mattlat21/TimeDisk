@@ -36,7 +36,7 @@ static lv_obj_t *s_wedge_settings;
 #define MENU_BTN_TIMER_X_WF   30
 #define MENU_BTN_TIMER_Y_WF   370
 
-static lv_obj_t *menu_create_image_btn(lv_obj_t *parent, const lv_image_dsc_t *src, int w, int h,
+static lv_obj_t *menu_create_image_btn(lv_obj_t *parent, const void *src, int w, int h,
                                        int x_wf, int y_wf, const char *label_text,
                                        const lv_font_t *label_font, int label_ofs_x, int label_ofs_y,
                                        lv_obj_t **label_out, lv_event_cb_t cb)
@@ -199,16 +199,16 @@ void ui_screen_menu_build(lv_obj_t *screens[UI_SCREEN_COUNT])
     /* Raise ring overlay before layout so wf→content uses a consistent border (0). */
     ui_screen_ring_raise_overlay(s_scr);
 
-    s_btn_rest = menu_create_image_btn(s_scr, &btn_start_rest, MENU_BTN_REST_W, MENU_BTN_REST_H,
+    s_btn_rest = menu_create_image_btn(s_scr, ui_assets_spiffs_path("btn_start_rest"), MENU_BTN_REST_W, MENU_BTN_REST_H,
                                        MENU_BTN_REST_X_WF, MENU_BTN_REST_Y_WF, "Start\nRest",
                                        &lv_font_montserrat_48, 30, 60, NULL, rest_cb);
-    s_btn_sleep = menu_create_image_btn(s_scr, &btn_start_sleep, MENU_BTN_SLEEP_W, MENU_BTN_SLEEP_H,
+    s_btn_sleep = menu_create_image_btn(s_scr, ui_assets_spiffs_path("btn_start_sleep"), MENU_BTN_SLEEP_W, MENU_BTN_SLEEP_H,
                                         MENU_BTN_SLEEP_X_WF, MENU_BTN_SLEEP_Y_WF, "Start\nSleep",
                                         &lv_font_montserrat_48, -30, 60, NULL, sleep_cb);
-    s_btn_switch_wake = menu_create_image_btn(s_scr, &btn_start_wake, MENU_BTN_WAKE_W, MENU_BTN_WAKE_H,
+    s_btn_switch_wake = menu_create_image_btn(s_scr, ui_assets_spiffs_path("btn_start_wake"), MENU_BTN_WAKE_W, MENU_BTN_WAKE_H,
                                               MENU_BTN_WAKE_X_WF, MENU_BTN_WAKE_Y_WF, "End Rest",
                                               &lv_font_montserrat_48, 0, 60, &s_lbl_switch_wake, switch_wake_cb);
-    s_btn_timer = menu_create_image_btn(s_scr, &btn_start_timer, MENU_BTN_TIMER_W, MENU_BTN_TIMER_H,
+    s_btn_timer = menu_create_image_btn(s_scr, ui_assets_spiffs_path("btn_start_timer"), MENU_BTN_TIMER_W, MENU_BTN_TIMER_H,
                                         MENU_BTN_TIMER_X_WF, MENU_BTN_TIMER_Y_WF, "Start Timer",
                                         &lv_font_montserrat_48, 0, 60, NULL, timer_cb);
 

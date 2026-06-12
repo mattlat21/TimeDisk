@@ -40,19 +40,19 @@ static tod_mode_panel_t *panel_for(app_mode_t mode, bool dim)
     return dim ? &s_panels_dim[mode] : &s_panels_bright[mode];
 }
 
-static const lv_image_dsc_t *mode_image(app_mode_t mode)
+static const char *mode_image(app_mode_t mode)
 {
     switch (mode) {
     case APP_MODE_WAKE:
-        return &tod_wake;
+        return ui_assets_spiffs_path("tod_wake");
     case APP_MODE_WIND_DOWN:
-        return &tod_winddown;
+        return ui_assets_spiffs_path("tod_winddown");
     case APP_MODE_SLEEP:
-        return &tod_sleep;
+        return ui_assets_spiffs_path("tod_sleep");
     case APP_MODE_REST:
-        return &tod_rest;
+        return ui_assets_spiffs_path("tod_rest");
     default:
-        return &tod_wake;
+        return ui_assets_spiffs_path("tod_wake");
     }
 }
 
@@ -73,7 +73,7 @@ static void apply_mode_background(lv_obj_t *bg, app_mode_t mode, uint8_t blend)
 static lv_obj_t *create_mode_background(lv_obj_t *scr)
 {
     lv_obj_t *img = lv_image_create(scr);
-    lv_image_set_src(img, &tod_wake);
+    lv_image_set_src(img, ui_assets_spiffs_path("tod_wake"));
     lv_obj_set_size(img, UI_DISP, UI_DISP);
     lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
     lv_obj_remove_flag(img, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);

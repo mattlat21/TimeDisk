@@ -11,7 +11,7 @@
  * Graphics are baked into firmware as an LVGL image descriptor (RGB565):
  *   - Source SVG:  docs/wireframes/splash.svg
  *   - Asset folder: components/ui_assets/assets/splash/ (embed.txt + splash.png)
- *   - Embed:        ./scripts/embed_ui_assets.sh → src/splash.c (symbol: splash)
+ *   - Embed:        ./scripts/embed_ui_assets.sh → spiffs_image/splash.bin
  *
  * Navigation (see ui_nav.c):
  *   - ui_nav_init() loads UI_SCREEN_SPLASH first.
@@ -22,10 +22,8 @@
 
 #include "ui_screens_registry.h"
 #include "ui_layout.h"
+#include "ui_assets.h"
 #include "lvgl.h"
-
-/** Embedded bitmap from components/ui_assets (LVGLImage.py → splash.c). */
-extern const lv_image_dsc_t splash;
 
 /* Root screen object; kept so on_show() can reference it later if needed. */
 static lv_obj_t *s_scr;
@@ -58,10 +56,10 @@ void ui_screen_splash_build(lv_obj_t *screens[UI_SCREEN_COUNT])
 
     /*
      * Centered bitmap: pre-rendered wireframe at native resolution.
-     * lv_image_set_src() uses the embedded descriptor; no filesystem or PNG decoder at runtime.
+     * lv_image_set_src() loads compressed LVGL bin from SPIFFS (S:/splash.bin).
      */
     lv_obj_t *img = lv_image_create(s_scr);
-    lv_image_set_src(img, &splash);
+    lv_image_set_src(img, ui_assets_spiffs_path("splash"));
     lv_obj_center(img);
 
     /* Register in the global screen table used by ui_nav_go() / lv_screen_load(). */

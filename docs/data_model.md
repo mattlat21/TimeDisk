@@ -12,9 +12,14 @@ Canonical schema for persisted settings and runtime state. Firmware: `firmware/e
 | ----- | ------- | -------- | ------- |
 | **Config** | NVS (`timedisk_cfg` namespace) | Survives reboot | WiFi, NTP, timeouts, theme, schedules, AA, timer defaults |
 | **Runtime** | RAM | Current session | Active mode, countdowns, UI session state |
-| **Assets (future)** | SPIFFS (`storage` partition) | Survives reboot | Timer style assets, optional large blobs |
+| **UI assets** | SPIFFS (`storage` partition) | Survives reboot | Large RGB565 images (splash, TOD backgrounds, menu buttons) as LZ4-compressed LVGL `.bin` files |
+| **UI assets (embedded)** | App flash | Shipped with firmware | Small A8 wedge silhouettes and icon overlays |
 
-[`partitions.csv`](../firmware/esp32-p4/partitions.csv) provides ~24 KB NVS and 7 MB SPIFFS. All fields below are intended for **NVS** unless noted.
+[`partitions.csv`](../firmware/esp32-p4/partitions.csv) provides ~24 KB NVS, **15 MB SPIFFS** (`storage`), and 8 MB × 2 OTA app slots on 32 MB flash. SPIFFS is mounted at `/spiffs` at boot; LVGL loads images via `S:/<name>.bin`. Wedge/icon assets remain embedded in the app binary.
+
+**Asset updates:** changing SPIFFS images requires `idf.py build flash` (or `idf.py spiffs-flash`). App OTA alone does not update the `storage` partition. Partition table changes require a full USB reflash.
+
+All fields below are intended for **NVS** unless noted.
 
 ---
 

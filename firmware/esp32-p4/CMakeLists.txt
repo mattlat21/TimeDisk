@@ -10,3 +10,5 @@ include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
 add_compile_options(-Wno-format)
 project(TimeDisk)
+
+spiffs_create_partition_image(storage spiffs_image FLASH_IN_PROJECT)
