@@ -12,6 +12,7 @@
 #include <esp_err.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <time.h>
 
 #include "app_nvs.h"
 
@@ -93,7 +94,10 @@ typedef struct {
     uint8_t display_brightness;
     uint32_t active_timer_remaining_sec;
     uint32_t active_timer_total_sec;
-    /** lv_tick_get() when the active countdown started (for smooth visuals). */
+    /** UTC bounds for timer progress (NVS checkpoint + visuals). */
+    time_t active_timer_start_utc;
+    time_t active_timer_end_utc;
+    /** lv_tick_get() when the active countdown started (fallback when !time_valid). */
     uint32_t active_timer_anim_start_ms;
     bool timer_running;
 } app_runtime_t;

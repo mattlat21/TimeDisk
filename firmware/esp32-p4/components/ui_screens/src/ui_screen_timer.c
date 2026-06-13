@@ -7,7 +7,9 @@
 #include "ui_theme.h"
 #include "ui_nav.h"
 #include "app_config.h"
-#include <math.h>
+#include "app_checkpoint.h"
+#include <sys/time.h>
+#include <time.h>
 
 #define TIMER_STYLE_TILE_W   200
 #define TIMER_STYLE_TILE_H   160
@@ -17,10 +19,10 @@
 /** Progress ring: outer edge at display bounds, centered on 720×720. */
 #define TIMER_RING_DIAMETER  UI_SCREEN_W
 #define TIMER_RING_STROKE    56
-#define TIMER_RING_VALUE_MAX 1000
+#define TIMER_RING_VALUE_MAX 60000
 #define TIMER_RING_TRACK_COLOR lv_color_make(0x3D, 0x3D, 0x3D)
 
-/** Visual refresh for ring/water (~60 Hz; water level + bob via cached layout). */
+/** Visual refresh for ring/water (~60 Hz). */
 #define TIMER_ANIM_PERIOD_MS 16
 
 /** Ring/water reach full progress this many seconds before the countdown hits zero. */
@@ -50,17 +52,12 @@ static uint32_t timer_duration_step_sec(uint32_t value_sec, void *user_data)
 #define TIMER_WATER_COLOR    lv_color_make(0x2E, 0x7A, 0xE8)
 #define TIMER_WATER_W        UI_SCREEN_W
 
-/** Water surface bobbing at the top only (pixels, milliseconds). Bottom stays screen-anchored. */
-#define TIMER_WATER_BOB_AMP_PX     4.0f
-#define TIMER_WATER_BOB_PERIOD_MS 2500.0f
-
 typedef struct {
     lv_obj_t *water_clip;
     lv_obj_t *water_fill;
     lv_obj_t *ring_arc;
     int cached_water_h;
     int cached_arc_value;
-    lv_coord_t cached_bob_y;
     uint8_t shown_style;
 } timer_countdown_vis_t;
 
@@ -73,7 +70,6 @@ static void timer_vis_reset_cache(timer_countdown_vis_t *vis)
     }
     vis->cached_water_h = -1;
     vis->cached_arc_value = -1;
-    vis->cached_bob_y = (lv_coord_t)9999;
     vis->shown_style = TIMER_STYLE_UNSET;
 }
 
@@ -85,6 +81,10 @@ static lv_obj_t *s_scr_triggered;
 static lv_obj_t *s_scr_confirm;
 static lv_obj_t *lbl_countdown_bright;
 static lv_obj_t *lbl_countdown_dim;
+static lv_obj_t *s_end_btn_bright;
+static lv_obj_t *s_end_btn_dim;
+static ui_wedge_t *s_end_wedge_bright;
+static ui_wedge_t *s_end_wedge_dim;
 static lv_obj_t *s_style_tiles[APP_TIMER_STYLE_COUNT];
 static timer_countdown_vis_t s_vis_bright;
 static timer_countdown_vis_t s_vis_dim;
@@ -130,8 +130,36 @@ static void timer_sync_anim_start_ms(app_runtime_t *rt)
     rt->active_timer_anim_start_ms = timer_now_ms() - elapsed_sec * 1000U;
 }
 
+static int64_t timer_now_epoch_ms(void)
+{
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return (int64_t)tv.tv_sec * 1000 + (int64_t)tv.tv_usec / 1000;
+}
+
 static float timer_smooth_progress(const app_runtime_t *rt)
 {
+    if (rt->time_valid && rt->active_timer_end_utc > rt->active_timer_start_utc) {
+        const int64_t now_ms = timer_now_epoch_ms();
+        const int64_t start_ms = (int64_t)rt->active_timer_start_utc * 1000;
+        const int64_t end_ms = (int64_t)rt->active_timer_end_utc * 1000;
+        const int64_t total_ms = end_ms - start_ms;
+
+        if (now_ms <= start_ms) {
+            return 0.0f;
+        }
+        const int64_t finish_early_ms = (int64_t)TIMER_ANIM_FINISH_REMAINING_SEC * 1000;
+        if (total_ms <= finish_early_ms) {
+            return 1.0f;
+        }
+        const int64_t anim_duration_ms = total_ms - finish_early_ms;
+        const int64_t elapsed_ms = now_ms - start_ms;
+        if (elapsed_ms >= anim_duration_ms) {
+            return 1.0f;
+        }
+        return (float)elapsed_ms / (float)anim_duration_ms;
+    }
+
     const uint32_t total_ms = timer_total_sec(rt) * 1000U;
     if (total_ms == 0) {
         return 1.0f;
@@ -168,18 +196,6 @@ static void timer_layout_ring(timer_countdown_vis_t *vis, float progress)
     }
 }
 
-static lv_coord_t timer_water_bob_y(void)
-{
-    if (timer_total_sec(app_runtime_get()) < 60) {
-        return 0;
-    }
-    const uint32_t now = timer_now_ms();
-    const float phase = (TIMER_WATER_BOB_PERIOD_MS > 0.0f)
-                            ? (2.0f * (float)M_PI * ((float)now / TIMER_WATER_BOB_PERIOD_MS))
-                            : 0.0f;
-    return (lv_coord_t)lroundf(TIMER_WATER_BOB_AMP_PX * sinf(phase));
-}
-
 static void timer_layout_water(timer_countdown_vis_t *vis, float progress)
 {
     if (vis == NULL || vis->water_fill == NULL) {
@@ -187,16 +203,7 @@ static void timer_layout_water(timer_countdown_vis_t *vis, float progress)
     }
 
     lv_obj_t *water = vis->water_fill;
-    int fill_h = (int)((float)UI_SCREEN_H * progress);
-    if (fill_h < 1) {
-        fill_h = 1;
-    }
-    if (fill_h > (int)UI_SCREEN_H) {
-        fill_h = (int)UI_SCREEN_H;
-    }
-
-    const lv_coord_t bob_y = timer_water_bob_y();
-    int display_h = fill_h + (int)bob_y;
+    int display_h = (int)((float)UI_SCREEN_H * progress);
     if (display_h < 1) {
         display_h = 1;
     }
@@ -204,12 +211,10 @@ static void timer_layout_water(timer_countdown_vis_t *vis, float progress)
         display_h = (int)UI_SCREEN_H;
     }
 
-    if (display_h != vis->cached_water_h || bob_y != vis->cached_bob_y) {
+    if (display_h != vis->cached_water_h) {
         lv_obj_set_size(water, TIMER_WATER_W, display_h);
         lv_obj_align(water, LV_ALIGN_BOTTOM_MID, 0, 0);
-        lv_obj_set_style_translate_y(water, 0, 0);
         vis->cached_water_h = display_h;
-        vis->cached_bob_y = bob_y;
     }
 }
 
@@ -250,6 +255,31 @@ static void timer_update_countdown_visuals(timer_countdown_vis_t *vis, lv_obj_t 
     }
 }
 
+static void timer_update_end_controls(uint8_t style_id)
+{
+    const bool water = (style_id == APP_TIMER_STYLE_WATER);
+
+    ui_wedge_set_visible(s_end_wedge_bright, water);
+    ui_wedge_set_visible(s_end_wedge_dim, water);
+
+    if (s_end_btn_bright != NULL) {
+        if (water) {
+            lv_obj_add_flag(s_end_btn_bright, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_clear_flag(s_end_btn_bright, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_move_foreground(s_end_btn_bright);
+        }
+    }
+    if (s_end_btn_dim != NULL) {
+        if (water) {
+            lv_obj_add_flag(s_end_btn_dim, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_clear_flag(s_end_btn_dim, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_move_foreground(s_end_btn_dim);
+        }
+    }
+}
+
 static void timer_refresh_active_countdown_visuals(void)
 {
     app_runtime_t *rt = app_runtime_get();
@@ -281,6 +311,7 @@ static void timer_refresh_all_countdown_visuals(void)
 
     timer_update_countdown_visuals(&s_vis_bright, lbl_countdown_bright, style_id, progress, true);
     timer_update_countdown_visuals(&s_vis_dim, lbl_countdown_dim, style_id, progress, true);
+    timer_update_end_controls(style_id);
 }
 
 static void timer_anim_cb(lv_timer_t *t)
@@ -307,6 +338,11 @@ void ui_screen_timer_set_running(bool running)
     } else {
         lv_timer_pause(s_anim_timer);
     }
+}
+
+void ui_screen_timer_sync_anim_from_runtime(void)
+{
+    timer_sync_anim_start_ms(app_runtime_get());
 }
 
 static void style_refresh_tiles(void)
@@ -359,6 +395,13 @@ static void style_next_cb(lv_event_t *e)
     rt->active_timer_remaining_sec = s_duration_sec;
     rt->active_timer_anim_start_ms = timer_now_ms();
     rt->timer_running = true;
+    if (rt->time_valid) {
+        const time_t start = time(NULL);
+        const time_t end = start + (time_t)s_duration_sec;
+        rt->active_timer_start_utc = start;
+        rt->active_timer_end_utc = end;
+        app_checkpoint_set_timer(start, end);
+    }
     ui_screen_timer_set_running(true);
     ui_nav_go(UI_SCREEN_TIMER_BRIGHT);
 }
@@ -394,9 +437,14 @@ static void confirm_yes_cb(lv_event_t *e)
 {
     (void)e;
     app_runtime_t *rt = app_runtime_get();
+    if (rt->time_valid) {
+        app_checkpoint_cancel_timer(time(NULL));
+    }
     rt->timer_running = false;
     rt->active_timer_remaining_sec = 0;
     rt->active_timer_total_sec = 0;
+    rt->active_timer_start_utc = 0;
+    rt->active_timer_end_utc = 0;
     rt->active_timer_anim_start_ms = 0;
     ui_screen_timer_set_running(false);
     ui_nav_go(UI_SCREEN_MENU);
@@ -406,9 +454,12 @@ static void triggered_ok_cb(lv_event_t *e)
 {
     (void)e;
     app_runtime_t *rt = app_runtime_get();
+    app_checkpoint_clear_timer();
     rt->timer_running = false;
     rt->active_timer_remaining_sec = 0;
     rt->active_timer_total_sec = 0;
+    rt->active_timer_start_utc = 0;
+    rt->active_timer_end_utc = 0;
     rt->active_timer_anim_start_ms = 0;
     ui_screen_timer_set_running(false);
     ui_nav_go(UI_SCREEN_TOD_BRIGHT);
@@ -624,6 +675,21 @@ static void build_countdown(lv_obj_t **scr, lv_obj_t **lbl, timer_countdown_vis_
     lv_obj_add_event_cb(end, timer_end_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_move_foreground(end);
 
+    ui_wedge_t *end_wedge = ui_wedge_create_overlay(*scr, UI_WEDGE_END_TIMER);
+    if (end_wedge != NULL) {
+        ui_wedge_bind(end_wedge, UI_WEDGE_END_TIMER, timer_end_cb, NULL);
+        ui_wedge_set_label(end_wedge, "End Timer");
+        ui_wedge_set_visible(end_wedge, false);
+    }
+
+    if (id == UI_SCREEN_TIMER_BRIGHT) {
+        s_end_btn_bright = end;
+        s_end_wedge_bright = end_wedge;
+    } else {
+        s_end_btn_dim = end;
+        s_end_wedge_dim = end_wedge;
+    }
+
     ui_widgets_send_edge_fill_to_back(*scr);
 }
 
@@ -725,6 +791,8 @@ void ui_screen_timer_on_show(ui_screen_id_t id)
         timer_update_countdown_visuals(&s_vis_dim, lbl_countdown_dim, style_id, progress, true);
         ui_nav_apply_dim(true);
     }
+
+    timer_update_end_controls(style_id);
 }
 
 void ui_screen_timer_tick(void)
@@ -770,6 +838,12 @@ void ui_screen_timer_apply_theme(void)
         }
     }
     ui_duration_editor_apply_theme(&s_duration_bundle.editor);
+    if (s_end_wedge_bright != NULL) {
+        ui_wedge_refresh_theme(s_end_wedge_bright);
+    }
+    if (s_end_wedge_dim != NULL) {
+        ui_wedge_refresh_theme(s_end_wedge_dim);
+    }
     timer_refresh_all_countdown_visuals();
     style_refresh_tiles();
 }

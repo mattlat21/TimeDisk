@@ -20,6 +20,7 @@ idf_component_register(
         "src/ui_settings_adult_auth.c"
         "src/ui_settings_mqtt.c"
         "src/ui_settings_update.c"
+        "src/ui_settings_live_timer.c"
     INCLUDE_DIRS "include"
     REQUIRES
         ui_core

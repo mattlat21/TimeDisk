@@ -13,6 +13,7 @@ typedef enum {
     PANEL_AA,
     PANEL_MQTT,
     PANEL_UPDATE,
+    PANEL_LIVE_TIMER,
     PANEL_COUNT,
 } settings_panel_t;
 

@@ -85,6 +85,10 @@ void mode_engine_start_cycle(void);
 /** Stop the automatic cycle and return to Wake mode. */
 void mode_engine_switch_to_wake(void);
 
+/** Restore cycle/timer state from NVS checkpoints after SNTP (when time_valid).
+ *  Returns the screen to show after boot (timer bright if a timer was restored). */
+ui_screen_id_t mode_engine_restore_from_nvs(void);
+
 /** Optional hook for MQTT status publish (registered by app_mqtt_init). */
 void ui_nav_set_mqtt_status_hook(void (*hook)(void));
 

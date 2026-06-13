@@ -40,6 +40,8 @@ typedef enum {
     UI_WEDGE_SETTINGS,
     /** Wide bar (420×100); TOD menu (theme primary / ring colour). */
     UI_WEDGE_MENU,
+    /** Wide bar (420×100); water timer end (orange). */
+    UI_WEDGE_END_TIMER,
 } ui_wedge_type_t;
 
 typedef struct {

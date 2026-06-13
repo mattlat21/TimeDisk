@@ -2,8 +2,9 @@
  * @file app_nvs.h
  * @brief NVS persistence for app_config_t (namespace timedisk_cfg).
  *
- * Key layout and defaults match docs/data_model.md. Runtime state (app_runtime_t)
- * is never stored here.
+ * Key layout and defaults match docs/data_model.md. Schedule durations and UTC
+ * checkpoint end times are stored here; volatile countdown state is in RAM unless
+ * restored via app_checkpoint after SNTP.
  */
 
 #pragma once
@@ -11,12 +12,13 @@
 #include <esp_err.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <time.h>
 
 /** NVS namespace for persisted settings. */
 #define APP_NVS_NAMESPACE "timedisk_cfg"
 
 /** Schema version written on save; bump when keys or semantics change. */
-#define APP_NVS_CFG_VERSION 3
+#define APP_NVS_CFG_VERSION 4
 
 /** Number of timer styles (ring, water). */
 #define APP_TIMER_STYLE_COUNT 2
@@ -50,3 +52,9 @@ esp_err_t app_nvs_erase_all(void);
 
 /** True if cfg_ver exists in NVS (device has been saved at least once). */
 bool app_nvs_has_stored_config(void);
+
+/** UTC epoch end times for cycle/timer recovery (schema v4). */
+esp_err_t app_nvs_checkpoint_load(time_t *winddown_end, time_t *sleep_end,
+                                  time_t *rest_end, time_t *timer_start, time_t *timer_end);
+esp_err_t app_nvs_checkpoint_save_cycle(time_t winddown_end, time_t sleep_end, time_t rest_end);
+esp_err_t app_nvs_checkpoint_save_timer(time_t timer_start, time_t timer_end);

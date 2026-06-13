@@ -13,6 +13,7 @@
 #include "ui_nav.h"
 #include "app_config.h"
 #include "app_time.h"
+#include "app_time.h"
 #include "timezone_catalog.h"
 #include <stdio.h>
 #include <string.h>
@@ -138,7 +139,7 @@ static void next_cb(lv_event_t *e)
     cfg->timezone_set = true;
     app_time_apply_timezone_id(tz_id);
     app_config_save_timezone();
-    ui_nav_go(UI_SCREEN_TOD_BRIGHT);
+    ui_nav_go(mode_engine_restore_from_nvs());
 }
 
 void ui_screen_startup_timezone_wizard_build(lv_obj_t *screens[UI_SCREEN_COUNT])

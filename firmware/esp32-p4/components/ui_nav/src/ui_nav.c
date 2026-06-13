@@ -7,6 +7,7 @@
 #include "ui_screens_registry.h"
 #include "ui_theme.h"
 #include "app_config.h"
+#include "app_checkpoint.h"
 #include "app_nvs.h"
 #include "app_time.h"
 #include "app_network.h"
@@ -19,6 +20,7 @@
 #include <esp_random.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 static const char *TAG = "ui_nav";
 
@@ -598,6 +600,8 @@ static void mode_engine_advance_if_expired(void)
         return;
     }
 
+    const bool cycle_was_active = rt->cycle_active;
+
     switch (rt->current_mode) {
     case APP_MODE_WAKE:
         if (cfg->wind_down_sec > 0) {
@@ -642,6 +646,10 @@ static void mode_engine_advance_if_expired(void)
         break;
     }
 
+    if (cycle_was_active && !rt->cycle_active) {
+        app_checkpoint_clear_cycle();
+    }
+
     mode_engine_refresh_tod_if_visible();
     notify_mqtt_status();
 }
@@ -649,6 +657,14 @@ static void mode_engine_advance_if_expired(void)
 void mode_engine_start_cycle(void)
 {
     app_runtime_t *rt = app_runtime_get();
+    app_config_t *cfg = app_config_get();
+
+    if (rt->time_valid) {
+        app_checkpoint_start_cycle(time(NULL),
+                                   cfg->wind_down_sec,
+                                   cfg->sleep_sec,
+                                   cfg->rest_sec);
+    }
 
     rt->cycle_active = true;
     rt->current_mode = APP_MODE_WAKE;
@@ -662,10 +678,36 @@ void mode_engine_switch_to_wake(void)
 {
     app_runtime_t *rt = app_runtime_get();
 
+    app_checkpoint_clear_cycle();
     rt->cycle_active = false;
     rt->current_mode = APP_MODE_WAKE;
     rt->mode_remaining_sec = 0;
     notify_mqtt_status();
+}
+
+ui_screen_id_t mode_engine_restore_from_nvs(void)
+{
+    app_runtime_t *rt = app_runtime_get();
+    if (!rt->time_valid) {
+        return UI_SCREEN_TOD_BRIGHT;
+    }
+
+    esp_err_t err = app_checkpoint_apply_to_runtime(time(NULL));
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "checkpoint restore: %s", esp_err_to_name(err));
+        return UI_SCREEN_TOD_BRIGHT;
+    }
+
+    if (rt->timer_running) {
+        notify_mqtt_status();
+        return UI_SCREEN_TIMER_BRIGHT;
+    }
+
+    if (rt->cycle_active) {
+        mode_engine_refresh_tod_if_visible();
+    }
+    notify_mqtt_status();
+    return UI_SCREEN_TOD_BRIGHT;
 }
 
 void ui_nav_mqtt_start_sleep_cycle(void)
@@ -716,6 +758,13 @@ void ui_nav_mqtt_start_timer(uint32_t duration_sec, uint8_t style_id)
     rt->active_timer_anim_start_ms = now_ms();
     rt->timer_running = true;
     ui_screen_timer_set_running(true);
+    if (rt->time_valid) {
+        const time_t start = time(NULL);
+        const time_t end = start + (time_t)duration_sec;
+        rt->active_timer_start_utc = start;
+        rt->active_timer_end_utc = end;
+        app_checkpoint_set_timer(start, end);
+    }
     ui_nav_go(UI_SCREEN_TIMER_BRIGHT);
     notify_mqtt_status();
 }
@@ -723,9 +772,14 @@ void ui_nav_mqtt_start_timer(uint32_t duration_sec, uint8_t style_id)
 void ui_nav_mqtt_cancel_timer(void)
 {
     app_runtime_t *rt = app_runtime_get();
+    if (rt->time_valid) {
+        app_checkpoint_cancel_timer(time(NULL));
+    }
     rt->timer_running = false;
     rt->active_timer_remaining_sec = 0;
     rt->active_timer_total_sec = 0;
+    rt->active_timer_start_utc = 0;
+    rt->active_timer_end_utc = 0;
     rt->active_timer_anim_start_ms = 0;
     ui_screen_timer_set_running(false);
     if (s_current == UI_SCREEN_TIMER_BRIGHT || s_current == UI_SCREEN_TIMER_DIM ||
@@ -774,7 +828,7 @@ static void loading_boot_async_cb(void *user_data)
             ui_nav_go(UI_SCREEN_STARTUP_TIMEZONE);
         } else {
             app_time_apply_from_config();
-            ui_nav_go(UI_SCREEN_TOD_BRIGHT);
+            ui_nav_go(mode_engine_restore_from_nvs());
         }
     } else if (app_network_setup_ap_active()) {
         ui_nav_go(UI_SCREEN_TOD_BRIGHT);
@@ -847,6 +901,7 @@ static void tick_timer_cb(lv_timer_t *t)
     ui_screen_timer_tick();
 
     if (rt->active_timer_remaining_sec == 0) {
+        app_checkpoint_clear_timer();
         ui_screen_timer_set_running(false);
         ui_nav_go(UI_SCREEN_TIMER_TRIGGERED);
     }

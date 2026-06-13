@@ -290,14 +290,21 @@ Full behaviour: [adult_authentication.md](adult_authentication.md).
 | `mqtt_port` | uint16 | — | yes | `1883` | MQTT broker |
 | `mqtt_username` | string | — | yes | `""` | MQTT auth |
 | `mqtt_password` | string | — | yes | `""` | MQTT auth |
+| `cyc_winddn_end` | int64 (UTC epoch) | s | yes | `0` | Cycle recovery; wind-down phase end (`0` = skipped) |
+| `cyc_sleep_end` | int64 (UTC epoch) | s | yes | `0` | Cycle recovery; sleep phase end |
+| `cyc_rest_end` | int64 (UTC epoch) | s | yes | `0` | Cycle recovery; rest phase end |
+| `timer_start` | int64 (UTC epoch) | s | yes | `0` | Standalone timer start time |
+| `timer_end` | int64 (UTC epoch) | s | yes | `0` | Standalone timer fire time |
 
-NVS schema version **3** adds MQTT keys. Device ID for topics is MAC-derived (`timedisk-XXXXXXXXXXXX`); not stored in NVS. Protocol: [mqtt_protocol.md](mqtt_protocol.md).
+NVS schema version **4** adds UTC checkpoint keys (`cyc_winddn_end`, `cyc_sleep_end`, `cyc_rest_end`, `timer_start`, `timer_end`) for crash recovery. Logical field `winddown_end` maps to NVS key `cyc_winddn_end` (15-character NVS limit). Version **3** added MQTT keys. Device ID for topics is MAC-derived (`timedisk-XXXXXXXXXXXX`); not stored in NVS. Protocol: [mqtt_protocol.md](mqtt_protocol.md).
+
+Checkpoint read/write and status inference: `app_checkpoint.h`. After SNTP, `app_checkpoint_apply_to_runtime()` restores mode/timer RAM from stored end times. Settings → **Live Timer Values** shows stored ends and inferred status for debugging.
 
 ---
 
 ## Runtime state (RAM)
 
-Not persisted unless noted. Reset on reboot; mode schedule reloads from NVS.
+Reset on reboot except where checkpoint recovery applies after SNTP (`app_checkpoint_apply_to_runtime`).
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -307,6 +314,9 @@ Not persisted unless noted. Reset on reboot; mode schedule reloads from NVS.
 | `time_valid` | bool | System time obtained from NTP |
 | `display_brightness` | uint8 | Current backlight level (bright vs dim) |
 | `active_timer_remaining_sec` | uint32 | Standalone timer countdown; `0` when no timer running |
+| `active_timer_total_sec` | uint32 | Configured or inferred timer duration for display |
+| `active_timer_start_utc` | int64 (UTC epoch) | Timer start; drives ring/water progress with `active_timer_end_utc` |
+| `active_timer_end_utc` | int64 (UTC epoch) | Timer fire time; persisted as `timer_end` |
 | `timer_running` | bool | Standalone timer active |
 | `aa_session` | struct | See [adult_authentication.md](adult_authentication.md) |
 

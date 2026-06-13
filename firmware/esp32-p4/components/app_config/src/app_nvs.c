@@ -46,6 +46,11 @@ static const char *TAG = "app_nvs";
 #define KEY_MQTT_PORT           "mqtt_port"    /* uint16 mqtt_port */
 #define KEY_MQTT_USER           "mqtt_user"    /* string mqtt_username */
 #define KEY_MQTT_PASS           "mqtt_pass"    /* string mqtt_password */
+#define KEY_CYC_WINDDN_END      "cyc_winddn_end" /* int64 winddown_end UTC */
+#define KEY_CYC_SLEEP_END       "cyc_sleep_end"  /* int64 sleep_end UTC */
+#define KEY_CYC_REST_END        "cyc_rest_end"   /* int64 rest_end UTC */
+#define KEY_TIMER_START         "timer_start"    /* int64 timer_start UTC */
+#define KEY_TIMER_END           "timer_end"      /* int64 timer_end UTC */
 
 static esp_err_t open_rw(nvs_handle_t *out)
 {
@@ -104,6 +109,21 @@ static esp_err_t set_u8(nvs_handle_t h, const char *key, uint8_t val)
 static esp_err_t get_u8(nvs_handle_t h, const char *key, uint8_t *val, uint8_t default_val)
 {
     esp_err_t err = nvs_get_u8(h, key, val);
+    if (err == ESP_ERR_NVS_NOT_FOUND) {
+        *val = default_val;
+        return ESP_OK;
+    }
+    return err;
+}
+
+static esp_err_t set_i64(nvs_handle_t h, const char *key, int64_t val)
+{
+    return nvs_set_i64(h, key, val);
+}
+
+static esp_err_t get_i64(nvs_handle_t h, const char *key, int64_t *val, int64_t default_val)
+{
+    esp_err_t err = nvs_get_i64(h, key, val);
     if (err == ESP_ERR_NVS_NOT_FOUND) {
         *val = default_val;
         return ESP_OK;
@@ -300,7 +320,7 @@ esp_err_t app_nvs_load(void)
         nvs_close(h);
         return err;
     }
-    if (cfg_ver != APP_NVS_CFG_VERSION && cfg_ver != 1) {
+    if (cfg_ver != APP_NVS_CFG_VERSION && cfg_ver != 3 && cfg_ver != 1) {
         ESP_LOGW(TAG, "cfg_ver %lu unsupported, using defaults",
                  (unsigned long)cfg_ver);
         nvs_close(h);
@@ -747,6 +767,92 @@ out:
     } else {
         ESP_LOGE(TAG, "save all failed: %s", esp_err_to_name(err));
     }
+    return err;
+}
+
+esp_err_t app_nvs_checkpoint_load(time_t *winddown_end, time_t *sleep_end,
+                                  time_t *rest_end, time_t *timer_start, time_t *timer_end)
+{
+    if (winddown_end == NULL || sleep_end == NULL || rest_end == NULL ||
+        timer_start == NULL || timer_end == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    nvs_handle_t h;
+    esp_err_t err = open_ro(&h);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    int64_t v = 0;
+    err = get_i64(h, KEY_CYC_WINDDN_END, &v, 0);
+    if (err == ESP_OK) {
+        *winddown_end = (time_t)v;
+        err = get_i64(h, KEY_CYC_SLEEP_END, &v, 0);
+    }
+    if (err == ESP_OK) {
+        *sleep_end = (time_t)v;
+        err = get_i64(h, KEY_CYC_REST_END, &v, 0);
+    }
+    if (err == ESP_OK) {
+        *rest_end = (time_t)v;
+        err = get_i64(h, KEY_TIMER_START, &v, 0);
+    }
+    if (err == ESP_OK) {
+        *timer_start = (time_t)v;
+        err = get_i64(h, KEY_TIMER_END, &v, 0);
+    }
+    if (err == ESP_OK) {
+        *timer_end = (time_t)v;
+    }
+
+    nvs_close(h);
+    return err;
+}
+
+esp_err_t app_nvs_checkpoint_save_cycle(time_t winddown_end, time_t sleep_end, time_t rest_end)
+{
+    nvs_handle_t h;
+    esp_err_t err = open_rw(&h);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    if ((err = set_i64(h, KEY_CYC_WINDDN_END, (int64_t)winddown_end)) != ESP_OK ||
+        (err = set_i64(h, KEY_CYC_SLEEP_END, (int64_t)sleep_end)) != ESP_OK ||
+        (err = set_i64(h, KEY_CYC_REST_END, (int64_t)rest_end)) != ESP_OK) {
+        nvs_close(h);
+        return err;
+    }
+
+    err = touch_cfg_ver(h);
+    if (err == ESP_OK) {
+        err = commit(h);
+    }
+    nvs_close(h);
+    return err;
+}
+
+esp_err_t app_nvs_checkpoint_save_timer(time_t timer_start, time_t timer_end)
+{
+    nvs_handle_t h;
+    esp_err_t err = open_rw(&h);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    if ((err = set_i64(h, KEY_TIMER_START, (int64_t)timer_start)) != ESP_OK ||
+        (err = set_i64(h, KEY_TIMER_END, (int64_t)timer_end)) != ESP_OK) {
+        nvs_close(h);
+        return err;
+    }
+    if (err == ESP_OK) {
+        err = touch_cfg_ver(h);
+    }
+    if (err == ESP_OK) {
+        err = commit(h);
+    }
+    nvs_close(h);
     return err;
 }
 

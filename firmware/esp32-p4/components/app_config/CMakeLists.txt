@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "src/app_config.c" "src/app_nvs.c" "src/app_version.c"
+    SRCS "src/app_config.c" "src/app_nvs.c" "src/app_version.c" "src/app_checkpoint.c"
     INCLUDE_DIRS "include"
     REQUIRES nvs_flash
 )

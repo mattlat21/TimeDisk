@@ -62,6 +62,11 @@ lv_obj_t *ui_settings_update_build(void);
 void ui_settings_update_sync_from_draft(void);
 void ui_settings_update_apply_theme(void);
 
+lv_obj_t *ui_settings_live_timer_build(void);
+void ui_settings_live_timer_on_show(void);
+void ui_settings_live_timer_on_hide(void);
+void ui_settings_live_timer_apply_theme(void);
+
 lv_obj_t *ui_settings_screen(void)
 {
     return s_scr;
@@ -101,6 +106,7 @@ static ui_wedge_t *s_hub_cancel_wedge;
 static lv_obj_t *s_hub_web_lbl;
 static ui_wedge_t *s_panel_cancel_wedge[PANEL_COUNT];
 static ui_wedge_t *s_panel_save_wedge[PANEL_COUNT];
+static settings_panel_t s_visible_panel = PANEL_HUB;
 
 static void show_panel(settings_panel_t panel);
 void ui_settings_show_panel(settings_panel_t panel);
@@ -261,6 +267,13 @@ static void settings_wedges_show_for_panel(settings_panel_t panel)
         return;
     }
 
+    if (panel == PANEL_LIVE_TIMER) {
+        if (s_panel_cancel_wedge[panel] != NULL) {
+            ui_wedge_set_visible(s_panel_cancel_wedge[panel], true);
+        }
+        return;
+    }
+
     if (s_panel_cancel_wedge[panel] != NULL) {
         ui_wedge_set_visible(s_panel_cancel_wedge[panel], true);
     }
@@ -302,6 +315,10 @@ void ui_settings_set_panel_wedges_visible(settings_panel_t panel, bool visible)
 
 static void show_panel(settings_panel_t panel)
 {
+    if (s_visible_panel == PANEL_LIVE_TIMER && panel != PANEL_LIVE_TIMER) {
+        ui_settings_live_timer_on_hide();
+    }
+
     for (int i = 0; i < PANEL_COUNT; i++) {
         if (s_panels[i] != NULL) {
             lv_obj_add_flag(s_panels[i], LV_OBJ_FLAG_HIDDEN);
@@ -341,9 +358,14 @@ static void show_panel(settings_panel_t panel)
     case PANEL_UPDATE:
         ui_settings_update_sync_from_draft();
         break;
+    case PANEL_LIVE_TIMER:
+        ui_settings_live_timer_on_show();
+        break;
     default:
         break;
     }
+
+    s_visible_panel = panel;
 }
 
 void ui_settings_show_panel(settings_panel_t panel)
@@ -465,6 +487,7 @@ static void build_hub_panel(void)
         "Adult Auth",
         "MQTT",
         "Update",
+        "Live Timer\nValues",
     };
 
     static const settings_panel_t panel_targets[] = {
@@ -476,6 +499,7 @@ static void build_hub_panel(void)
         PANEL_AA,
         PANEL_MQTT,
         PANEL_UPDATE,
+        PANEL_LIVE_TIMER,
     };
 
     const int hub_btn_count = (int)(sizeof(labels) / sizeof(labels[0]));
@@ -515,6 +539,7 @@ void ui_screen_settings_build(lv_obj_t *screens[UI_SCREEN_COUNT])
     s_panels[PANEL_AA] = ui_settings_adult_auth_build();
     s_panels[PANEL_MQTT] = ui_settings_mqtt_build();
     s_panels[PANEL_UPDATE] = ui_settings_update_build();
+    s_panels[PANEL_LIVE_TIMER] = ui_settings_live_timer_build();
 
     show_panel(PANEL_HUB);
 }
@@ -562,4 +587,5 @@ void ui_screen_settings_apply_theme(void)
     ui_settings_timezone_apply_theme();
     ui_settings_mqtt_apply_theme();
     ui_settings_update_apply_theme();
+    ui_settings_live_timer_apply_theme();
 }
