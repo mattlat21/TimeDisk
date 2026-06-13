@@ -5,8 +5,7 @@ firmware/esp32-p4/managed_components/
 firmware/esp32-p4/.venv-assets/
 firmware/esp32-p4/spiffs_image/
 
-# Release binaries and deploy secrets
-binaries/
+# Deploy secrets
 .env
 scripts/deploy_timedisk_to_ha.env
 
