@@ -101,7 +101,7 @@ static void layout_ampm(tod_clock_t *clock)
     const int32_t gap = 18;
 
     /* HM uses 2x scale from center; visual bounds extend hm_w/2 past layout edges. */
-    lv_obj_align_to(clock->ampm, clock->hm, LV_ALIGN_OUT_RIGHT_BOTTOM, hm_w / 2 + gap, hm_h / 2);
+    lv_obj_align_to(clock->ampm, clock->hm, LV_ALIGN_OUT_RIGHT_BOTTOM, hm_w / 2 + gap, hm_h / 2 - 12);
 }
 
 static void create_clock(lv_obj_t *scr, tod_clock_t *clock)

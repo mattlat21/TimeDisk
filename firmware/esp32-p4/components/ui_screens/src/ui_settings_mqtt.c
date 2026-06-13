@@ -18,9 +18,9 @@
 #define MQTT_ROW_W           400
 #define MQTT_ROW_H           52
 #define MQTT_ROW_GAP         8
-#define MQTT_ROW_Y0_WF       130
-#define MQTT_DEVICE_Y_WF     95
-#define MQTT_CHK_Y_WF        72
+#define MQTT_ROW_Y0_WF       175
+#define MQTT_DEVICE_Y_WF     145
+#define MQTT_CHK_Y_WF        108
 
 typedef enum {
     MQTT_FIELD_HOST = 0,

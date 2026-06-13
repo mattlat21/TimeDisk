@@ -15,7 +15,8 @@
 #include <time.h>
 
 #define LIVE_ROW_COUNT  16
-#define LIVE_ROW_Y0_WF  90
+#define LIVE_ROW_Y0_WF  140
+#define LIVE_ROW_X_WF   150
 #define LIVE_ROW_STEP   28
 #define LIVE_LABEL_W    560
 
@@ -163,7 +164,8 @@ lv_obj_t *ui_settings_live_timer_build(void)
         lv_obj_set_style_text_color(s_rows[i], t->white, 0);
         lv_obj_set_style_text_font(s_rows[i], &lv_font_montserrat_14, 0);
         lv_obj_set_width(s_rows[i], LIVE_LABEL_W);
-        lv_obj_align(s_rows[i], LV_ALIGN_TOP_MID, 0, ui_settings_wf_y(s_panel, LIVE_ROW_Y0_WF + i * LIVE_ROW_STEP));
+        lv_obj_set_pos(s_rows[i], ui_settings_wf_x(s_panel, LIVE_ROW_X_WF),
+                       ui_settings_wf_y(s_panel, LIVE_ROW_Y0_WF + i * LIVE_ROW_STEP));
     }
 
     ui_settings_attach_panel_wedges(s_panel, PANEL_LIVE_TIMER, live_timer_noop_save_cb);

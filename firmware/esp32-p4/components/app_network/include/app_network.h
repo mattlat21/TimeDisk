@@ -97,3 +97,9 @@ bool app_network_web_ui_active(void);
  * @return true if the device currently has an IP address.
  */
 bool app_network_get_device_ip(char *out, size_t out_len);
+
+/**
+ * Write the connected STA SSID into @p out when Wi-Fi has an IP address.
+ * @return true if connected and SSID is known.
+ */
+bool app_network_get_connected_ssid(char *out, size_t out_len);

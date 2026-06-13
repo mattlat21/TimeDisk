@@ -217,6 +217,36 @@ bool app_network_get_device_ip(char *out, size_t out_len)
     return netif_ip_to_str(sta, out, out_len);
 }
 
+bool app_network_get_connected_ssid(char *out, size_t out_len)
+{
+    if (out == NULL || out_len == 0) {
+        return false;
+    }
+    out[0] = '\0';
+
+    if (app_network_setup_ap_active()) {
+        return false;
+    }
+
+    esp_netif_t *sta = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+    if (sta == NULL) {
+        return false;
+    }
+
+    esp_netif_ip_info_t ip = {0};
+    if (esp_netif_get_ip_info(sta, &ip) != ESP_OK || ip.ip.addr == 0) {
+        return false;
+    }
+
+    wifi_ap_record_t ap = {0};
+    if (esp_wifi_sta_get_ap_info(&ap) != ESP_OK) {
+        return false;
+    }
+
+    snprintf(out, out_len, "%s", (const char *)ap.ssid);
+    return out[0] != '\0';
+}
+
 static bool wifi_already_connected(const char *ssid)
 {
     esp_netif_t *sta = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
