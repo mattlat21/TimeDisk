@@ -84,3 +84,13 @@ void mode_engine_start_cycle(void);
 
 /** Stop the automatic cycle and return to Wake mode. */
 void mode_engine_switch_to_wake(void);
+
+/** Optional hook for MQTT status publish (registered by app_mqtt_init). */
+void ui_nav_set_mqtt_status_hook(void (*hook)(void));
+
+/** Remote MQTT command handlers (LVGL thread only). */
+void ui_nav_mqtt_start_sleep_cycle(void);
+void ui_nav_mqtt_start_rest_cycle(void);
+void ui_nav_mqtt_end_cycle(void);
+void ui_nav_mqtt_start_timer(uint32_t duration_sec, uint8_t style_id);
+void ui_nav_mqtt_cancel_timer(void);

@@ -5,6 +5,7 @@
 
 #include "app_config.h"
 #include <esp_log.h>
+#include <esp_mac.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -12,6 +13,27 @@ static const char *TAG = "app_config";
 
 static app_config_t s_cfg;
 static app_runtime_t s_rt;
+static void (*s_mqtt_saved_hook)(void);
+
+void app_config_set_mqtt_saved_hook(void (*hook)(void))
+{
+    s_mqtt_saved_hook = hook;
+}
+
+bool app_config_get_device_id(char *out, size_t out_len)
+{
+    uint8_t mac[6];
+
+    if (out == NULL || out_len == 0) {
+        return false;
+    }
+    if (esp_read_mac(mac, ESP_MAC_WIFI_STA) != ESP_OK) {
+        esp_read_mac(mac, ESP_MAC_ETH);
+    }
+    snprintf(out, out_len, "timedisk-%02X%02X%02X%02X%02X%02X",
+             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    return true;
+}
 
 void app_config_apply_defaults(void)
 {
@@ -38,6 +60,12 @@ void app_config_apply_defaults(void)
 
     s_cfg.aa_methods = 0x00;
     snprintf(s_cfg.aa_pin, sizeof(s_cfg.aa_pin), "%s", "0000");
+
+    s_cfg.mqtt_enabled = false;
+    s_cfg.mqtt_host[0] = '\0';
+    s_cfg.mqtt_port = 1883;
+    s_cfg.mqtt_username[0] = '\0';
+    s_cfg.mqtt_password[0] = '\0';
 
     s_cfg.wifi_network_count = 0;
     s_cfg.timezone_set = false;
@@ -180,4 +208,13 @@ bool app_config_timezone_unset(void)
 bool app_config_theme_unset(void)
 {
     return !s_cfg.theme_set;
+}
+
+esp_err_t app_config_save_mqtt(void)
+{
+    esp_err_t err = app_nvs_save_mqtt();
+    if (err == ESP_OK && s_mqtt_saved_hook != NULL) {
+        s_mqtt_saved_hook();
+    }
+    return err;
 }

@@ -8,6 +8,7 @@ firmware/esp32-p4/spiffs_image/
 # Release binaries and deploy secrets
 binaries/
 .env
+scripts/deploy_timedisk_to_ha.env
 
 # SDK configuration backup (menuconfig)
 sdkconfig.old

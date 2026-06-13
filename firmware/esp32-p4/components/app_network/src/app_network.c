@@ -41,6 +41,8 @@ static char s_status[64];
 
 static app_network_boot_done_cb_t s_boot_done_cb;
 static void *s_boot_done_ctx;
+static app_network_state_cb_t s_state_cb;
+static void *s_state_cb_ctx;
 
 void app_network_set_boot_done_callback(app_network_boot_done_cb_t cb, void *user_data)
 {
@@ -48,11 +50,20 @@ void app_network_set_boot_done_callback(app_network_boot_done_cb_t cb, void *use
     s_boot_done_ctx = user_data;
 }
 
+void app_network_set_state_callback(app_network_state_cb_t cb, void *user_data)
+{
+    s_state_cb = cb;
+    s_state_cb_ctx = user_data;
+}
+
 static void set_state(app_network_state_t st, const char *status)
 {
     s_state = st;
     if (status != NULL) {
         snprintf(s_status, sizeof(s_status), "%s", status);
+    }
+    if (s_state_cb != NULL) {
+        s_state_cb(st, s_state_cb_ctx);
     }
 }
 

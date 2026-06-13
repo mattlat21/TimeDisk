@@ -26,7 +26,12 @@ typedef enum {
 /** Called on the boot-sync task when connect + SNTP finish (success or failure). */
 typedef void (*app_network_boot_done_cb_t)(bool time_ok, void *user_data);
 
+/** Called when network state changes (e.g. MQTT reconnect on READY). */
+typedef void (*app_network_state_cb_t)(app_network_state_t state, void *user_data);
+
 void app_network_set_boot_done_callback(app_network_boot_done_cb_t cb, void *user_data);
+
+void app_network_set_state_callback(app_network_state_cb_t cb, void *user_data);
 
 /**
  * Initialise esp_netif, event loop, and WiFi driver (safe to call once at boot).

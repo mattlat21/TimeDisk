@@ -79,7 +79,7 @@ flowchart TB
 
     nvs[(NVS timedisk_cfg)]
 
-    settings -->|"theme timeouts aa_methods aa_pin network"| nvs
+    settings -->|"theme timeouts aa_methods aa_pin network mqtt"| nvs
     sleepWizard -->|"wind_down_sec sleep_sec rest_sec"| nvs
     restWizard -->|"wind_down_sec rest_sec sleep_sec=0"| nvs
     timerSetup -->|"timer_duration_sec timer_style_id"| nvs
@@ -152,3 +152,34 @@ Independent of mode engine unless a future policy forbids overlap.
 | AA module | Navigation | pass / fail / timeout | Session end |
 
 Detail: [adult_authentication.md](adult_authentication.md).
+
+---
+
+## 6. MQTT (Home Assistant)
+
+```mermaid
+flowchart LR
+    nvs[(NVS)]
+    mqtt[app_mqtt]
+    broker[MQTT broker]
+    ha[HA timedisk integration]
+    nav[ui_nav mode engine]
+
+    nvs -->|"mqtt_* settings"| mqtt
+    mqtt -->|"status JSON retain"| broker
+    broker -->|"status availability"| ha
+    ha -->|"config/set command"| broker
+    broker --> mqtt
+    mqtt -->|"lv_async_call"| nav
+    nav -->|"runtime changes"| mqtt
+```
+
+| From | To | Data | Trigger |
+| ---- | -- | ---- | ------- |
+| NVS | `app_mqtt` | `mqtt_enabled`, `mqtt_host`, `mqtt_port`, credentials | Boot, settings save |
+| Runtime + NVS | Broker | `timedisk/<id>/status` (passwords masked) | Connect, 30 s, debounced change |
+| HA / MQTT | NVS | partial config via `config/set` | Remote write |
+| HA / MQTT | UI | `command` actions (cycles, timer) | Button or automation |
+| `app_network` | `app_mqtt` | network `READY` | Reconnect |
+
+Protocol reference: [mqtt_protocol.md](mqtt_protocol.md). HA install: [integrations/home-assistant/README.md](../integrations/home-assistant/README.md).

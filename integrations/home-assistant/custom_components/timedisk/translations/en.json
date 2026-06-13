@@ -1,0 +1,26 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "TimeDisk",
+        "description": "Enter the device ID (e.g. timedisk-AABBCCDDEEFF) or wait for discovery.",
+        "data": {
+          "device_id": "Device ID"
+        }
+      },
+      "discover": {
+        "title": "Discovered TimeDisk",
+        "description": "Select a TimeDisk device found on MQTT.",
+        "data": {
+          "device_id": "Device"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Device is already configured"
+    },
+    "error": {
+      "mqtt_not_connected": "MQTT is not connected. Configure the MQTT integration first."
+    }
+  }
+}

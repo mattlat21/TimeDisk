@@ -155,6 +155,7 @@ static void apply_editor_constraints(int idx)
     switch (idx) {
     case 0:
         dcfg->min_sec = UI_DURATION_EDITOR_STEP_SEC;
+        dcfg->max_sec = UI_SCHEDULE_REST_MAX_SEC;
         break;
     case 1:
         dcfg->end_time_offset_sec = s_wizard_vals[0];
@@ -411,9 +412,9 @@ static void build_wizard_screen(lv_obj_t *screens[UI_SCREEN_COUNT], ui_screen_id
 
 void ui_screen_schedule_build(lv_obj_t *screens[UI_SCREEN_COUNT])
 {
-    build_wizard_screen(screens, UI_SCREEN_SLEEP_WAKE, s_sleep_title, s_sleep_subtitles_duration[0], false, 0);
-    build_wizard_screen(screens, UI_SCREEN_SLEEP_REST_END, s_sleep_title, s_sleep_subtitles_duration[1], false, 1);
-    build_wizard_screen(screens, UI_SCREEN_SLEEP_WIND_DOWN, s_sleep_title, s_sleep_subtitles_duration[2], false, 2);
+    build_wizard_screen(screens, UI_SCREEN_SLEEP_WAKE, s_sleep_title, s_sleep_subtitles[0], true, 0);
+    build_wizard_screen(screens, UI_SCREEN_SLEEP_REST_END, s_sleep_title, s_sleep_subtitles[1], true, 1);
+    build_wizard_screen(screens, UI_SCREEN_SLEEP_WIND_DOWN, s_sleep_title, s_sleep_subtitles[2], true, 2);
     build_wizard_screen(screens, UI_SCREEN_REST_REST_END, s_rest_titles[0], s_rest_subtitles[0], true, 3);
     build_wizard_screen(screens, UI_SCREEN_REST_WIND_DOWN, s_rest_titles[1], s_rest_subtitles[1], true, 4);
 }

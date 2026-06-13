@@ -7,6 +7,7 @@
 #include "ui_screens_registry.h"
 #include "ui_theme.h"
 #include "app_config.h"
+#include "app_nvs.h"
 #include "app_time.h"
 #include "app_network.h"
 #include "bsp/esp-bsp.h"
@@ -58,6 +59,12 @@ typedef struct {
 
 static tod_fade_t s_tod_fade;
 static uint32_t s_last_backlight_duty = UINT32_MAX;
+static void (*s_mqtt_status_hook)(void);
+static app_mode_t s_mqtt_last_mode = APP_MODE_WAKE;
+static uint32_t s_mqtt_last_mode_rem;
+static bool s_mqtt_last_cycle;
+static bool s_mqtt_last_timer;
+static uint32_t s_mqtt_last_timer_rem;
 
 static void idle_timer_cb(lv_timer_t *t);
 static void on_enter(ui_screen_id_t screen);
@@ -541,6 +548,38 @@ void ui_nav_aa_cancel(void)
     ui_nav_go(dest);
 }
 
+void ui_nav_set_mqtt_status_hook(void (*hook)(void))
+{
+    s_mqtt_status_hook = hook;
+}
+
+static void notify_mqtt_status(void)
+{
+    if (s_mqtt_status_hook != NULL) {
+        s_mqtt_status_hook();
+    }
+}
+
+static void mqtt_track_runtime_snapshot(void)
+{
+    app_runtime_t *rt = app_runtime_get();
+    bool changed = (rt->current_mode != s_mqtt_last_mode) ||
+                   (rt->mode_remaining_sec != s_mqtt_last_mode_rem) ||
+                   (rt->cycle_active != s_mqtt_last_cycle) ||
+                   (rt->timer_running != s_mqtt_last_timer) ||
+                   (rt->active_timer_remaining_sec != s_mqtt_last_timer_rem);
+
+    s_mqtt_last_mode = rt->current_mode;
+    s_mqtt_last_mode_rem = rt->mode_remaining_sec;
+    s_mqtt_last_cycle = rt->cycle_active;
+    s_mqtt_last_timer = rt->timer_running;
+    s_mqtt_last_timer_rem = rt->active_timer_remaining_sec;
+
+    if (changed) {
+        notify_mqtt_status();
+    }
+}
+
 static void mode_engine_refresh_tod_if_visible(void)
 {
     if (!s_tod_fade.active &&
@@ -604,6 +643,7 @@ static void mode_engine_advance_if_expired(void)
     }
 
     mode_engine_refresh_tod_if_visible();
+    notify_mqtt_status();
 }
 
 void mode_engine_start_cycle(void)
@@ -615,6 +655,7 @@ void mode_engine_start_cycle(void)
     rt->mode_remaining_sec = 0;
     /* Skip the transient Wake frame before TOD loads (mode_flow.md auto-advance). */
     mode_engine_advance_if_expired();
+    notify_mqtt_status();
 }
 
 void mode_engine_switch_to_wake(void)
@@ -624,6 +665,74 @@ void mode_engine_switch_to_wake(void)
     rt->cycle_active = false;
     rt->current_mode = APP_MODE_WAKE;
     rt->mode_remaining_sec = 0;
+    notify_mqtt_status();
+}
+
+void ui_nav_mqtt_start_sleep_cycle(void)
+{
+    mode_engine_start_cycle();
+    ui_nav_go(UI_SCREEN_TOD_BRIGHT);
+}
+
+void ui_nav_mqtt_start_rest_cycle(void)
+{
+    app_config_t *cfg = app_config_get();
+    cfg->sleep_sec = 0;
+    app_config_save_schedule();
+    mode_engine_start_cycle();
+    ui_nav_go(UI_SCREEN_TOD_BRIGHT);
+}
+
+void ui_nav_mqtt_end_cycle(void)
+{
+    mode_engine_switch_to_wake();
+    if (s_current == UI_SCREEN_TOD_BRIGHT || s_current == UI_SCREEN_TOD_DIM) {
+        ui_screen_tod_on_show(s_current == UI_SCREEN_TOD_DIM);
+    }
+    notify_mqtt_status();
+}
+
+void ui_nav_mqtt_start_timer(uint32_t duration_sec, uint8_t style_id)
+{
+    app_config_t *cfg = app_config_get();
+    app_runtime_t *rt = app_runtime_get();
+
+    if (duration_sec == 0) {
+        duration_sec = cfg->timer_duration_sec;
+    }
+    if (duration_sec == 0) {
+        return;
+    }
+    if (style_id >= APP_TIMER_STYLE_COUNT) {
+        style_id = 0;
+    }
+
+    cfg->timer_duration_sec = duration_sec;
+    cfg->timer_style_id = style_id;
+    app_config_save_timer();
+
+    rt->active_timer_total_sec = duration_sec;
+    rt->active_timer_remaining_sec = duration_sec;
+    rt->active_timer_anim_start_ms = now_ms();
+    rt->timer_running = true;
+    ui_screen_timer_set_running(true);
+    ui_nav_go(UI_SCREEN_TIMER_BRIGHT);
+    notify_mqtt_status();
+}
+
+void ui_nav_mqtt_cancel_timer(void)
+{
+    app_runtime_t *rt = app_runtime_get();
+    rt->timer_running = false;
+    rt->active_timer_remaining_sec = 0;
+    rt->active_timer_total_sec = 0;
+    rt->active_timer_anim_start_ms = 0;
+    ui_screen_timer_set_running(false);
+    if (s_current == UI_SCREEN_TIMER_BRIGHT || s_current == UI_SCREEN_TIMER_DIM ||
+        s_current == UI_SCREEN_CONFIRM_END_TIMER) {
+        ui_nav_go(UI_SCREEN_MENU);
+    }
+    notify_mqtt_status();
 }
 
 static void mode_engine_tick(void)
@@ -719,6 +828,7 @@ static void tick_timer_cb(lv_timer_t *t)
     }
 
     mode_engine_tick();
+    mqtt_track_runtime_snapshot();
 
     if (s_current == UI_SCREEN_TOD_BRIGHT || s_current == UI_SCREEN_TOD_DIM) {
         ui_screen_tod_tick();

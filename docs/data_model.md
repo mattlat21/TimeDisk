@@ -285,6 +285,13 @@ Full behaviour: [adult_authentication.md](adult_authentication.md).
 | `rest_sec` | uint32 | s | yes | `0` | Mode engine |
 | `aa_methods` | uint8 | bitmask | yes | `0x00` | Adult Authentication |
 | `aa_pin` | string | — | yes | `"0000"` | Adult Authentication |
+| `mqtt_enabled` | bool | — | yes | `false` | MQTT client |
+| `mqtt_host` | string | — | yes | `""` | MQTT broker |
+| `mqtt_port` | uint16 | — | yes | `1883` | MQTT broker |
+| `mqtt_username` | string | — | yes | `""` | MQTT auth |
+| `mqtt_password` | string | — | yes | `""` | MQTT auth |
+
+NVS schema version **3** adds MQTT keys. Device ID for topics is MAC-derived (`timedisk-XXXXXXXXXXXX`); not stored in NVS. Protocol: [mqtt_protocol.md](mqtt_protocol.md).
 
 ---
 

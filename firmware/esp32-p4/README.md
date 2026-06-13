@@ -24,12 +24,19 @@ From the repository root:
 | `scripts/upload_firmware.sh` | OTA upload via SFTP (reads `../../.env`) |
 | `scripts/embed_ui_assets.sh` | Regenerate embedded UI assets from `components/ui_assets/assets/` |
 
+## Home Assistant
+
+MQTT is optional. Enable it under **Settings → MQTT** on the device, then use the custom HA integration:
+
+- Protocol: [`docs/mqtt_protocol.md`](../../docs/mqtt_protocol.md)
+- Integration: [`integrations/home-assistant/README.md`](../../integrations/home-assistant/README.md)
+
 ## Layout
 
 ```
 firmware/esp32-p4/
   main/           Application entry
-  components/     IDF components (UI, app logic, BSP extras)
+  components/     IDF components (UI, app logic, app_mqtt, BSP extras)
   cmake/          Firmware version for builds and OTA
   scripts/        Build, asset, and upload helpers
   partitions.csv

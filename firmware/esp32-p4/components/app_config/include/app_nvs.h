@@ -16,7 +16,7 @@
 #define APP_NVS_NAMESPACE "timedisk_cfg"
 
 /** Schema version written on save; bump when keys or semantics change. */
-#define APP_NVS_CFG_VERSION 2
+#define APP_NVS_CFG_VERSION 3
 
 /** Number of timer styles (ring, water). */
 #define APP_TIMER_STYLE_COUNT 2
@@ -43,6 +43,7 @@ esp_err_t app_nvs_save_theme(void);
 esp_err_t app_nvs_save_timer(void);
 esp_err_t app_nvs_save_schedule(void);
 esp_err_t app_nvs_save_aa(void);
+esp_err_t app_nvs_save_mqtt(void);
 
 /** Erase the timedisk_cfg namespace (factory reset of settings). */
 esp_err_t app_nvs_erase_all(void);

@@ -21,6 +21,9 @@
 #define APP_NTP_SERVER_MAX    129
 #define APP_TIMEZONE_ID_MAX   48
 #define APP_AA_PIN_LEN        5
+#define APP_MQTT_HOST_MAX     64
+#define APP_MQTT_USER_MAX     64
+#define APP_MQTT_PASS_MAX     64
 
 /** Bit flags for enabled adult-auth methods (see app_config_t::aa_methods). */
 #define AA_METHOD_PIN   0x01
@@ -73,6 +76,12 @@ typedef struct {
 
     uint8_t aa_methods;
     char aa_pin[APP_AA_PIN_LEN];
+
+    bool mqtt_enabled;
+    char mqtt_host[APP_MQTT_HOST_MAX];
+    uint16_t mqtt_port;
+    char mqtt_username[APP_MQTT_USER_MAX];
+    char mqtt_password[APP_MQTT_PASS_MAX];
 } app_config_t;
 
 /** Volatile runtime state (not persisted across reboot). */
@@ -108,6 +117,12 @@ bool app_config_wifi_ssid_missing(void);
 bool app_config_wifi_password_unset(void);
 bool app_config_timezone_unset(void);
 bool app_config_theme_unset(void);
+
+/** MAC-derived MQTT device id (e.g. timedisk-AABBCCDDEEFF). */
+bool app_config_get_device_id(char *out, size_t out_len);
+
+/** Optional hook after MQTT settings are saved (registered by app_mqtt). */
+void app_config_set_mqtt_saved_hook(void (*hook)(void));
 
 int app_config_wifi_network_count(void);
 const app_wifi_network_t *app_config_wifi_network_get(int index);
@@ -159,6 +174,8 @@ static inline esp_err_t app_config_save_aa(void)
 {
     return app_nvs_save_aa();
 }
+
+esp_err_t app_config_save_mqtt(void);
 
 static inline esp_err_t app_config_erase_nvs(void)
 {

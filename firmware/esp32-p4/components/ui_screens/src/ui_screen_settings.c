@@ -54,6 +54,10 @@ void ui_settings_timeouts_show_list(void);
 lv_obj_t *ui_settings_adult_auth_build(void);
 void ui_settings_adult_auth_sync_from_draft(void);
 
+lv_obj_t *ui_settings_mqtt_build(void);
+void ui_settings_mqtt_sync_from_draft(void);
+void ui_settings_mqtt_apply_theme(void);
+
 lv_obj_t *ui_settings_update_build(void);
 void ui_settings_update_sync_from_draft(void);
 void ui_settings_update_apply_theme(void);
@@ -187,6 +191,14 @@ static void panel_cancel_cb(lv_event_t *e)
         s_draft.aa_methods = s_saved.aa_methods;
         memcpy(s_draft.aa_pin, s_saved.aa_pin, sizeof(s_draft.aa_pin));
         break;
+    case PANEL_MQTT:
+        s_draft.mqtt_enabled = s_saved.mqtt_enabled;
+        snprintf(s_draft.mqtt_host, sizeof(s_draft.mqtt_host), "%s", s_saved.mqtt_host);
+        s_draft.mqtt_port = s_saved.mqtt_port;
+        snprintf(s_draft.mqtt_username, sizeof(s_draft.mqtt_username), "%s", s_saved.mqtt_username);
+        snprintf(s_draft.mqtt_password, sizeof(s_draft.mqtt_password), "%s", s_saved.mqtt_password);
+        ui_settings_mqtt_sync_from_draft();
+        break;
     default:
         break;
     }
@@ -275,6 +287,19 @@ void ui_settings_attach_panel_wedges(lv_obj_t *panel, settings_panel_t panel_id,
     }
 }
 
+void ui_settings_set_panel_wedges_visible(settings_panel_t panel, bool visible)
+{
+    if (panel < 0 || panel >= PANEL_COUNT) {
+        return;
+    }
+    if (s_panel_cancel_wedge[panel] != NULL) {
+        ui_wedge_set_visible(s_panel_cancel_wedge[panel], visible);
+    }
+    if (s_panel_save_wedge[panel] != NULL) {
+        ui_wedge_set_visible(s_panel_save_wedge[panel], visible);
+    }
+}
+
 static void show_panel(settings_panel_t panel)
 {
     for (int i = 0; i < PANEL_COUNT; i++) {
@@ -309,6 +334,9 @@ static void show_panel(settings_panel_t panel)
         break;
     case PANEL_AA:
         ui_settings_adult_auth_sync_from_draft();
+        break;
+    case PANEL_MQTT:
+        ui_settings_mqtt_sync_from_draft();
         break;
     case PANEL_UPDATE:
         ui_settings_update_sync_from_draft();
@@ -435,7 +463,19 @@ static void build_hub_panel(void)
         "Schedule",
         "Timeouts",
         "Adult Auth",
+        "MQTT",
         "Update",
+    };
+
+    static const settings_panel_t panel_targets[] = {
+        PANEL_COLOURS,
+        PANEL_NETWORK,
+        PANEL_TIMEZONE,
+        PANEL_SCHEDULE,
+        PANEL_TIMEOUTS,
+        PANEL_AA,
+        PANEL_MQTT,
+        PANEL_UPDATE,
     };
 
     const int hub_btn_count = (int)(sizeof(labels) / sizeof(labels[0]));
@@ -450,7 +490,7 @@ static void build_hub_panel(void)
         hub_create_btn(s_panels[PANEL_HUB], labels[i],
                        x0_hub + col * (HUB_BTN_W + HUB_BTN_GAP_X),
                        y0_hub + row * (HUB_BTN_H + HUB_BTN_GAP_Y),
-                       (settings_panel_t)(PANEL_COLOURS + i));
+                       panel_targets[i]);
     }
 
     s_hub_cancel_wedge = ui_wedge_create_overlay(s_scr, UI_WEDGE_CANCEL);
@@ -473,6 +513,7 @@ void ui_screen_settings_build(lv_obj_t *screens[UI_SCREEN_COUNT])
     s_panels[PANEL_SCHEDULE] = ui_settings_schedule_build();
     s_panels[PANEL_TIMEOUTS] = ui_settings_timeouts_build();
     s_panels[PANEL_AA] = ui_settings_adult_auth_build();
+    s_panels[PANEL_MQTT] = ui_settings_mqtt_build();
     s_panels[PANEL_UPDATE] = ui_settings_update_build();
 
     show_panel(PANEL_HUB);
@@ -491,6 +532,7 @@ void ui_screen_settings_on_show(void)
     ui_settings_schedule_sync_from_draft();
     ui_settings_timeouts_show_list();
     ui_settings_adult_auth_sync_from_draft();
+    ui_settings_mqtt_sync_from_draft();
 
     ui_settings_refresh_web_ui_label();
     show_panel(PANEL_HUB);
@@ -518,5 +560,6 @@ void ui_screen_settings_apply_theme(void)
     ui_settings_colours_apply_theme();
     ui_settings_network_apply_theme();
     ui_settings_timezone_apply_theme();
+    ui_settings_mqtt_apply_theme();
     ui_settings_update_apply_theme();
 }

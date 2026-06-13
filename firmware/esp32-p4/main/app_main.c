@@ -11,6 +11,7 @@
 #include "ui_assets.h"
 #include "ui_display.h"
 #include "ui_nav.h"
+#include "app_mqtt.h"
 
 static const char *TAG = "app_main";
 
@@ -38,5 +39,6 @@ void app_main(void)
 
     bsp_display_lock(0);
     ui_nav_init();
+    ESP_ERROR_CHECK(app_mqtt_init());
     bsp_display_unlock();
 }

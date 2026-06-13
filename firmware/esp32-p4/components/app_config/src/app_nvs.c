@@ -41,6 +41,11 @@ static const char *TAG = "app_nvs";
 #define KEY_REST                "rest_sec"     /* uint32 rest_sec */
 #define KEY_AA_METHODS          "aa_methods"   /* uint8  aa_methods */
 #define KEY_AA_PIN              "aa_pin"       /* string aa_pin */
+#define KEY_MQTT_EN             "mqtt_en"      /* uint8  mqtt_enabled */
+#define KEY_MQTT_HOST           "mqtt_host"    /* string mqtt_host */
+#define KEY_MQTT_PORT           "mqtt_port"    /* uint16 mqtt_port */
+#define KEY_MQTT_USER           "mqtt_user"    /* string mqtt_username */
+#define KEY_MQTT_PASS           "mqtt_pass"    /* string mqtt_password */
 
 static esp_err_t open_rw(nvs_handle_t *out)
 {
@@ -236,6 +241,10 @@ static void sanitize_loaded_config(app_config_t *cfg)
             break;
         }
     }
+
+    if (cfg->mqtt_port == 0) {
+        cfg->mqtt_port = 1883;
+    }
 }
 
 esp_err_t app_nvs_init(void)
@@ -393,6 +402,38 @@ esp_err_t app_nvs_load(void)
         goto out;
     }
     err = get_str(h, KEY_AA_PIN, cfg->aa_pin, sizeof(cfg->aa_pin), "0000");
+    if (err != ESP_OK) {
+        goto out;
+    }
+
+    {
+        uint8_t mqtt_en = 0;
+        err = get_u8(h, KEY_MQTT_EN, &mqtt_en, 0);
+        if (err != ESP_OK) {
+            goto out;
+        }
+        cfg->mqtt_enabled = (mqtt_en != 0);
+    }
+    err = get_str(h, KEY_MQTT_HOST, cfg->mqtt_host, sizeof(cfg->mqtt_host), "");
+    if (err != ESP_OK) {
+        goto out;
+    }
+    {
+        uint32_t port = 1883;
+        err = get_u32(h, KEY_MQTT_PORT, &port, 1883);
+        if (err != ESP_OK) {
+            goto out;
+        }
+        if (port == 0 || port > 65535U) {
+            port = 1883;
+        }
+        cfg->mqtt_port = (uint16_t)port;
+    }
+    err = get_str(h, KEY_MQTT_USER, cfg->mqtt_username, sizeof(cfg->mqtt_username), "");
+    if (err != ESP_OK) {
+        goto out;
+    }
+    err = get_str(h, KEY_MQTT_PASS, cfg->mqtt_password, sizeof(cfg->mqtt_password), "");
     if (err != ESP_OK) {
         goto out;
     }
@@ -597,6 +638,45 @@ esp_err_t app_nvs_save_aa(void)
     return err;
 }
 
+static esp_err_t save_mqtt_keys(nvs_handle_t h, const app_config_t *cfg)
+{
+    esp_err_t err = set_u8(h, KEY_MQTT_EN, cfg->mqtt_enabled ? 1 : 0);
+    if (err != ESP_OK) {
+        return err;
+    }
+    if ((err = set_str(h, KEY_MQTT_HOST, cfg->mqtt_host)) != ESP_OK ||
+        (err = set_u32(h, KEY_MQTT_PORT, cfg->mqtt_port)) != ESP_OK ||
+        (err = set_str(h, KEY_MQTT_USER, cfg->mqtt_username)) != ESP_OK ||
+        (err = set_str(h, KEY_MQTT_PASS, cfg->mqtt_password)) != ESP_OK) {
+        return err;
+    }
+    return ESP_OK;
+}
+
+esp_err_t app_nvs_save_mqtt(void)
+{
+    const app_config_t *cfg = app_config_get();
+    nvs_handle_t h;
+    esp_err_t err = open_rw(&h);
+    if (err != ESP_OK) {
+        return err;
+    }
+    err = save_mqtt_keys(h, cfg);
+    if (err == ESP_OK) {
+        err = touch_cfg_ver(h);
+    }
+    if (err == ESP_OK) {
+        err = commit(h);
+    }
+    nvs_close(h);
+    if (err == ESP_OK) {
+        ESP_LOGI(TAG, "saved mqtt");
+    } else {
+        ESP_LOGE(TAG, "save mqtt failed: %s", esp_err_to_name(err));
+    }
+    return err;
+}
+
 esp_err_t app_nvs_save_all(void)
 {
     const app_config_t *cfg = app_config_get();
@@ -650,6 +730,11 @@ esp_err_t app_nvs_save_all(void)
 
     if ((err = set_u8(h, KEY_AA_METHODS, cfg->aa_methods & 0x03)) != ESP_OK ||
         (err = set_str(h, KEY_AA_PIN, cfg->aa_pin)) != ESP_OK) {
+        goto out;
+    }
+
+    err = save_mqtt_keys(h, cfg);
+    if (err != ESP_OK) {
         goto out;
     }
 
