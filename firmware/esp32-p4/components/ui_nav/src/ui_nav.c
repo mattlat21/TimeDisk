@@ -47,7 +47,7 @@ static ui_screen_id_t s_deferred_screen = UI_SCREEN_COUNT;
 #define UI_NAV_BRIGHTNESS_DIM     30
 
 #define TOD_FADE_TO_DIM_MS    5000U
-#define TOD_FADE_TO_BRIGHT_MS 1000U
+#define TOD_FADE_TO_BRIGHT_MS 300U
 #define TOD_FADE_TICK_MS      8U
 
 /** Matches BSP LEDC_TIMER_10_BIT (see bsp_display_brightness_set). */
