@@ -8,6 +8,10 @@
 #include "ui_assets.h"
 #include "app_config.h"
 
+#include "draw/lv_image_decoder_private.h"
+#include <esp_log.h>
+#include <esp_timer.h>
+
 static lv_obj_t *s_scr;
 static lv_obj_t *s_scr_confirm;
 static lv_obj_t *s_btn_rest;
@@ -17,6 +21,13 @@ static lv_obj_t *s_btn_timer;
 static lv_obj_t *s_lbl_switch_wake;
 static lv_obj_t *s_wedge_back;
 static lv_obj_t *s_wedge_settings;
+
+static const char *const s_menu_asset_names[] = {
+    "btn_start_rest",
+    "btn_start_sleep",
+    "btn_start_wake",
+    "btn_start_timer",
+};
 
 #define MENU_BTN_REST_W       320
 #define MENU_BTN_REST_H       320
@@ -236,6 +247,51 @@ void ui_screen_menu_on_show(void)
     if (s_lbl_switch_wake != NULL) {
         lv_label_set_text(s_lbl_switch_wake, switch_wake_label_for_mode(rt->current_mode));
     }
+}
+
+void ui_screen_menu_preload_assets(void)
+{
+    // #region agent log
+    uint32_t t0 = (uint32_t)(esp_timer_get_time() / 1000ULL);
+    ESP_LOGI("DBG06e366",
+             "{\"sessionId\":\"06e366\",\"hypothesisId\":\"H3\",\"location\":\"ui_screen_menu.c:preload\","
+             "\"message\":\"preload_start\",\"timestamp\":%lu}",
+             (unsigned long)t0);
+    // #endregion
+    lv_image_decoder_dsc_t dsc;
+    lv_image_decoder_args_t args;
+    lv_memzero(&args, sizeof(args));
+
+    for (size_t i = 0; i < sizeof(s_menu_asset_names) / sizeof(s_menu_asset_names[0]); i++) {
+        const char *path = ui_assets_spiffs_path(s_menu_asset_names[i]);
+        if (path == NULL) {
+            continue;
+        }
+        // #region agent log
+        uint32_t t_img = (uint32_t)(esp_timer_get_time() / 1000ULL);
+        // #endregion
+        lv_result_t res = lv_image_decoder_open(&dsc, path, &args);
+        if (res == LV_RESULT_OK) {
+            lv_image_decoder_close(&dsc);
+        }
+        // #region agent log
+        ESP_LOGI("DBG06e366",
+                 "{\"sessionId\":\"06e366\",\"hypothesisId\":\"H3\",\"location\":\"ui_screen_menu.c:preload\","
+                 "\"message\":\"asset_decoded\",\"data\":{\"asset\":\"%s\",\"ok\":%d,\"ms\":%lu},\"timestamp\":%lu}",
+                 s_menu_asset_names[i], (int)(res == LV_RESULT_OK),
+                 (unsigned long)((esp_timer_get_time() / 1000ULL) - t_img),
+                 (unsigned long)(esp_timer_get_time() / 1000ULL));
+        // #endregion
+    }
+
+    ui_screen_menu_on_show();
+    // #region agent log
+    ESP_LOGI("DBG06e366",
+             "{\"sessionId\":\"06e366\",\"hypothesisId\":\"H3\",\"location\":\"ui_screen_menu.c:preload\","
+             "\"message\":\"preload_end\",\"data\":{\"total_ms\":%lu},\"timestamp\":%lu}",
+             (unsigned long)((esp_timer_get_time() / 1000ULL) - t0),
+             (unsigned long)(esp_timer_get_time() / 1000ULL));
+    // #endregion
 }
 
 void ui_screen_menu_apply_theme(void)

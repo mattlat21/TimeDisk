@@ -15,6 +15,7 @@
 #include "driver/ledc.h"
 #include "esp_timer.h"
 #include "sdkconfig.h"
+#include "core/lv_refr.h"
 #include <esp_err.h>
 #include <esp_log.h>
 #include <esp_random.h>
@@ -31,6 +32,14 @@ static lv_timer_t *s_idle_timer;
 static lv_timer_t *s_tick_timer;
 static uint32_t s_idle_deadline_ms;
 static uint32_t s_loading_retry_at_ms;
+
+typedef enum {
+    UI_LOADING_REASON_BOOT = 0,
+    UI_LOADING_REASON_MENU,
+} ui_loading_reason_t;
+
+static ui_loading_reason_t s_loading_reason = UI_LOADING_REASON_BOOT;
+static ui_screen_id_t s_deferred_screen = UI_SCREEN_COUNT;
 
 #define LOADING_RETRY_MS 10000U
 
@@ -70,6 +79,39 @@ static uint32_t s_mqtt_last_timer_rem;
 
 static void idle_timer_cb(lv_timer_t *t);
 static void on_enter(ui_screen_id_t screen);
+static void nav_go_internal(ui_screen_id_t screen);
+
+/** Monotonic ms for timeouts and fades (not LVGL tick). */
+static uint32_t now_ms(void);
+
+// #region agent log
+static void dbg_log(const char *hypothesis_id, const char *location, const char *message, int screen, uint32_t elapsed_ms)
+{
+    ESP_LOGI("DBG06e366",
+             "{\"sessionId\":\"06e366\",\"hypothesisId\":\"%s\",\"location\":\"%s\",\"message\":\"%s\","
+             "\"data\":{\"screen\":%d,\"current\":%d,\"loading_reason\":%d,\"elapsed_ms\":%lu},\"timestamp\":%lu}",
+             hypothesis_id, location, message, screen, (int)s_current, (int)s_loading_reason,
+             (unsigned long)elapsed_ms, (unsigned long)now_ms());
+}
+// #endregion
+
+static void menu_preload_async_cb(void *user_data)
+{
+    (void)user_data;
+    // #region agent log
+    uint32_t t0 = now_ms();
+    dbg_log("H3", "ui_nav.c:menu_preload_async_cb", "preload_async_start", (int)s_deferred_screen, 0);
+    // #endregion
+    ui_screen_menu_preload_assets();
+    // #region agent log
+    dbg_log("H3", "ui_nav.c:menu_preload_async_cb", "preload_async_done", (int)s_deferred_screen, now_ms() - t0);
+    // #endregion
+    ui_screen_id_t dest = s_deferred_screen;
+    s_deferred_screen = UI_SCREEN_COUNT;
+    if (dest < UI_SCREEN_COUNT) {
+        nav_go_internal(dest);
+    }
+}
 
 /** Monotonic ms for timeouts and fades (not LVGL tick). */
 static uint32_t now_ms(void)
@@ -353,8 +395,12 @@ static void on_enter(ui_screen_id_t screen)
         break;
     case UI_SCREEN_LOADING:
         s_loading_retry_at_ms = 0;
-        ui_screen_loading_on_show();
-        app_network_start_boot_sync();
+        if (s_loading_reason == UI_LOADING_REASON_BOOT) {
+            ui_screen_loading_on_show();
+            app_network_start_boot_sync();
+        } else {
+            ui_screen_loading_set_menu_mode(true);
+        }
         break;
     case UI_SCREEN_STARTUP_THEME:
         ui_screen_startup_theme_wizard_on_show();
@@ -408,7 +454,7 @@ static void on_enter(ui_screen_id_t screen)
     }
 }
 
-void ui_nav_go(ui_screen_id_t screen)
+static void nav_go_internal(ui_screen_id_t screen)
 {
     if (screen >= UI_SCREEN_COUNT || s_screens[screen] == NULL) {
         ESP_LOGE(TAG, "invalid screen %d", (int)screen);
@@ -418,7 +464,11 @@ void ui_nav_go(ui_screen_id_t screen)
     tod_fade_cancel();
 
     if (s_current == UI_SCREEN_LOADING && screen != UI_SCREEN_LOADING) {
-        app_network_cancel_boot_sync();
+        if (s_loading_reason == UI_LOADING_REASON_BOOT) {
+            app_network_cancel_boot_sync();
+        }
+        ui_screen_loading_set_menu_mode(false);
+        s_loading_reason = UI_LOADING_REASON_BOOT;
     }
 
     if (s_current == UI_SCREEN_STARTUP_TIMEZONE && screen != UI_SCREEN_STARTUP_TIMEZONE) {
@@ -434,6 +484,32 @@ void ui_nav_go(ui_screen_id_t screen)
     on_enter(screen);
     ui_nav_reset_idle_timer();
     ESP_LOGI(TAG, "screen -> %d", (int)screen);
+    // #region agent log
+    if (screen == UI_SCREEN_LOADING || screen == UI_SCREEN_MENU) {
+        dbg_log(screen == UI_SCREEN_LOADING ? "H3" : "H1", "ui_nav.c:nav_go_internal", "screen_loaded",
+                (int)screen, 0);
+    }
+    // #endregion
+}
+
+void ui_nav_go(ui_screen_id_t screen)
+{
+    if (screen == UI_SCREEN_MENU) {
+        // #region agent log
+        dbg_log("H1", "ui_nav.c:ui_nav_go", "menu_intercept", (int)screen, 0);
+        // #endregion
+        s_deferred_screen = screen;
+        s_loading_reason = UI_LOADING_REASON_MENU;
+        nav_go_internal(UI_SCREEN_LOADING);
+        lv_refr_now(NULL);
+        // #region agent log
+        dbg_log("H3", "ui_nav.c:ui_nav_go", "after_lv_refr_now", (int)UI_SCREEN_LOADING, 0);
+        // #endregion
+        lv_async_call(menu_preload_async_cb, NULL);
+        return;
+    }
+
+    nav_go_internal(screen);
 }
 
 ui_screen_id_t ui_nav_current(void)
@@ -539,6 +615,9 @@ void ui_nav_start_aa(ui_screen_id_t entry, ui_screen_id_t on_pass)
 void ui_nav_aa_pass(void)
 {
     ui_screen_id_t dest = s_aa.on_pass_screen;
+    // #region agent log
+    dbg_log("H1", "ui_nav.c:ui_nav_aa_pass", "aa_pass", (int)dest, 0);
+    // #endregion
     memset(&s_aa, 0, sizeof(s_aa));
     ui_nav_go(dest);
 }
@@ -853,6 +932,10 @@ static void network_boot_done_cb(bool time_ok, void *user_data)
 
 static void loading_screen_tick(void)
 {
+    if (s_loading_reason != UI_LOADING_REASON_BOOT) {
+        return;
+    }
+
     ui_screen_loading_set_status(app_network_get_status_text());
 
     if (app_network_boot_sync_active()) {
