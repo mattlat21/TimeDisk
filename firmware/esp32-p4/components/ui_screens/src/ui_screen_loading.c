@@ -4,9 +4,6 @@
 #include "ui_theme.h"
 #include "ui_nav.h"
 
-#include <esp_log.h>
-#include <esp_timer.h>
-
 static lv_obj_t *s_scr;
 static lv_obj_t *s_lbl_title;
 static lv_obj_t *s_lbl_status;
@@ -74,12 +71,6 @@ void ui_screen_loading_set_menu_mode(bool menu)
 {
     s_menu_mode = menu;
     loading_apply_layout();
-    // #region agent log
-    ESP_LOGI("DBG06e366",
-             "{\"sessionId\":\"06e366\",\"hypothesisId\":\"H2\",\"location\":\"ui_screen_loading.c:set_menu_mode\","
-             "\"message\":\"menu_mode_set\",\"data\":{\"menu\":%d},\"timestamp\":%lu}",
-             (int)menu, (unsigned long)(esp_timer_get_time() / 1000ULL));
-    // #endregion
 }
 
 void ui_screen_loading_on_show(void)

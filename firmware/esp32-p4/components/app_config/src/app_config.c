@@ -6,6 +6,7 @@
 #include "app_config.h"
 #include <esp_log.h>
 #include <esp_mac.h>
+#include <soc/soc_caps.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -14,6 +15,21 @@ static const char *TAG = "app_config";
 static app_config_t s_cfg;
 static app_runtime_t s_rt;
 static void (*s_mqtt_saved_hook)(void);
+static char s_device_id[40];
+static bool s_device_id_ready;
+
+static esp_err_t read_device_mac(uint8_t mac[6])
+{
+#if defined(SOC_WIFI_SUPPORTED) && SOC_WIFI_SUPPORTED
+    if (esp_read_mac(mac, ESP_MAC_WIFI_STA) == ESP_OK) {
+        return ESP_OK;
+    }
+#endif
+    if (esp_read_mac(mac, ESP_MAC_ETH) == ESP_OK) {
+        return ESP_OK;
+    }
+    return esp_read_mac(mac, ESP_MAC_EFUSE_FACTORY);
+}
 
 void app_config_set_mqtt_saved_hook(void (*hook)(void))
 {
@@ -22,16 +38,20 @@ void app_config_set_mqtt_saved_hook(void (*hook)(void))
 
 bool app_config_get_device_id(char *out, size_t out_len)
 {
-    uint8_t mac[6];
-
     if (out == NULL || out_len == 0) {
         return false;
     }
-    if (esp_read_mac(mac, ESP_MAC_WIFI_STA) != ESP_OK) {
-        esp_read_mac(mac, ESP_MAC_ETH);
+    if (!s_device_id_ready) {
+        uint8_t mac[6];
+        if (read_device_mac(mac) != ESP_OK) {
+            snprintf(s_device_id, sizeof(s_device_id), "timedisk-unknown");
+        } else {
+            snprintf(s_device_id, sizeof(s_device_id), "timedisk-%02X%02X%02X%02X%02X%02X",
+                     mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+        }
+        s_device_id_ready = true;
     }
-    snprintf(out, out_len, "timedisk-%02X%02X%02X%02X%02X%02X",
-             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    snprintf(out, out_len, "%s", s_device_id);
     return true;
 }
 

@@ -9,8 +9,6 @@
 #include "app_config.h"
 
 #include "draw/lv_image_decoder_private.h"
-#include <esp_log.h>
-#include <esp_timer.h>
 
 static lv_obj_t *s_scr;
 static lv_obj_t *s_scr_confirm;
@@ -251,13 +249,6 @@ void ui_screen_menu_on_show(void)
 
 void ui_screen_menu_preload_assets(void)
 {
-    // #region agent log
-    uint32_t t0 = (uint32_t)(esp_timer_get_time() / 1000ULL);
-    ESP_LOGI("DBG06e366",
-             "{\"sessionId\":\"06e366\",\"hypothesisId\":\"H3\",\"location\":\"ui_screen_menu.c:preload\","
-             "\"message\":\"preload_start\",\"timestamp\":%lu}",
-             (unsigned long)t0);
-    // #endregion
     lv_image_decoder_dsc_t dsc;
     lv_image_decoder_args_t args;
     lv_memzero(&args, sizeof(args));
@@ -267,31 +258,13 @@ void ui_screen_menu_preload_assets(void)
         if (path == NULL) {
             continue;
         }
-        // #region agent log
-        uint32_t t_img = (uint32_t)(esp_timer_get_time() / 1000ULL);
-        // #endregion
         lv_result_t res = lv_image_decoder_open(&dsc, path, &args);
         if (res == LV_RESULT_OK) {
             lv_image_decoder_close(&dsc);
         }
-        // #region agent log
-        ESP_LOGI("DBG06e366",
-                 "{\"sessionId\":\"06e366\",\"hypothesisId\":\"H3\",\"location\":\"ui_screen_menu.c:preload\","
-                 "\"message\":\"asset_decoded\",\"data\":{\"asset\":\"%s\",\"ok\":%d,\"ms\":%lu},\"timestamp\":%lu}",
-                 s_menu_asset_names[i], (int)(res == LV_RESULT_OK),
-                 (unsigned long)((esp_timer_get_time() / 1000ULL) - t_img),
-                 (unsigned long)(esp_timer_get_time() / 1000ULL));
-        // #endregion
     }
 
     ui_screen_menu_on_show();
-    // #region agent log
-    ESP_LOGI("DBG06e366",
-             "{\"sessionId\":\"06e366\",\"hypothesisId\":\"H3\",\"location\":\"ui_screen_menu.c:preload\","
-             "\"message\":\"preload_end\",\"data\":{\"total_ms\":%lu},\"timestamp\":%lu}",
-             (unsigned long)((esp_timer_get_time() / 1000ULL) - t0),
-             (unsigned long)(esp_timer_get_time() / 1000ULL));
-    // #endregion
 }
 
 void ui_screen_menu_apply_theme(void)

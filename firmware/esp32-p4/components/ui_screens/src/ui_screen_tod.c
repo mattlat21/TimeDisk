@@ -75,12 +75,7 @@ static lv_obj_t *create_mode_background(lv_obj_t *scr)
 static void screen_tap_cb(lv_event_t *e)
 {
     (void)e;
-    ui_screen_id_t cur = ui_nav_current();
-    if (cur == UI_SCREEN_TOD_DIM) {
-        ui_nav_tod_fade_to_bright();
-    } else if (cur == UI_SCREEN_TOD_BRIGHT) {
-        ui_nav_reset_idle_timer();
-    }
+    ui_nav_tod_wake();
 }
 
 static void menu_btn_cb(lv_event_t *e)

@@ -76,8 +76,10 @@ void ui_nav_apply_dim(bool dim);
 
 /** Fade TOD to dim over 5 s (from bright idle timeout). */
 void ui_nav_tod_fade_to_dim(void);
-/** Fade TOD to bright over 1 s (tap on dim screen). */
+/** Fade TOD to bright (legacy; tap uses ui_nav_tod_wake for instant bright). */
 void ui_nav_tod_fade_to_bright(void);
+/** Instant bright + menu on TOD bright/dim screen tap. */
+void ui_nav_tod_wake(void);
 
 /** Begin automatic Wake→… mode cycle after Sleep/Rest schedule wizard. */
 void mode_engine_start_cycle(void);
