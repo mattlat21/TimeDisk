@@ -64,6 +64,8 @@ typedef struct {
     uint32_t timeout_aa_sec;
     uint32_t timeout_main_menu_sec;
     uint32_t timeout_timer_dim_sec;
+    /** Idle on completed timer before returning to Time of Day. */
+    uint32_t timeout_timer_done_sec;
 
     uint32_t ui_primary_color;
     uint32_t ui_secondary_color;

@@ -191,6 +191,7 @@ static void panel_cancel_cb(lv_event_t *e)
         s_draft.timeout_aa_sec = s_saved.timeout_aa_sec;
         s_draft.timeout_main_menu_sec = s_saved.timeout_main_menu_sec;
         s_draft.timeout_timer_dim_sec = s_saved.timeout_timer_dim_sec;
+        s_draft.timeout_timer_done_sec = s_saved.timeout_timer_done_sec;
         ui_settings_timeouts_show_list();
         break;
     case PANEL_AA:

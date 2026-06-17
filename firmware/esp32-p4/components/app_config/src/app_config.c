@@ -67,6 +67,7 @@ void app_config_apply_defaults(void)
     s_cfg.timeout_aa_sec = 60;
     s_cfg.timeout_main_menu_sec = 60;
     s_cfg.timeout_timer_dim_sec = 900;
+    s_cfg.timeout_timer_done_sec = 30;
 
     s_cfg.ui_primary_color = 0x7A24BC;
     s_cfg.ui_secondary_color = 0x6BCA24;

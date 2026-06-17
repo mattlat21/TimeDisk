@@ -29,20 +29,21 @@ typedef enum {
 static lv_obj_t *s_panel;
 static timeout_view_t s_timeout_view;
 static int s_timeout_edit_idx;
-static lv_obj_t *s_timeout_row_btns[6];
+static lv_obj_t *s_timeout_row_btns[7];
 static lv_obj_t *s_timeout_panel_title;
 static lv_obj_t *s_timeout_edit_title;
-static lv_obj_t *s_timeout_row_lbls[6];
+static lv_obj_t *s_timeout_row_lbls[7];
 static ui_duration_editor_bundle_t s_timeout_bundle;
 static uint32_t s_timeout_edit_val;
 
-static const char *s_timeout_names[6] = {
+static const char *s_timeout_names[7] = {
     "Splash",
     "TOD dim",
     "TOD menu",
     "Adult auth",
     "Main menu",
     "Timer dim",
+    "Timer done",
 };
 
 /** Tiered +/- step sizes for timeout edit screens. */
@@ -80,6 +81,8 @@ static uint32_t *timeout_field_ptr(int idx)
         return &draft->timeout_main_menu_sec;
     case 5:
         return &draft->timeout_timer_dim_sec;
+    case 6:
+        return &draft->timeout_timer_done_sec;
     default:
         return &draft->timeout_splash_sec;
     }
@@ -88,7 +91,7 @@ static uint32_t *timeout_field_ptr(int idx)
 static void timeout_refresh_list_labels(void)
 {
     char buf[48];
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 7; i++) {
         ui_format_duration_human(buf, sizeof(buf), *timeout_field_ptr(i));
         char line[64];
         snprintf(line, sizeof(line), "%s: %s", s_timeout_names[i], buf);
@@ -117,7 +120,7 @@ bool ui_settings_timeouts_on_cancel(void)
 void ui_settings_timeouts_show_list(void)
 {
     s_timeout_view = TIMEOUT_VIEW_LIST;
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 7; i++) {
         if (s_timeout_row_btns[i] != NULL) {
             lv_obj_clear_flag(s_timeout_row_btns[i], LV_OBJ_FLAG_HIDDEN);
         }
@@ -139,7 +142,7 @@ static void timeout_row_cb(lv_event_t *e)
     s_timeout_edit_val = *timeout_field_ptr(idx);
     s_timeout_view = TIMEOUT_VIEW_EDIT;
 
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 7; i++) {
         if (s_timeout_row_btns[i] != NULL) {
             lv_obj_add_flag(s_timeout_row_btns[i], LV_OBJ_FLAG_HIDDEN);
         }
@@ -172,6 +175,7 @@ static void timeouts_save_cb(lv_event_t *e)
     saved->timeout_aa_sec = draft->timeout_aa_sec;
     saved->timeout_main_menu_sec = draft->timeout_main_menu_sec;
     saved->timeout_timer_dim_sec = draft->timeout_timer_dim_sec;
+    saved->timeout_timer_done_sec = draft->timeout_timer_done_sec;
 
     app_config_save_timeouts();
     ui_settings_timeouts_show_list();
@@ -191,7 +195,7 @@ lv_obj_t *ui_settings_timeouts_build(void)
 
     s_timeout_panel_title = ui_widgets_create_title(s_panel, "Timeouts");
 
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 7; i++) {
         lv_obj_t *btn = lv_button_create(s_panel);
         lv_obj_set_size(btn, HUB_BTN_W, 64);
         lv_obj_align(btn, LV_ALIGN_TOP_MID, 0,

@@ -172,6 +172,7 @@ static char *build_status_json(void)
     cJSON_AddNumberToObject(config, "timeout_aa_sec", cfg->timeout_aa_sec);
     cJSON_AddNumberToObject(config, "timeout_main_menu_sec", cfg->timeout_main_menu_sec);
     cJSON_AddNumberToObject(config, "timeout_timer_dim_sec", cfg->timeout_timer_dim_sec);
+    cJSON_AddNumberToObject(config, "timeout_timer_done_sec", cfg->timeout_timer_done_sec);
     cJSON_AddNumberToObject(config, "ui_primary_color", cfg->ui_primary_color);
     cJSON_AddNumberToObject(config, "ui_secondary_color", cfg->ui_secondary_color);
     cJSON_AddNumberToObject(config, "timer_duration_sec", cfg->timer_duration_sec);
@@ -392,6 +393,10 @@ static bool apply_config_field(app_config_t *cfg, const char *key, const cJSON *
     }
     if (strcmp(key, "timeout_timer_dim_sec") == 0 && cJSON_IsNumber(val)) {
         cfg->timeout_timer_dim_sec = (uint32_t)val->valuedouble;
+        return true;
+    }
+    if (strcmp(key, "timeout_timer_done_sec") == 0 && cJSON_IsNumber(val)) {
+        cfg->timeout_timer_done_sec = (uint32_t)val->valuedouble;
         return true;
     }
     if (strcmp(key, "ui_primary_color") == 0 && cJSON_IsNumber(val)) {

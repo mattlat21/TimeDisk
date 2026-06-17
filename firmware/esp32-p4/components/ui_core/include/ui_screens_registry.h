@@ -53,6 +53,12 @@ void ui_screen_timer_on_show(ui_screen_id_t id);
 void ui_screen_timer_tick(void);
 void ui_screen_timer_set_running(bool running);
 void ui_screen_timer_sync_anim_from_runtime(void);
+/** Timer reached zero: show completed visuals and OK control on the active timer screen. */
+void ui_screen_timer_on_finished(void);
+bool ui_screen_timer_is_done(void);
+/** Dismiss completed timer and return to Time of Day (OK press or timeout). */
+void ui_screen_timer_dismiss(void);
+void ui_screen_timer_clear_done(void);
 void ui_screen_startup_wifi_wizard_ssid_get_text(char *out, size_t len);
 void ui_screen_startup_wifi_wizard_password_get_text(char *out, size_t len);
 uint32_t ui_screen_duration_get_sec(void);

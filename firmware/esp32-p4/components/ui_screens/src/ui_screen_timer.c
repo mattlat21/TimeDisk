@@ -77,12 +77,13 @@ static lv_obj_t *s_scr_duration;
 static lv_obj_t *s_scr_style;
 static lv_obj_t *s_scr_bright;
 static lv_obj_t *s_scr_dim;
-static lv_obj_t *s_scr_triggered;
 static lv_obj_t *s_scr_confirm;
 static lv_obj_t *lbl_countdown_bright;
 static lv_obj_t *lbl_countdown_dim;
 static lv_obj_t *s_end_btn_bright;
 static lv_obj_t *s_end_btn_dim;
+static lv_obj_t *s_end_lbl_bright;
+static lv_obj_t *s_end_lbl_dim;
 static ui_wedge_t *s_end_wedge_bright;
 static ui_wedge_t *s_end_wedge_dim;
 static lv_obj_t *s_style_tiles[APP_TIMER_STYLE_COUNT];
@@ -90,8 +91,11 @@ static timer_countdown_vis_t s_vis_bright;
 static timer_countdown_vis_t s_vis_dim;
 static uint32_t s_duration_sec;
 static uint8_t s_style_id;
+static bool s_timer_done;
 static ui_duration_editor_bundle_t s_duration_bundle;
 static lv_timer_t *s_anim_timer;
+
+static void timer_end_cb(lv_event_t *e);
 
 static void timer_duration_clamp(void)
 {
@@ -255,9 +259,118 @@ static void timer_update_countdown_visuals(timer_countdown_vis_t *vis, lv_obj_t 
     }
 }
 
+static void timer_clear_done_state(void)
+{
+    s_timer_done = false;
+}
+
+static void timer_dismiss_done(void)
+{
+    app_runtime_t *rt = app_runtime_get();
+    app_checkpoint_clear_timer();
+    rt->timer_running = false;
+    rt->active_timer_remaining_sec = 0;
+    rt->active_timer_total_sec = 0;
+    rt->active_timer_start_utc = 0;
+    rt->active_timer_end_utc = 0;
+    rt->active_timer_anim_start_ms = 0;
+    timer_clear_done_state();
+    ui_screen_timer_set_running(false);
+    ui_nav_go(UI_SCREEN_TOD_BRIGHT);
+}
+
+static void timer_set_wedge_done_ok(ui_wedge_t *wedge)
+{
+    const ui_theme_t *t = ui_theme_get();
+    ui_wedge_button_t *btn;
+
+    if (wedge == NULL) {
+        return;
+    }
+    btn = ui_wedge_get_obj(wedge);
+    if (btn == NULL) {
+        return;
+    }
+    ui_wedge_button_set_color(btn, t->green);
+    ui_wedge_set_label(wedge, NULL);
+    ui_wedge_button_set_icon(btn, UI_WEDGE_ICON_CONFIRM_CHECK);
+    ui_wedge_set_visible(wedge, true);
+    lv_obj_move_foreground(btn);
+}
+
+static void timer_set_ring_end_done_ok(lv_obj_t *btn, lv_obj_t *lbl)
+{
+    const ui_theme_t *t = ui_theme_get();
+
+    if (btn == NULL) {
+        return;
+    }
+    lv_obj_clear_flag(btn, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_style_bg_color(btn, t->green, 0);
+    if (lbl != NULL) {
+        lv_label_set_text(lbl, LV_SYMBOL_OK);
+        lv_obj_set_style_text_font(lbl, &lv_font_montserrat_26, 0);
+    }
+    lv_obj_move_foreground(btn);
+}
+
+static void timer_set_ring_end_running(lv_obj_t *btn, lv_obj_t *lbl)
+{
+    const ui_theme_t *t = ui_theme_get();
+
+    if (btn == NULL) {
+        return;
+    }
+    lv_obj_set_style_bg_color(btn, t->orange, 0);
+    if (lbl != NULL) {
+        lv_label_set_text(lbl, "End");
+    }
+}
+
+static void timer_set_wedge_running_end(ui_wedge_t *wedge)
+{
+    if (wedge == NULL) {
+        return;
+    }
+    ui_wedge_bind(wedge, UI_WEDGE_END_TIMER, timer_end_cb, NULL);
+    ui_wedge_set_label(wedge, "End Timer");
+}
+
+static void timer_update_done_controls(void)
+{
+    timer_set_wedge_done_ok(s_end_wedge_bright);
+    timer_set_wedge_done_ok(s_end_wedge_dim);
+    timer_set_ring_end_done_ok(s_end_btn_bright, s_end_lbl_bright);
+    timer_set_ring_end_done_ok(s_end_btn_dim, s_end_lbl_dim);
+
+    const uint8_t style_id = app_config_get()->timer_style_id;
+    const bool water = (style_id == APP_TIMER_STYLE_WATER);
+    if (water) {
+        if (s_end_btn_bright != NULL) {
+            lv_obj_add_flag(s_end_btn_bright, LV_OBJ_FLAG_HIDDEN);
+        }
+        if (s_end_btn_dim != NULL) {
+            lv_obj_add_flag(s_end_btn_dim, LV_OBJ_FLAG_HIDDEN);
+        }
+    } else {
+        ui_wedge_set_visible(s_end_wedge_bright, false);
+        ui_wedge_set_visible(s_end_wedge_dim, false);
+    }
+}
+
 static void timer_update_end_controls(uint8_t style_id)
 {
+    if (s_timer_done) {
+        timer_update_done_controls();
+        return;
+    }
+
     const bool water = (style_id == APP_TIMER_STYLE_WATER);
+
+    timer_set_wedge_running_end(s_end_wedge_bright);
+    timer_set_wedge_running_end(s_end_wedge_dim);
+    timer_set_ring_end_running(s_end_btn_bright, s_end_lbl_bright);
+    timer_set_ring_end_running(s_end_btn_dim, s_end_lbl_dim);
 
     ui_wedge_set_visible(s_end_wedge_bright, water);
     ui_wedge_set_visible(s_end_wedge_dim, water);
@@ -307,7 +420,7 @@ static void timer_refresh_all_countdown_visuals(void)
 {
     app_runtime_t *rt = app_runtime_get();
     const uint8_t style_id = app_config_get()->timer_style_id;
-    const float progress = timer_smooth_progress(rt);
+    const float progress = s_timer_done ? 1.0f : timer_smooth_progress(rt);
 
     timer_update_countdown_visuals(&s_vis_bright, lbl_countdown_bright, style_id, progress, true);
     timer_update_countdown_visuals(&s_vis_dim, lbl_countdown_dim, style_id, progress, true);
@@ -334,6 +447,7 @@ void ui_screen_timer_set_running(bool running)
         return;
     }
     if (running) {
+        timer_clear_done_state();
         lv_timer_resume(s_anim_timer);
     } else {
         lv_timer_pause(s_anim_timer);
@@ -394,6 +508,7 @@ static void style_next_cb(lv_event_t *e)
     rt->active_timer_total_sec = s_duration_sec;
     rt->active_timer_remaining_sec = s_duration_sec;
     rt->active_timer_anim_start_ms = timer_now_ms();
+    timer_clear_done_state();
     rt->timer_running = true;
     if (rt->time_valid) {
         const time_t start = time(NULL);
@@ -424,6 +539,10 @@ static void timer_tap_cb(lv_event_t *e)
 static void timer_end_cb(lv_event_t *e)
 {
     (void)e;
+    if (s_timer_done) {
+        timer_dismiss_done();
+        return;
+    }
     ui_nav_start_aa(UI_SCREEN_TIMER_BRIGHT, UI_SCREEN_CONFIRM_END_TIMER);
 }
 
@@ -446,23 +565,9 @@ static void confirm_yes_cb(lv_event_t *e)
     rt->active_timer_start_utc = 0;
     rt->active_timer_end_utc = 0;
     rt->active_timer_anim_start_ms = 0;
+    timer_clear_done_state();
     ui_screen_timer_set_running(false);
     ui_nav_go(UI_SCREEN_MENU);
-}
-
-static void triggered_ok_cb(lv_event_t *e)
-{
-    (void)e;
-    app_runtime_t *rt = app_runtime_get();
-    app_checkpoint_clear_timer();
-    rt->timer_running = false;
-    rt->active_timer_remaining_sec = 0;
-    rt->active_timer_total_sec = 0;
-    rt->active_timer_start_utc = 0;
-    rt->active_timer_end_utc = 0;
-    rt->active_timer_anim_start_ms = 0;
-    ui_screen_timer_set_running(false);
-    ui_nav_go(UI_SCREEN_TOD_BRIGHT);
 }
 
 static lv_obj_t *style_create_tile(lv_obj_t *parent, const char *name, int x, lv_obj_t **out_lbl)
@@ -684,30 +789,15 @@ static void build_countdown(lv_obj_t **scr, lv_obj_t **lbl, timer_countdown_vis_
 
     if (id == UI_SCREEN_TIMER_BRIGHT) {
         s_end_btn_bright = end;
+        s_end_lbl_bright = el;
         s_end_wedge_bright = end_wedge;
     } else {
         s_end_btn_dim = end;
+        s_end_lbl_dim = el;
         s_end_wedge_dim = end_wedge;
     }
 
     ui_widgets_send_edge_fill_to_back(*scr);
-}
-
-static void build_triggered(lv_obj_t *screens[UI_SCREEN_COUNT])
-{
-    const ui_theme_t *t = ui_theme_get();
-    s_scr_triggered = ui_widgets_create_screen();
-    screens[UI_SCREEN_TIMER_TRIGGERED] = s_scr_triggered;
-
-    lv_obj_t *lbl = lv_label_create(s_scr_triggered);
-    lv_label_set_text(lbl, "Timer Done!");
-    lv_obj_set_style_text_color(lbl, t->white, 0);
-    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_26, 0);
-    lv_obj_align(lbl, LV_ALIGN_CENTER, 0, -40);
-
-    lv_obj_t *ok = ui_wedge_create(s_scr_triggered, UI_WEDGE_CONFIRM);
-    lv_obj_add_event_cb(ok, triggered_ok_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_move_foreground(ok);
 }
 
 static void build_confirm(lv_obj_t *screens[UI_SCREEN_COUNT])
@@ -741,7 +831,6 @@ void ui_screen_timer_build(lv_obj_t *screens[UI_SCREEN_COUNT])
     build_style(screens);
     build_countdown(&s_scr_bright, &lbl_countdown_bright, &s_vis_bright, UI_SCREEN_TIMER_BRIGHT, screens);
     build_countdown(&s_scr_dim, &lbl_countdown_dim, &s_vis_dim, UI_SCREEN_TIMER_DIM, screens);
-    build_triggered(screens);
     build_confirm(screens);
 
     s_anim_timer = lv_timer_create(timer_anim_cb, TIMER_ANIM_PERIOD_MS, NULL);
@@ -769,8 +858,19 @@ void ui_screen_timer_on_show(ui_screen_id_t id)
     }
 
     ui_format_mm_ss(buf, sizeof(buf), rt->active_timer_remaining_sec);
+    const uint8_t style_id = app_config_get()->timer_style_id;
 
     if (id == UI_SCREEN_TIMER_BRIGHT || id == UI_SCREEN_TIMER_DIM) {
+        if (s_timer_done) {
+            lv_obj_t *lbl = (id == UI_SCREEN_TIMER_BRIGHT) ? lbl_countdown_bright : lbl_countdown_dim;
+            timer_countdown_vis_t *vis = (id == UI_SCREEN_TIMER_BRIGHT) ? &s_vis_bright : &s_vis_dim;
+            timer_vis_reset_cache(vis);
+            lv_label_set_text(lbl, "Timer Done");
+            timer_update_countdown_visuals(vis, lbl, style_id, 1.0f, true);
+            timer_update_done_controls();
+            ui_nav_apply_dim(id == UI_SCREEN_TIMER_DIM);
+            return;
+        }
         if (rt->timer_running) {
             timer_sync_anim_start_ms(rt);
             ui_screen_timer_set_running(true);
@@ -778,7 +878,6 @@ void ui_screen_timer_on_show(ui_screen_id_t id)
     }
 
     const float progress = timer_smooth_progress(rt);
-    const uint8_t style_id = app_config_get()->timer_style_id;
 
     if (id == UI_SCREEN_TIMER_BRIGHT) {
         timer_vis_reset_cache(&s_vis_bright);
@@ -797,6 +896,9 @@ void ui_screen_timer_on_show(ui_screen_id_t id)
 
 void ui_screen_timer_tick(void)
 {
+    if (s_timer_done) {
+        return;
+    }
     char buf[16];
     app_runtime_t *rt = app_runtime_get();
     if (!rt->timer_running) {
@@ -821,10 +923,37 @@ uint8_t ui_screen_style_get_id(void)
     return s_style_id;
 }
 
+void ui_screen_timer_on_finished(void)
+{
+    s_timer_done = true;
+    const uint8_t style_id = app_config_get()->timer_style_id;
+
+    timer_update_countdown_visuals(&s_vis_bright, lbl_countdown_bright, style_id, 1.0f, true);
+    timer_update_countdown_visuals(&s_vis_dim, lbl_countdown_dim, style_id, 1.0f, true);
+    lv_label_set_text(lbl_countdown_bright, "Timer Done");
+    lv_label_set_text(lbl_countdown_dim, "Timer Done");
+    timer_update_done_controls();
+}
+
+bool ui_screen_timer_is_done(void)
+{
+    return s_timer_done;
+}
+
+void ui_screen_timer_dismiss(void)
+{
+    timer_dismiss_done();
+}
+
+void ui_screen_timer_clear_done(void)
+{
+    timer_clear_done_state();
+}
+
 void ui_screen_timer_apply_theme(void)
 {
     lv_obj_t *scrs[] = {
-        s_scr_duration, s_scr_style, s_scr_bright, s_scr_dim, s_scr_triggered, s_scr_confirm,
+        s_scr_duration, s_scr_style, s_scr_bright, s_scr_dim, s_scr_confirm,
     };
     for (size_t i = 0; i < sizeof(scrs) / sizeof(scrs[0]); i++) {
         if (scrs[i] == NULL) {

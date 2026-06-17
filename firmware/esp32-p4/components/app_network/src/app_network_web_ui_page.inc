@@ -179,13 +179,15 @@
         "+numField('t0','Splash',cfg.timeout_splash_sec)+numField('t1','TOD dim',cfg.timeout_tod_dim_sec)"
         "+numField('t2','TOD menu wedge',cfg.timeout_tod_menu_sec)+numField('t3','Adult auth',cfg.timeout_aa_sec)"
         "+numField('t4','Main menu',cfg.timeout_main_menu_sec)+numField('t5','Timer dim',cfg.timeout_timer_dim_sec)"
+        "+numField('t6','Timer done',cfg.timeout_timer_done_sec)"
         "+'<button class=\"btn\" id=\"save-to\">Save</button></div>';"
         "$('save-to').onclick=async()=>{await saveCfg({timeout_splash_sec:+ $('t0').value,timeout_tod_dim_sec:+ $('t1').value,"
         "timeout_tod_menu_sec:+ $('t2').value,timeout_aa_sec:+ $('t3').value,timeout_main_menu_sec:+ $('t4').value,"
-        "timeout_timer_dim_sec:+ $('t5').value})};"
+        "timeout_timer_dim_sec:+ $('t5').value,timeout_timer_done_sec:+ $('t6').value})};"
         "startPoll(5000,async()=>{try{mergeCfgFromApi(await api('/api/config'));patchVal('t0',cfg.timeout_splash_sec);"
         "patchVal('t1',cfg.timeout_tod_dim_sec);patchVal('t2',cfg.timeout_tod_menu_sec);patchVal('t3',cfg.timeout_aa_sec);"
-        "patchVal('t4',cfg.timeout_main_menu_sec);patchVal('t5',cfg.timeout_timer_dim_sec)}catch(e){}});}"
+        "patchVal('t4',cfg.timeout_main_menu_sec);patchVal('t5',cfg.timeout_timer_dim_sec);"
+        "patchVal('t6',cfg.timeout_timer_done_sec)}catch(e){}});}"
     );
 
     httpd_resp_sendstr_chunk(req,

@@ -367,10 +367,16 @@ static void idle_timer_cb(lv_timer_t *t)
         ui_nav_go(UI_SCREEN_TOD_BRIGHT);
         break;
     case UI_SCREEN_TIMER_BRIGHT:
-        ui_nav_go(UI_SCREEN_TIMER_DIM);
+        if (ui_screen_timer_is_done()) {
+            ui_screen_timer_dismiss();
+        } else {
+            ui_nav_go(UI_SCREEN_TIMER_DIM);
+        }
         break;
-    case UI_SCREEN_TIMER_TRIGGERED:
-        ui_nav_go(UI_SCREEN_TOD_BRIGHT);
+    case UI_SCREEN_TIMER_DIM:
+        if (ui_screen_timer_is_done()) {
+            ui_screen_timer_dismiss();
+        }
         break;
     default:
         break;
@@ -432,13 +438,17 @@ static void on_enter(ui_screen_id_t screen)
         break;
     case UI_SCREEN_TIMER_BRIGHT:
         ui_screen_timer_on_show(UI_SCREEN_TIMER_BRIGHT);
-        arm_idle_timer(cfg->timeout_timer_dim_sec);
+        if (ui_screen_timer_is_done()) {
+            arm_idle_timer(cfg->timeout_timer_done_sec);
+        } else {
+            arm_idle_timer(cfg->timeout_timer_dim_sec);
+        }
         break;
     case UI_SCREEN_TIMER_DIM:
         ui_screen_timer_on_show(UI_SCREEN_TIMER_DIM);
-        break;
-    case UI_SCREEN_TIMER_TRIGGERED:
-        arm_idle_timer(30);
+        if (ui_screen_timer_is_done()) {
+            arm_idle_timer(cfg->timeout_timer_done_sec);
+        }
         break;
     case UI_SCREEN_SETTINGS:
         ui_screen_settings_on_show();
@@ -533,7 +543,11 @@ void ui_nav_reset_idle_timer(void)
         arm_idle_timer(cfg->timeout_main_menu_sec);
         break;
     case UI_SCREEN_TIMER_BRIGHT:
-        arm_idle_timer(cfg->timeout_timer_dim_sec);
+        if (ui_screen_timer_is_done()) {
+            arm_idle_timer(cfg->timeout_timer_done_sec);
+        } else {
+            arm_idle_timer(cfg->timeout_timer_dim_sec);
+        }
         break;
     case UI_SCREEN_ADULT_AUTH:
         s_aa.last_input_ms = now_ms();
@@ -849,6 +863,9 @@ void ui_nav_mqtt_cancel_timer(void)
     rt->active_timer_end_utc = 0;
     rt->active_timer_anim_start_ms = 0;
     ui_screen_timer_set_running(false);
+    if (ui_screen_timer_is_done()) {
+        ui_screen_timer_clear_done();
+    }
     if (s_current == UI_SCREEN_TIMER_BRIGHT || s_current == UI_SCREEN_TIMER_DIM ||
         s_current == UI_SCREEN_CONFIRM_END_TIMER) {
         ui_nav_go(UI_SCREEN_MENU);
@@ -1022,7 +1039,8 @@ static void tick_timer_cb(lv_timer_t *t)
     if (rt->active_timer_remaining_sec == 0) {
         app_checkpoint_clear_timer();
         ui_screen_timer_set_running(false);
-        ui_nav_go(UI_SCREEN_TIMER_TRIGGERED);
+        ui_screen_timer_on_finished();
+        arm_idle_timer(app_config_get()->timeout_timer_done_sec);
     }
 }
 

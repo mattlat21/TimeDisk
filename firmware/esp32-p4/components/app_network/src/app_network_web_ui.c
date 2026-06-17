@@ -135,6 +135,10 @@ static bool apply_config_field(app_config_t *cfg, const char *key, const cJSON *
         cfg->timeout_timer_dim_sec = (uint32_t)val->valuedouble;
         return true;
     }
+    if (strcmp(key, "timeout_timer_done_sec") == 0 && cJSON_IsNumber(val)) {
+        cfg->timeout_timer_done_sec = (uint32_t)val->valuedouble;
+        return true;
+    }
     if (strcmp(key, "ui_primary_color") == 0 && cJSON_IsNumber(val)) {
         cfg->ui_primary_color = (uint32_t)val->valuedouble;
         cfg->theme_set = true;

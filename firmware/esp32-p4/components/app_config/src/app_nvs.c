@@ -31,6 +31,7 @@ static const char *TAG = "app_nvs";
 #define KEY_TO_AA               "to_aa"        /* uint32 timeout_aa_sec */
 #define KEY_TO_MENU             "to_menu"      /* uint32 timeout_main_menu_sec */
 #define KEY_TO_TIMER_DIM        "to_tm_dim"    /* uint32 timeout_timer_dim_sec */
+#define KEY_TO_TIMER_DONE       "to_tm_done"   /* uint32 timeout_timer_done_sec */
 #define KEY_UI_PRIMARY          "ui_primary"   /* uint32 ui_primary_color */
 #define KEY_UI_SECONDARY        "ui_secondary" /* uint32 ui_secondary_color */
 #define KEY_THEME_SET           "theme_set"    /* uint8  theme_set */
@@ -377,6 +378,10 @@ esp_err_t app_nvs_load(void)
     if (err != ESP_OK) {
         goto out;
     }
+    err = get_u32(h, KEY_TO_TIMER_DONE, &cfg->timeout_timer_done_sec, 30);
+    if (err != ESP_OK) {
+        goto out;
+    }
 
     err = get_u32(h, KEY_UI_PRIMARY, &cfg->ui_primary_color, 0x7A24BC);
     if (err != ESP_OK) {
@@ -560,7 +565,8 @@ esp_err_t app_nvs_save_timeouts(void)
         (err = set_u32(h, KEY_TO_TOD_MENU, cfg->timeout_tod_menu_sec)) != ESP_OK ||
         (err = set_u32(h, KEY_TO_AA, cfg->timeout_aa_sec)) != ESP_OK ||
         (err = set_u32(h, KEY_TO_MENU, cfg->timeout_main_menu_sec)) != ESP_OK ||
-        (err = set_u32(h, KEY_TO_TIMER_DIM, cfg->timeout_timer_dim_sec)) != ESP_OK) {
+        (err = set_u32(h, KEY_TO_TIMER_DIM, cfg->timeout_timer_dim_sec)) != ESP_OK ||
+        (err = set_u32(h, KEY_TO_TIMER_DONE, cfg->timeout_timer_done_sec)) != ESP_OK) {
         nvs_close(h);
         return err;
     }
@@ -727,7 +733,8 @@ esp_err_t app_nvs_save_all(void)
         (err = set_u32(h, KEY_TO_TOD_MENU, cfg->timeout_tod_menu_sec)) != ESP_OK ||
         (err = set_u32(h, KEY_TO_AA, cfg->timeout_aa_sec)) != ESP_OK ||
         (err = set_u32(h, KEY_TO_MENU, cfg->timeout_main_menu_sec)) != ESP_OK ||
-        (err = set_u32(h, KEY_TO_TIMER_DIM, cfg->timeout_timer_dim_sec)) != ESP_OK) {
+        (err = set_u32(h, KEY_TO_TIMER_DIM, cfg->timeout_timer_dim_sec)) != ESP_OK ||
+        (err = set_u32(h, KEY_TO_TIMER_DONE, cfg->timeout_timer_done_sec)) != ESP_OK) {
         goto out;
     }
 
