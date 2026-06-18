@@ -16,6 +16,7 @@ idf_component_register(
         "src/ui_settings_network.c"
         "src/ui_settings_timezone.c"
         "src/ui_settings_schedule.c"
+        "src/ui_settings_schedule_events.c"
         "src/ui_settings_timeouts.c"
         "src/ui_settings_adult_auth.c"
         "src/ui_settings_mqtt.c"

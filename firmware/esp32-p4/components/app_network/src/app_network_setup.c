@@ -22,6 +22,8 @@ static const char *TAG = "app_net_setup";
 #define SETUP_AP_SSID       APP_NETWORK_SETUP_AP_SSID
 #define SETUP_AP_CHANNEL    1
 #define SETUP_AP_MAX_CONN   4
+/** Must be >= every handler in app_network_web_ui_register() routes[] (+ headroom). */
+#define WEB_UI_MAX_URI_HANDLERS 24
 
 static httpd_handle_t s_httpd;
 static bool s_setup_ap_active;
@@ -46,7 +48,7 @@ static esp_err_t setup_http_start(void)
     }
 
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-    config.max_uri_handlers = 16;
+    config.max_uri_handlers = WEB_UI_MAX_URI_HANDLERS;
     config.stack_size = 8192;
 
     esp_err_t err = httpd_start(&s_httpd, &config);
@@ -57,6 +59,7 @@ static esp_err_t setup_http_start(void)
 
     err = app_network_web_ui_register(s_httpd);
     if (err != ESP_OK) {
+        ESP_LOGE(TAG, "web UI register failed: %s — stopping httpd", esp_err_to_name(err));
         httpd_stop(s_httpd);
         s_httpd = NULL;
         return err;

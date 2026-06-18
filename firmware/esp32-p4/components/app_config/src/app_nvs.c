@@ -40,6 +40,7 @@ static const char *TAG = "app_nvs";
 #define KEY_WIND_DOWN           "wind_down"    /* uint32 wind_down_sec */
 #define KEY_SLEEP               "sleep_sec"    /* uint32 sleep_sec */
 #define KEY_REST                "rest_sec"     /* uint32 rest_sec */
+#define KEY_SCHED_EVTS          "sched_evts"   /* blob   schedule_events[] + count */
 #define KEY_AA_METHODS          "aa_methods"   /* uint8  aa_methods */
 #define KEY_AA_PIN              "aa_pin"       /* string aa_pin */
 #define KEY_MQTT_EN             "mqtt_en"      /* uint8  mqtt_enabled */
@@ -149,6 +150,12 @@ typedef struct {
     app_wifi_network_t entries[APP_WIFI_NETWORK_MAX];
 } wifi_nvs_blob_t;
 
+typedef struct {
+    uint8_t count;
+    uint8_t reserved[3];
+    app_schedule_event_t entries[APP_SCHEDULE_EVENT_MAX];
+} schedule_events_nvs_blob_t;
+
 static void sanitize_wifi_networks(app_config_t *cfg)
 {
     if (cfg->wifi_network_count > APP_WIFI_NETWORK_MAX) {
@@ -236,6 +243,44 @@ static esp_err_t save_wifi_list(nvs_handle_t h, const app_config_t *cfg)
     return nvs_set_blob(h, KEY_WIFI_LIST, &blob, sizeof(blob));
 }
 
+static esp_err_t load_schedule_events(nvs_handle_t h, app_config_t *cfg)
+{
+    schedule_events_nvs_blob_t blob;
+    size_t len = sizeof(blob);
+    esp_err_t err = nvs_get_blob(h, KEY_SCHED_EVTS, &blob, &len);
+    if (err == ESP_ERR_NVS_NOT_FOUND) {
+        cfg->schedule_event_count = 0;
+        return ESP_OK;
+    }
+    if (err != ESP_OK) {
+        return err;
+    }
+    if (len < sizeof(uint8_t)) {
+        return ESP_ERR_INVALID_SIZE;
+    }
+
+    cfg->schedule_event_count = blob.count;
+    if (cfg->schedule_event_count > APP_SCHEDULE_EVENT_MAX) {
+        cfg->schedule_event_count = APP_SCHEDULE_EVENT_MAX;
+    }
+    if (cfg->schedule_event_count > 0) {
+        memcpy(cfg->schedule_events, blob.entries,
+               (size_t)cfg->schedule_event_count * sizeof(app_schedule_event_t));
+    }
+    return ESP_OK;
+}
+
+static esp_err_t save_schedule_events(nvs_handle_t h, const app_config_t *cfg)
+{
+    schedule_events_nvs_blob_t blob = {0};
+    blob.count = cfg->schedule_event_count;
+    if (blob.count > 0) {
+        memcpy(blob.entries, cfg->schedule_events,
+               (size_t)blob.count * sizeof(app_schedule_event_t));
+    }
+    return nvs_set_blob(h, KEY_SCHED_EVTS, &blob, sizeof(blob));
+}
+
 static void sanitize_loaded_config(app_config_t *cfg)
 {
     sanitize_wifi_networks(cfg);
@@ -266,6 +311,22 @@ static void sanitize_loaded_config(app_config_t *cfg)
     if (cfg->mqtt_port == 0) {
         cfg->mqtt_port = 1883;
     }
+
+    if (cfg->schedule_event_count > APP_SCHEDULE_EVENT_MAX) {
+        ESP_LOGW(TAG, "schedule_event_count %u out of range, clamping",
+                 (unsigned)cfg->schedule_event_count);
+        cfg->schedule_event_count = APP_SCHEDULE_EVENT_MAX;
+    }
+    for (uint8_t i = 0; i < cfg->schedule_event_count; i++) {
+        app_schedule_event_t *ev = &cfg->schedule_events[i];
+        if (ev->time_min >= 24U * 60U || ev->action > APP_SCHEDULE_ACTION_START_REST) {
+            ESP_LOGW(TAG, "invalid schedule event at %u, truncating list", (unsigned)i);
+            cfg->schedule_event_count = i;
+            break;
+        }
+    }
+
+    app_config_schedule_events_sort_buf(cfg->schedule_events, cfg->schedule_event_count);
 }
 
 esp_err_t app_nvs_init(void)
@@ -418,6 +479,11 @@ esp_err_t app_nvs_load(void)
         goto out;
     }
     err = get_u32(h, KEY_REST, &cfg->rest_sec, 0);
+    if (err != ESP_OK) {
+        goto out;
+    }
+
+    err = load_schedule_events(h, cfg);
     if (err != ESP_OK) {
         goto out;
     }
@@ -635,6 +701,11 @@ esp_err_t app_nvs_save_schedule(void)
         nvs_close(h);
         return err;
     }
+    err = save_schedule_events(h, cfg);
+    if (err != ESP_OK) {
+        nvs_close(h);
+        return err;
+    }
     err = touch_cfg_ver(h);
     if (err == ESP_OK) {
         err = commit(h);
@@ -752,6 +823,11 @@ esp_err_t app_nvs_save_all(void)
     if ((err = set_u32(h, KEY_WIND_DOWN, cfg->wind_down_sec)) != ESP_OK ||
         (err = set_u32(h, KEY_SLEEP, cfg->sleep_sec)) != ESP_OK ||
         (err = set_u32(h, KEY_REST, cfg->rest_sec)) != ESP_OK) {
+        goto out;
+    }
+
+    err = save_schedule_events(h, cfg);
+    if (err != ESP_OK) {
         goto out;
     }
 

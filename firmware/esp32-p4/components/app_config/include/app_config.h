@@ -25,6 +25,7 @@
 #define APP_MQTT_HOST_MAX     64
 #define APP_MQTT_USER_MAX     64
 #define APP_MQTT_PASS_MAX     64
+#define APP_SCHEDULE_EVENT_MAX 16
 
 /** Bit flags for enabled adult-auth methods (see app_config_t::aa_methods). */
 #define AA_METHOD_PIN   0x01
@@ -37,6 +38,22 @@ typedef enum {
     APP_MODE_SLEEP,
     APP_MODE_REST,
 } app_mode_t;
+
+/** Wall-clock schedule action (local time, minutes since midnight). */
+typedef enum {
+    APP_SCHEDULE_ACTION_WAKE = 0,
+    APP_SCHEDULE_ACTION_START_SLEEP,
+    APP_SCHEDULE_ACTION_START_REST,
+} app_schedule_action_t;
+
+typedef struct {
+    /** Local time: 0–1439 (hour * 60 + minute). */
+    uint16_t time_min;
+    uint8_t action;
+    bool enabled;
+    /** 0 = use configured cycle duration for sleep/rest; else override primary segment. */
+    uint32_t duration_sec;
+} app_schedule_event_t;
 
 /** One saved Wi-Fi network (SSID + optional WPA passphrase). */
 typedef struct {
@@ -76,6 +93,9 @@ typedef struct {
     uint32_t wind_down_sec;
     uint32_t sleep_sec;
     uint32_t rest_sec;
+
+    uint8_t schedule_event_count;
+    app_schedule_event_t schedule_events[APP_SCHEDULE_EVENT_MAX];
 
     uint8_t aa_methods;
     char aa_pin[APP_AA_PIN_LEN];
@@ -139,6 +159,15 @@ esp_err_t app_config_wifi_network_set(int index, const char *ssid, const char *p
 esp_err_t app_config_wifi_network_delete(int index);
 void app_config_wifi_networks_copy(app_wifi_network_t *dst, uint8_t *dst_count,
                                    const app_wifi_network_t *src, uint8_t src_count);
+
+int app_config_schedule_event_count(void);
+const app_schedule_event_t *app_config_schedule_event_get(int index);
+void app_config_schedule_events_copy(app_schedule_event_t *dst, uint8_t *dst_count,
+                                     const app_schedule_event_t *src, uint8_t src_count);
+void app_config_schedule_events_sort_buf(app_schedule_event_t *events, uint8_t count);
+void app_config_schedule_events_sort(void);
+esp_err_t app_config_schedule_event_set(int index, const app_schedule_event_t *event);
+esp_err_t app_config_schedule_event_delete(int index);
 
 /** Convenience wrappers around app_nvs_save_* (see app_nvs.h). */
 static inline esp_err_t app_config_save_all(void)

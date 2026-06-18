@@ -89,6 +89,7 @@ void app_config_apply_defaults(void)
     s_cfg.mqtt_password[0] = '\0';
 
     s_cfg.wifi_network_count = 0;
+    s_cfg.schedule_event_count = 0;
     s_cfg.timezone_set = false;
     s_cfg.timezone_id[0] = '\0';
     s_cfg.theme_set = false;
@@ -218,6 +219,109 @@ esp_err_t app_config_wifi_network_delete(int index)
     }
     memset(&s_cfg.wifi_networks[s_cfg.wifi_network_count - 1], 0, sizeof(app_wifi_network_t));
     s_cfg.wifi_network_count--;
+    return ESP_OK;
+}
+
+int app_config_schedule_event_count(void)
+{
+    return (int)s_cfg.schedule_event_count;
+}
+
+const app_schedule_event_t *app_config_schedule_event_get(int index)
+{
+    if (index < 0 || index >= (int)s_cfg.schedule_event_count) {
+        return NULL;
+    }
+    return &s_cfg.schedule_events[index];
+}
+
+void app_config_schedule_events_copy(app_schedule_event_t *dst, uint8_t *dst_count,
+                                     const app_schedule_event_t *src, uint8_t src_count)
+{
+    if (dst == NULL || dst_count == NULL) {
+        return;
+    }
+    if (src_count > APP_SCHEDULE_EVENT_MAX) {
+        src_count = APP_SCHEDULE_EVENT_MAX;
+    }
+    *dst_count = src_count;
+    if (src_count > 0 && src != NULL) {
+        memcpy(dst, src, (size_t)src_count * sizeof(app_schedule_event_t));
+    }
+}
+
+void app_config_schedule_events_sort_buf(app_schedule_event_t *events, uint8_t count)
+{
+    if (events == NULL || count <= 1) {
+        return;
+    }
+
+    for (uint8_t i = 1; i < count; i++) {
+        app_schedule_event_t tmp = events[i];
+        uint8_t j = i;
+        while (j > 0 && events[j - 1].time_min > tmp.time_min) {
+            events[j] = events[j - 1];
+            j--;
+        }
+        events[j] = tmp;
+    }
+}
+
+void app_config_schedule_events_sort(void)
+{
+    app_config_schedule_events_sort_buf(s_cfg.schedule_events, s_cfg.schedule_event_count);
+}
+
+static esp_err_t schedule_event_sanitize(const app_schedule_event_t *event)
+{
+    if (event == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (event->time_min >= 24U * 60U) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (event->action > APP_SCHEDULE_ACTION_START_REST) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    return ESP_OK;
+}
+
+esp_err_t app_config_schedule_event_set(int index, const app_schedule_event_t *event)
+{
+    esp_err_t err = schedule_event_sanitize(event);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    if (index < 0 || index > (int)s_cfg.schedule_event_count) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (index == (int)s_cfg.schedule_event_count) {
+        if (s_cfg.schedule_event_count >= APP_SCHEDULE_EVENT_MAX) {
+            return ESP_ERR_NO_MEM;
+        }
+        index = (int)s_cfg.schedule_event_count;
+        s_cfg.schedule_event_count++;
+    }
+
+    s_cfg.schedule_events[index] = *event;
+    app_config_schedule_events_sort();
+    return ESP_OK;
+}
+
+esp_err_t app_config_schedule_event_delete(int index)
+{
+    if (index < 0 || index >= (int)s_cfg.schedule_event_count) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    for (int i = index; i < (int)s_cfg.schedule_event_count - 1; i++) {
+        s_cfg.schedule_events[i] = s_cfg.schedule_events[i + 1];
+    }
+    memset(&s_cfg.schedule_events[s_cfg.schedule_event_count - 1], 0,
+           sizeof(app_schedule_event_t));
+    s_cfg.schedule_event_count--;
+    app_config_schedule_events_sort();
     return ESP_OK;
 }
 

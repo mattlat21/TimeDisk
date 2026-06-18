@@ -9,6 +9,7 @@
 #include "app_config.h"
 #include "app_checkpoint.h"
 #include "app_nvs.h"
+#include "app_schedule.h"
 #include "app_time.h"
 #include "app_network.h"
 #include "app_network_web_ui.h"
@@ -72,6 +73,14 @@ typedef struct {
 static tod_fade_t s_tod_fade;
 static uint32_t s_last_backlight_duty = UINT32_MAX;
 static void (*s_mqtt_status_hook)(void);
+
+static struct {
+    bool active;
+    uint32_t wind_down_sec;
+    uint32_t sleep_sec;
+    uint32_t rest_sec;
+} s_cycle_dur;
+
 static app_mode_t s_mqtt_last_mode = APP_MODE_WAKE;
 static uint32_t s_mqtt_last_mode_rem;
 static bool s_mqtt_last_cycle;
@@ -643,6 +652,26 @@ static void notify_mqtt_status(void)
     }
 }
 
+static void cycle_durations_get(uint32_t *wind_down_sec, uint32_t *sleep_sec, uint32_t *rest_sec)
+{
+    if (s_cycle_dur.active) {
+        *wind_down_sec = s_cycle_dur.wind_down_sec;
+        *sleep_sec = s_cycle_dur.sleep_sec;
+        *rest_sec = s_cycle_dur.rest_sec;
+        return;
+    }
+
+    app_config_t *cfg = app_config_get();
+    *wind_down_sec = cfg->wind_down_sec;
+    *sleep_sec = cfg->sleep_sec;
+    *rest_sec = cfg->rest_sec;
+}
+
+static void cycle_durations_clear(void)
+{
+    s_cycle_dur.active = false;
+}
+
 static void mqtt_track_runtime_snapshot(void)
 {
     app_runtime_t *rt = app_runtime_get();
@@ -675,7 +704,11 @@ static void mode_engine_refresh_tod_if_visible(void)
 static void mode_engine_advance_if_expired(void)
 {
     app_runtime_t *rt = app_runtime_get();
-    app_config_t *cfg = app_config_get();
+    uint32_t wind_down_sec = 0;
+    uint32_t sleep_sec = 0;
+    uint32_t rest_sec = 0;
+
+    cycle_durations_get(&wind_down_sec, &sleep_sec, &rest_sec);
 
     if (!rt->cycle_active || rt->mode_remaining_sec > 0) {
         return;
@@ -685,35 +718,35 @@ static void mode_engine_advance_if_expired(void)
 
     switch (rt->current_mode) {
     case APP_MODE_WAKE:
-        if (cfg->wind_down_sec > 0) {
+        if (wind_down_sec > 0) {
             rt->current_mode = APP_MODE_WIND_DOWN;
-            rt->mode_remaining_sec = cfg->wind_down_sec;
-        } else if (cfg->sleep_sec > 0) {
+            rt->mode_remaining_sec = wind_down_sec;
+        } else if (sleep_sec > 0) {
             rt->current_mode = APP_MODE_SLEEP;
-            rt->mode_remaining_sec = cfg->sleep_sec;
-        } else if (cfg->rest_sec > 0) {
+            rt->mode_remaining_sec = sleep_sec;
+        } else if (rest_sec > 0) {
             rt->current_mode = APP_MODE_REST;
-            rt->mode_remaining_sec = cfg->rest_sec;
+            rt->mode_remaining_sec = rest_sec;
         } else {
             rt->cycle_active = false;
         }
         break;
     case APP_MODE_WIND_DOWN:
-        if (cfg->sleep_sec > 0) {
+        if (sleep_sec > 0) {
             rt->current_mode = APP_MODE_SLEEP;
-            rt->mode_remaining_sec = cfg->sleep_sec;
-        } else if (cfg->rest_sec > 0) {
+            rt->mode_remaining_sec = sleep_sec;
+        } else if (rest_sec > 0) {
             rt->current_mode = APP_MODE_REST;
-            rt->mode_remaining_sec = cfg->rest_sec;
+            rt->mode_remaining_sec = rest_sec;
         } else {
             rt->current_mode = APP_MODE_WAKE;
             rt->cycle_active = false;
         }
         break;
     case APP_MODE_SLEEP:
-        if (cfg->rest_sec > 0) {
+        if (rest_sec > 0) {
             rt->current_mode = APP_MODE_REST;
-            rt->mode_remaining_sec = cfg->rest_sec;
+            rt->mode_remaining_sec = rest_sec;
         } else {
             rt->current_mode = APP_MODE_WAKE;
             rt->cycle_active = false;
@@ -729,30 +762,39 @@ static void mode_engine_advance_if_expired(void)
 
     if (cycle_was_active && !rt->cycle_active) {
         app_checkpoint_clear_cycle();
+        cycle_durations_clear();
     }
 
     mode_engine_refresh_tod_if_visible();
     notify_mqtt_status();
 }
 
-void mode_engine_start_cycle(void)
+void mode_engine_start_cycle_durations(uint32_t wind_down_sec, uint32_t sleep_sec, uint32_t rest_sec)
 {
     app_runtime_t *rt = app_runtime_get();
-    app_config_t *cfg = app_config_get();
+
+    s_cycle_dur.active = true;
+    s_cycle_dur.wind_down_sec = wind_down_sec;
+    s_cycle_dur.sleep_sec = sleep_sec;
+    s_cycle_dur.rest_sec = rest_sec;
 
     if (rt->time_valid) {
-        app_checkpoint_start_cycle(time(NULL),
-                                   cfg->wind_down_sec,
-                                   cfg->sleep_sec,
-                                   cfg->rest_sec);
+        app_checkpoint_start_cycle(time(NULL), wind_down_sec, sleep_sec, rest_sec);
     }
 
     rt->cycle_active = true;
     rt->current_mode = APP_MODE_WAKE;
     rt->mode_remaining_sec = 0;
-    /* Skip the transient Wake frame before TOD loads (mode_flow.md auto-advance). */
     mode_engine_advance_if_expired();
     notify_mqtt_status();
+}
+
+void mode_engine_start_cycle(void)
+{
+    cycle_durations_clear();
+    app_config_t *cfg = app_config_get();
+    mode_engine_start_cycle_durations(cfg->wind_down_sec, cfg->sleep_sec, cfg->rest_sec);
+    s_cycle_dur.active = false;
 }
 
 void mode_engine_switch_to_wake(void)
@@ -760,6 +802,7 @@ void mode_engine_switch_to_wake(void)
     app_runtime_t *rt = app_runtime_get();
 
     app_checkpoint_clear_cycle();
+    cycle_durations_clear();
     rt->cycle_active = false;
     rt->current_mode = APP_MODE_WAKE;
     rt->mode_remaining_sec = 0;
@@ -921,6 +964,45 @@ static void register_web_timer_ops(void)
     app_network_web_ui_set_timer_ops(&ops);
 }
 
+static void schedule_event_fire(const app_schedule_event_t *ev)
+{
+    if (ev == NULL) {
+        return;
+    }
+
+    app_config_t *cfg = app_config_get();
+
+    switch ((app_schedule_action_t)ev->action) {
+    case APP_SCHEDULE_ACTION_WAKE:
+        mode_engine_switch_to_wake();
+        if (s_current == UI_SCREEN_TOD_BRIGHT || s_current == UI_SCREEN_TOD_DIM) {
+            ui_nav_tod_wake();
+        } else {
+            ui_nav_go(UI_SCREEN_TOD_BRIGHT);
+        }
+        break;
+    case APP_SCHEDULE_ACTION_START_SLEEP: {
+        const uint32_t sleep_sec = ev->duration_sec > 0 ? ev->duration_sec : cfg->sleep_sec;
+        mode_engine_start_cycle_durations(cfg->wind_down_sec, sleep_sec, cfg->rest_sec);
+        ui_nav_go(UI_SCREEN_TOD_BRIGHT);
+        break;
+    }
+    case APP_SCHEDULE_ACTION_START_REST: {
+        const uint32_t rest_sec = ev->duration_sec > 0 ? ev->duration_sec : cfg->rest_sec;
+        mode_engine_start_cycle_durations(0, 0, rest_sec);
+        ui_nav_go(UI_SCREEN_TOD_BRIGHT);
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+static void register_schedule_handler(void)
+{
+    app_schedule_set_fire_callback(schedule_event_fire);
+}
+
 static void mode_engine_tick(void)
 {
     app_runtime_t *rt = app_runtime_get();
@@ -1018,6 +1100,7 @@ static void tick_timer_cb(lv_timer_t *t)
     }
 
     mode_engine_tick();
+    app_schedule_tick();
     mqtt_track_runtime_snapshot();
 
     if (s_current == UI_SCREEN_TOD_BRIGHT || s_current == UI_SCREEN_TOD_DIM) {
@@ -1065,5 +1148,6 @@ void ui_nav_init(void)
     s_tick_timer = lv_timer_create(tick_timer_cb, 1000, NULL);
 
     register_web_timer_ops();
+    register_schedule_handler();
     ui_nav_go(UI_SCREEN_SPLASH);
 }

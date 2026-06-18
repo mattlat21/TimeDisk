@@ -36,4 +36,11 @@ void ui_settings_register_overlay_obj(lv_obj_t *obj);
 
 /* Panel-specific helpers needed by shared cancel plumbing. */
 bool ui_settings_timeouts_on_cancel(void);
+bool ui_settings_schedule_on_cancel(void);
+
+void ui_settings_schedule_hide_durations(bool hide);
+void ui_settings_schedule_events_init(lv_obj_t *panel, lv_obj_t *panel_title);
+void ui_settings_schedule_events_open(void);
+void ui_settings_schedule_events_close(void);
+void ui_settings_schedule_events_restore_saved(void);
 

@@ -450,6 +450,177 @@ static esp_err_t api_wifi_connect_post(httpd_req_t *req)
     return send_json_ok(req);
 }
 
+static const char *schedule_action_name(uint8_t action)
+{
+    switch ((app_schedule_action_t)action) {
+    case APP_SCHEDULE_ACTION_START_SLEEP:
+        return "start_sleep";
+    case APP_SCHEDULE_ACTION_START_REST:
+        return "start_rest";
+    case APP_SCHEDULE_ACTION_WAKE:
+    default:
+        return "wake";
+    }
+}
+
+static bool schedule_action_from_json(const cJSON *val, uint8_t *action_out)
+{
+    if (action_out == NULL) {
+        return false;
+    }
+    if (cJSON_IsNumber(val)) {
+        const int n = (int)val->valuedouble;
+        if (n >= APP_SCHEDULE_ACTION_WAKE && n <= APP_SCHEDULE_ACTION_START_REST) {
+            *action_out = (uint8_t)n;
+            return true;
+        }
+        return false;
+    }
+    if (!cJSON_IsString(val)) {
+        return false;
+    }
+    if (strcmp(val->valuestring, "wake") == 0) {
+        *action_out = APP_SCHEDULE_ACTION_WAKE;
+        return true;
+    }
+    if (strcmp(val->valuestring, "start_sleep") == 0) {
+        *action_out = APP_SCHEDULE_ACTION_START_SLEEP;
+        return true;
+    }
+    if (strcmp(val->valuestring, "start_rest") == 0) {
+        *action_out = APP_SCHEDULE_ACTION_START_REST;
+        return true;
+    }
+    return false;
+}
+
+static bool schedule_event_from_json(const cJSON *root, app_schedule_event_t *event_out)
+{
+    if (root == NULL || event_out == NULL || !cJSON_IsObject(root)) {
+        return false;
+    }
+
+    app_schedule_event_t ev = {0};
+    const cJSON *time_min = cJSON_GetObjectItem(root, "time_min");
+    const cJSON *action = cJSON_GetObjectItem(root, "action");
+    const cJSON *enabled = cJSON_GetObjectItem(root, "enabled");
+    const cJSON *duration_sec = cJSON_GetObjectItem(root, "duration_sec");
+
+    if (!cJSON_IsNumber(time_min) || time_min->valuedouble < 0 || time_min->valuedouble >= 24 * 60) {
+        return false;
+    }
+    if (!schedule_action_from_json(action, &ev.action)) {
+        return false;
+    }
+
+    ev.time_min = (uint16_t)time_min->valuedouble;
+    ev.enabled = !cJSON_IsBool(enabled) || cJSON_IsTrue(enabled);
+    ev.duration_sec = cJSON_IsNumber(duration_sec) ? (uint32_t)duration_sec->valuedouble : 0;
+    if (ev.action == APP_SCHEDULE_ACTION_WAKE) {
+        ev.duration_sec = 0;
+    }
+    *event_out = ev;
+    return true;
+}
+
+static esp_err_t api_schedule_events_get(httpd_req_t *req)
+{
+    cJSON *root = cJSON_CreateObject();
+    if (root == NULL) {
+        return ESP_FAIL;
+    }
+
+    cJSON *events = cJSON_CreateArray();
+    const app_config_t *cfg = app_config_get();
+    for (int i = 0; i < (int)cfg->schedule_event_count; i++) {
+        const app_schedule_event_t *ev = &cfg->schedule_events[i];
+        cJSON *item = cJSON_CreateObject();
+        if (item == NULL) {
+            continue;
+        }
+        cJSON_AddNumberToObject(item, "index", i);
+        cJSON_AddNumberToObject(item, "time_min", ev->time_min);
+        cJSON_AddStringToObject(item, "action", schedule_action_name(ev->action));
+        cJSON_AddBoolToObject(item, "enabled", ev->enabled);
+        cJSON_AddNumberToObject(item, "duration_sec", ev->duration_sec);
+        cJSON_AddItemToArray(events, item);
+    }
+    cJSON_AddItemToObject(root, "events", events);
+    cJSON_AddNumberToObject(root, "count", cfg->schedule_event_count);
+    char *json = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    return send_json(req, json);
+}
+
+static esp_err_t api_schedule_events_add_post(httpd_req_t *req)
+{
+    char body[WEB_POST_MAX];
+    if (read_body(req, body, sizeof(body)) != ESP_OK) {
+        return ESP_FAIL;
+    }
+
+    cJSON *root = cJSON_Parse(body);
+    if (root == NULL) {
+        return ESP_FAIL;
+    }
+
+    app_schedule_event_t ev;
+    if (schedule_event_from_json(root, &ev)) {
+        int index = app_config_schedule_event_count();
+        if (app_config_schedule_event_set(index, &ev) == ESP_OK) {
+            app_config_save_schedule();
+        }
+    }
+
+    cJSON_Delete(root);
+    return send_json_ok(req);
+}
+
+static esp_err_t api_schedule_events_edit_post(httpd_req_t *req)
+{
+    char body[WEB_POST_MAX];
+    if (read_body(req, body, sizeof(body)) != ESP_OK) {
+        return ESP_FAIL;
+    }
+
+    cJSON *root = cJSON_Parse(body);
+    if (root == NULL) {
+        return ESP_FAIL;
+    }
+
+    const cJSON *index_j = cJSON_GetObjectItem(root, "index");
+    app_schedule_event_t ev;
+    if (cJSON_IsNumber(index_j) && schedule_event_from_json(root, &ev)) {
+        app_config_schedule_event_set((int)index_j->valuedouble, &ev);
+        app_config_save_schedule();
+    }
+
+    cJSON_Delete(root);
+    return send_json_ok(req);
+}
+
+static esp_err_t api_schedule_events_delete_post(httpd_req_t *req)
+{
+    char body[WEB_POST_MAX];
+    if (read_body(req, body, sizeof(body)) != ESP_OK) {
+        return ESP_FAIL;
+    }
+
+    cJSON *root = cJSON_Parse(body);
+    if (root == NULL) {
+        return ESP_FAIL;
+    }
+
+    const cJSON *index = cJSON_GetObjectItem(root, "index");
+    if (cJSON_IsNumber(index)) {
+        app_config_schedule_event_delete((int)index->valuedouble);
+        app_config_save_schedule();
+    }
+
+    cJSON_Delete(root);
+    return send_json_ok(req);
+}
+
 static void reboot_task(void *arg)
 {
     (void)arg;
@@ -593,6 +764,10 @@ esp_err_t app_network_web_ui_register(httpd_handle_t server)
         {.uri = "/api/wifi/edit", .method = HTTP_POST, .handler = api_wifi_edit_post},
         {.uri = "/api/wifi/reorder", .method = HTTP_POST, .handler = api_wifi_reorder_post},
         {.uri = "/api/wifi/connect", .method = HTTP_POST, .handler = api_wifi_connect_post},
+        {.uri = "/api/schedule/events", .method = HTTP_GET, .handler = api_schedule_events_get},
+        {.uri = "/api/schedule/events", .method = HTTP_POST, .handler = api_schedule_events_add_post},
+        {.uri = "/api/schedule/events/edit", .method = HTTP_POST, .handler = api_schedule_events_edit_post},
+        {.uri = "/api/schedule/events/delete", .method = HTTP_POST, .handler = api_schedule_events_delete_post},
         {.uri = "/api/reboot", .method = HTTP_POST, .handler = api_reboot_post},
         {.uri = "/api/timer/start", .method = HTTP_POST, .handler = api_timer_start_post},
         {.uri = "/api/timer/cancel", .method = HTTP_POST, .handler = api_timer_cancel_post},

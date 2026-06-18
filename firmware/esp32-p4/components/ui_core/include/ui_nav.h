@@ -83,6 +83,10 @@ void ui_nav_tod_wake(void);
 /** Begin automatic Wake→… mode cycle after Sleep/Rest schedule wizard. */
 void mode_engine_start_cycle(void);
 
+/** Start cycle with explicit segment durations (not persisted to config). */
+void mode_engine_start_cycle_durations(uint32_t wind_down_sec, uint32_t sleep_sec,
+                                       uint32_t rest_sec);
+
 /** Stop the automatic cycle and return to Wake mode. */
 void mode_engine_switch_to_wake(void);
 

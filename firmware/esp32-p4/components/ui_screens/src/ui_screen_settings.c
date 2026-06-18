@@ -177,9 +177,14 @@ static void panel_cancel_cb(lv_event_t *e)
         s_draft.timezone_set = s_saved.timezone_set;
         break;
     case PANEL_SCHEDULE:
+        if (ui_settings_schedule_on_cancel()) {
+            return;
+        }
         s_draft.wind_down_sec = s_saved.wind_down_sec;
         s_draft.sleep_sec = s_saved.sleep_sec;
         s_draft.rest_sec = s_saved.rest_sec;
+        ui_settings_schedule_events_restore_saved();
+        ui_settings_schedule_sync_from_draft();
         break;
     case PANEL_TIMEOUTS:
         if (ui_settings_timeouts_on_cancel()) {
