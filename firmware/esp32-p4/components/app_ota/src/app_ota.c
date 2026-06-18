@@ -27,9 +27,24 @@ typedef struct {
 
 static app_update_state_t s_state = APP_UPDATE_STATE_IDLE;
 static TaskHandle_t s_task;
+static int s_progress_percent;
+static char s_progress_status[64];
+static char s_last_message[96];
+
+static void set_progress(int percent, const char *status)
+{
+    if (percent < 0) {
+        percent = 0;
+    } else if (percent > 100) {
+        percent = 100;
+    }
+    s_progress_percent = percent;
+    snprintf(s_progress_status, sizeof(s_progress_status), "%s", status != NULL ? status : "");
+}
 
 static void report_progress(ota_job_t *job, int percent, const char *status)
 {
+    set_progress(percent, status);
     if (job->progress_cb != NULL) {
         job->progress_cb(percent, status, job->user_data);
     }
@@ -37,6 +52,7 @@ static void report_progress(ota_job_t *job, int percent, const char *status)
 
 static void report_done(ota_job_t *job, esp_err_t err, const char *message)
 {
+    snprintf(s_last_message, sizeof(s_last_message), "%s", message != NULL ? message : "");
     if (job->done_cb != NULL) {
         job->done_cb(err, message, job->user_data);
     }
@@ -136,6 +152,21 @@ bool app_update_active(void)
     return s_state == APP_UPDATE_STATE_RUNNING;
 }
 
+int app_update_get_progress_percent(void)
+{
+    return s_progress_percent;
+}
+
+const char *app_update_get_progress_status(void)
+{
+    return s_progress_status;
+}
+
+const char *app_update_get_last_message(void)
+{
+    return s_last_message;
+}
+
 esp_err_t app_update_start(const char *url, app_update_progress_cb_t progress_cb,
                            app_update_done_cb_t done_cb, void *user_data)
 {
@@ -157,6 +188,8 @@ esp_err_t app_update_start(const char *url, app_update_progress_cb_t progress_cb
     job->user_data = user_data;
 
     s_state = APP_UPDATE_STATE_IDLE;
+    s_last_message[0] = '\0';
+    set_progress(0, "Starting...");
 
     BaseType_t ok = xTaskCreate(ota_task, "app_ota", OTA_TASK_STACK, job, OTA_TASK_PRIO, &s_task);
     if (ok != pdPASS) {

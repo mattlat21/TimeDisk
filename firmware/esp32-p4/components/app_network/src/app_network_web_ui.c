@@ -7,6 +7,7 @@
 #include "app_network_web_ui_internal.h"
 #include "app_network.h"
 #include "app_config.h"
+#include "app_ota.h"
 #include "app_time.h"
 #include "timezone_catalog.h"
 
@@ -29,6 +30,8 @@ static const char *TAG = "web_ui";
 
 static app_network_web_ui_timer_ops_t s_timer_ops;
 static bool s_timer_ops_set;
+static app_network_web_ui_mode_ops_t s_mode_ops;
+static bool s_mode_ops_set;
 
 void app_network_web_ui_set_timer_ops(const app_network_web_ui_timer_ops_t *ops)
 {
@@ -37,6 +40,15 @@ void app_network_web_ui_set_timer_ops(const app_network_web_ui_timer_ops_t *ops)
     }
     s_timer_ops = *ops;
     s_timer_ops_set = true;
+}
+
+void app_network_web_ui_set_mode_ops(const app_network_web_ui_mode_ops_t *ops)
+{
+    if (ops == NULL) {
+        return;
+    }
+    s_mode_ops = *ops;
+    s_mode_ops_set = true;
 }
 
 static esp_err_t read_body(httpd_req_t *req, char *body, size_t body_len)
@@ -640,6 +652,89 @@ static esp_err_t api_reboot_post(httpd_req_t *req)
     return err;
 }
 
+static const char *update_state_name(app_update_state_t state)
+{
+    switch (state) {
+    case APP_UPDATE_STATE_RUNNING:
+        return "running";
+    case APP_UPDATE_STATE_SUCCESS:
+        return "success";
+    case APP_UPDATE_STATE_FAILED:
+        return "failed";
+    case APP_UPDATE_STATE_IDLE:
+    default:
+        return "idle";
+    }
+}
+
+static bool update_wifi_ready(void)
+{
+    const app_network_state_t net = app_network_get_state();
+    return net == APP_NETWORK_STATE_READY || net == APP_NETWORK_STATE_GOT_IP;
+}
+
+static esp_err_t api_update_get(httpd_req_t *req)
+{
+    (void)req;
+    cJSON *root = cJSON_CreateObject();
+    if (root == NULL) {
+        return ESP_FAIL;
+    }
+
+    cJSON_AddStringToObject(root, "version", app_update_get_version());
+    cJSON_AddStringToObject(root, "default_url", APP_UPDATE_DEFAULT_FIRMWARE_URL);
+    cJSON_AddBoolToObject(root, "wifi_ready", update_wifi_ready());
+    cJSON_AddBoolToObject(root, "active", app_update_active());
+    cJSON_AddStringToObject(root, "state", update_state_name(app_update_get_state()));
+    cJSON_AddNumberToObject(root, "percent", app_update_get_progress_percent());
+    cJSON_AddStringToObject(root, "status", app_update_get_progress_status());
+    cJSON_AddStringToObject(root, "message", app_update_get_last_message());
+
+    char *json = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    return send_json(req, json);
+}
+
+static esp_err_t api_update_start_post(httpd_req_t *req)
+{
+    if (app_update_active()) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Update already running");
+        return ESP_FAIL;
+    }
+    if (!update_wifi_ready()) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Connect to Wi-Fi first");
+        return ESP_FAIL;
+    }
+
+    char body[WEB_POST_MAX];
+    esp_err_t err = read_body(req, body, sizeof(body));
+    if (err != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad body");
+        return err;
+    }
+
+    char url[APP_UPDATE_URL_MAX];
+    snprintf(url, sizeof(url), "%s", APP_UPDATE_DEFAULT_FIRMWARE_URL);
+    if (body[0] != '\0') {
+        cJSON *root = cJSON_Parse(body);
+        if (root != NULL) {
+            const cJSON *url_j = cJSON_GetObjectItem(root, "url");
+            if (cJSON_IsString(url_j) && url_j->valuestring[0] != '\0') {
+                snprintf(url, sizeof(url), "%s", url_j->valuestring);
+            }
+            cJSON_Delete(root);
+        }
+    }
+
+    err = app_update_start(url, NULL, NULL, NULL);
+    if (err != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Could not start update");
+        return ESP_FAIL;
+    }
+
+    return send_json_ok(req);
+}
+
 static esp_err_t api_timer_start_post(httpd_req_t *req)
 {
     if (!s_timer_ops_set || s_timer_ops.timer_start == NULL) {
@@ -683,6 +778,45 @@ static esp_err_t api_timer_cancel_post(httpd_req_t *req)
         return ESP_FAIL;
     }
     s_timer_ops.timer_cancel();
+    return send_json_ok(req);
+}
+
+static esp_err_t api_mode_set_post(httpd_req_t *req)
+{
+    if (!s_mode_ops_set || s_mode_ops.mode_set == NULL) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Mode control not ready");
+        return ESP_FAIL;
+    }
+
+    char body[WEB_POST_MAX];
+    esp_err_t err = read_body(req, body, sizeof(body));
+    if (err != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad body");
+        return err;
+    }
+
+    cJSON *root = cJSON_Parse(body);
+    if (root == NULL) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+        return ESP_FAIL;
+    }
+
+    const cJSON *action_j = cJSON_GetObjectItem(root, "action");
+    uint8_t action = APP_SCHEDULE_ACTION_WAKE;
+    if (!schedule_action_from_json(action_j, &action)) {
+        cJSON_Delete(root);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid action");
+        return ESP_FAIL;
+    }
+
+    uint32_t duration_sec = 0;
+    if (action != APP_SCHEDULE_ACTION_WAKE) {
+        const cJSON *duration_j = cJSON_GetObjectItem(root, "duration_sec");
+        duration_sec = cJSON_IsNumber(duration_j) ? (uint32_t)duration_j->valuedouble : 86400;
+    }
+
+    cJSON_Delete(root);
+    s_mode_ops.mode_set(action, duration_sec);
     return send_json_ok(req);
 }
 
@@ -769,8 +903,11 @@ esp_err_t app_network_web_ui_register(httpd_handle_t server)
         {.uri = "/api/schedule/events/edit", .method = HTTP_POST, .handler = api_schedule_events_edit_post},
         {.uri = "/api/schedule/events/delete", .method = HTTP_POST, .handler = api_schedule_events_delete_post},
         {.uri = "/api/reboot", .method = HTTP_POST, .handler = api_reboot_post},
+        {.uri = "/api/update", .method = HTTP_GET, .handler = api_update_get},
+        {.uri = "/api/update/start", .method = HTTP_POST, .handler = api_update_start_post},
         {.uri = "/api/timer/start", .method = HTTP_POST, .handler = api_timer_start_post},
         {.uri = "/api/timer/cancel", .method = HTTP_POST, .handler = api_timer_cancel_post},
+        {.uri = "/api/mode/set", .method = HTTP_POST, .handler = api_mode_set_post},
         {.uri = "/api/images", .method = HTTP_GET, .handler = api_images_get},
     };
 

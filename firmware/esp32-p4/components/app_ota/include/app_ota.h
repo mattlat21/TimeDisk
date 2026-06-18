@@ -27,6 +27,9 @@ typedef void (*app_update_done_cb_t)(esp_err_t err, const char *message, void *u
 const char *app_update_get_version(void);
 app_update_state_t app_update_get_state(void);
 bool app_update_active(void);
+int app_update_get_progress_percent(void);
+const char *app_update_get_progress_status(void);
+const char *app_update_get_last_message(void);
 
 /**
  * Download and install firmware from @p url on a background task.

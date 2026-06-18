@@ -964,15 +964,47 @@ static void register_web_timer_ops(void)
     app_network_web_ui_set_timer_ops(&ops);
 }
 
-static void schedule_event_fire(const app_schedule_event_t *ev)
+typedef struct {
+    uint8_t action;
+    uint32_t duration_sec;
+} web_mode_set_req_t;
+
+static void web_mode_set_async_cb(void *user_data)
 {
-    if (ev == NULL) {
+    web_mode_set_req_t *req = (web_mode_set_req_t *)user_data;
+    if (req == NULL) {
         return;
     }
+    ui_nav_apply_mode_action(req->action, req->duration_sec);
+    free(req);
+}
 
+static void web_mode_set_cb(uint8_t action, uint32_t duration_sec)
+{
+    web_mode_set_req_t *req = calloc(1, sizeof(*req));
+    if (req == NULL) {
+        return;
+    }
+    req->action = action;
+    req->duration_sec = duration_sec;
+    if (lv_async_call(web_mode_set_async_cb, req) != LV_RESULT_OK) {
+        free(req);
+    }
+}
+
+static void register_web_mode_ops(void)
+{
+    static const app_network_web_ui_mode_ops_t ops = {
+        .mode_set = web_mode_set_cb,
+    };
+    app_network_web_ui_set_mode_ops(&ops);
+}
+
+void ui_nav_apply_mode_action(uint8_t action, uint32_t duration_sec)
+{
     app_config_t *cfg = app_config_get();
 
-    switch ((app_schedule_action_t)ev->action) {
+    switch ((app_schedule_action_t)action) {
     case APP_SCHEDULE_ACTION_WAKE:
         mode_engine_switch_to_wake();
         if (s_current == UI_SCREEN_TOD_BRIGHT || s_current == UI_SCREEN_TOD_DIM) {
@@ -982,13 +1014,13 @@ static void schedule_event_fire(const app_schedule_event_t *ev)
         }
         break;
     case APP_SCHEDULE_ACTION_START_SLEEP: {
-        const uint32_t sleep_sec = ev->duration_sec > 0 ? ev->duration_sec : cfg->sleep_sec;
+        const uint32_t sleep_sec = duration_sec > 0 ? duration_sec : cfg->sleep_sec;
         mode_engine_start_cycle_durations(cfg->wind_down_sec, sleep_sec, cfg->rest_sec);
         ui_nav_go(UI_SCREEN_TOD_BRIGHT);
         break;
     }
     case APP_SCHEDULE_ACTION_START_REST: {
-        const uint32_t rest_sec = ev->duration_sec > 0 ? ev->duration_sec : cfg->rest_sec;
+        const uint32_t rest_sec = duration_sec > 0 ? duration_sec : cfg->rest_sec;
         mode_engine_start_cycle_durations(0, 0, rest_sec);
         ui_nav_go(UI_SCREEN_TOD_BRIGHT);
         break;
@@ -996,6 +1028,14 @@ static void schedule_event_fire(const app_schedule_event_t *ev)
     default:
         break;
     }
+}
+
+static void schedule_event_fire(const app_schedule_event_t *ev)
+{
+    if (ev == NULL) {
+        return;
+    }
+    ui_nav_apply_mode_action(ev->action, ev->duration_sec);
 }
 
 static void register_schedule_handler(void)
@@ -1148,6 +1188,7 @@ void ui_nav_init(void)
     s_tick_timer = lv_timer_create(tick_timer_cb, 1000, NULL);
 
     register_web_timer_ops();
+    register_web_mode_ops();
     register_schedule_handler();
     ui_nav_go(UI_SCREEN_SPLASH);
 }

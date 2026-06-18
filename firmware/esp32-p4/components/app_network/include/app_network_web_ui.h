@@ -17,4 +17,11 @@ typedef struct {
 /** Register LVGL-thread timer control (called from ui_nav_init). */
 void app_network_web_ui_set_timer_ops(const app_network_web_ui_timer_ops_t *ops);
 
+typedef struct {
+    void (*mode_set)(uint8_t action, uint32_t duration_sec);
+} app_network_web_ui_mode_ops_t;
+
+/** Register LVGL-thread mode control (called from ui_nav_init). */
+void app_network_web_ui_set_mode_ops(const app_network_web_ui_mode_ops_t *ops);
+
 esp_err_t app_network_web_ui_register(httpd_handle_t server);

@@ -90,6 +90,9 @@ void mode_engine_start_cycle_durations(uint32_t wind_down_sec, uint32_t sleep_se
 /** Stop the automatic cycle and return to Wake mode. */
 void mode_engine_switch_to_wake(void);
 
+/** Apply wake/sleep/rest immediately (same semantics as scheduled events). */
+void ui_nav_apply_mode_action(uint8_t action, uint32_t duration_sec);
+
 /** Restore cycle/timer state from NVS checkpoints after SNTP (when time_valid).
  *  Returns the screen to show after boot (timer bright if a timer was restored). */
 ui_screen_id_t mode_engine_restore_from_nvs(void);
