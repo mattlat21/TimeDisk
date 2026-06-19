@@ -175,6 +175,7 @@ asset_group() {
   local n="$1"
   case "${n}" in
     splash) printf 'splash' ;;
+    first_boot_*) printf 'first_boot' ;;
     tod_*) printf 'tod' ;;
     btn_start_*) printf 'btn_start' ;;
     wedge_shape_*) printf 'wedge_shape' ;;
@@ -215,6 +216,7 @@ generate_header() {
       if [[ -n "${group}" && "${group}" != "${prev_group}" ]]; then
         case "${group}" in
           tod) echo "/** Full-screen Time of Day backgrounds (720×720 RGB565, SPIFFS). */" ;;
+          first_boot) echo "/** First-boot welcome screen (720×720 RGB565, SPIFFS). */" ;;
           btn_start) echo "/** Menu button images (RGB565, SPIFFS). */" ;;
           wedge_shape) echo "/** A8 wedge silhouettes — tint at runtime via image_recolor. */" ;;
           icon_wedge) echo "/** White icon overlays, composed on top of a wedge button. */" ;;

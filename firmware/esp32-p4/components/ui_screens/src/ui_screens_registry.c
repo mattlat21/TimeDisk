@@ -8,6 +8,7 @@ void ui_screen_timer_apply_theme(void);
 void ui_screen_schedule_apply_theme(void);
 void ui_screen_settings_apply_theme(void);
 void ui_screen_aa_apply_theme(void);
+void ui_screen_first_boot_apply_theme(void);
 void ui_screen_startup_theme_wizard_apply_theme(void);
 void ui_screen_startup_wifi_wizard_apply_theme(void);
 void ui_screen_startup_timezone_wizard_apply_theme(void);
@@ -22,6 +23,7 @@ void ui_theme_apply(void)
     ui_screen_schedule_apply_theme();
     ui_screen_settings_apply_theme();
     ui_screen_aa_apply_theme();
+    ui_screen_first_boot_apply_theme();
     ui_screen_startup_theme_wizard_apply_theme();
     ui_screen_startup_wifi_wizard_apply_theme();
     ui_screen_startup_timezone_wizard_apply_theme();
@@ -30,6 +32,7 @@ void ui_theme_apply(void)
 void ui_screens_build_all(lv_obj_t *screens[UI_SCREEN_COUNT])
 {
     ui_screen_splash_build(screens);
+    ui_screen_first_boot_build(screens);
     ui_screen_startup_theme_wizard_build(screens);
     ui_screen_startup_wifi_wizard_build(screens);
     ui_screen_startup_timezone_wizard_build(screens);

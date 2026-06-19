@@ -1,0 +1,7 @@
+source=first_boot_screen.png
+format=RGB565
+storage=spiffs
+compress=auto
+width=720
+height=720
+description=First screen that ever gets loaded

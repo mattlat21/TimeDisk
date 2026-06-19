@@ -14,6 +14,9 @@
 #include "app_config.h"
 #include "app_network.h"
 #include "app_time.h"
+#include "esp_system.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -131,6 +134,30 @@ static void hub_btn_cb(lv_event_t *e)
     settings_panel_t target = (settings_panel_t)(uintptr_t)lv_event_get_user_data(e);
     show_panel(target);
     ui_nav_reset_idle_timer();
+}
+
+static void factory_reset_task(void *arg)
+{
+    (void)arg;
+    vTaskDelay(pdMS_TO_TICKS(250));
+    esp_restart();
+}
+
+static void factory_reset_async_cb(void *user_data)
+{
+    (void)user_data;
+    if (app_config_factory_reset() == ESP_OK) {
+        if (xTaskCreate(factory_reset_task, "factory_rst", 2048, NULL, 1, NULL) != pdPASS) {
+            esp_restart();
+        }
+    }
+}
+
+static void factory_reset_btn_cb(lv_event_t *e)
+{
+    (void)e;
+    ui_nav_reset_idle_timer();
+    lv_async_call(factory_reset_async_cb, NULL);
 }
 
 static lv_obj_t *hub_create_btn(lv_obj_t *parent, const char *text, int x, int y,
@@ -521,6 +548,29 @@ static void build_hub_panel(void)
                        x0_hub + col * (HUB_BTN_W + HUB_BTN_GAP_X),
                        y0_hub + row * (HUB_BTN_H + HUB_BTN_GAP_Y),
                        panel_targets[i]);
+    }
+
+    {
+        const int factory_row = rows;
+        const int factory_y = y0_hub + factory_row * (HUB_BTN_H + HUB_BTN_GAP_Y);
+        const int factory_x = ui_layout_parent_center_x_wf(s_panels[PANEL_HUB], HUB_BTN_W);
+        const ui_theme_t *t = ui_theme_get();
+        lv_obj_t *btn = lv_button_create(s_panels[PANEL_HUB]);
+        lv_obj_set_size(btn, HUB_BTN_W, HUB_BTN_H);
+        lv_obj_set_pos(btn, factory_x, factory_y);
+        lv_obj_set_style_radius(btn, HUB_BTN_RADIUS, 0);
+        lv_obj_set_style_bg_color(btn, t->orange, 0);
+        lv_obj_set_style_bg_opa(btn, LV_OPA_COVER, 0);
+        lv_obj_set_style_border_width(btn, 0, 0);
+        lv_obj_set_style_shadow_width(btn, 0, 0);
+
+        lv_obj_t *lbl = lv_label_create(btn);
+        lv_label_set_text(lbl, "Restore to\nFactory Settings");
+        lv_obj_set_style_text_color(lbl, t->white, 0);
+        lv_obj_set_style_text_font(lbl, &lv_font_montserrat_18, 0);
+        lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_center(lbl);
+        lv_obj_add_event_cb(btn, factory_reset_btn_cb, LV_EVENT_CLICKED, NULL);
     }
 
     s_hub_cancel_wedge = ui_wedge_create_overlay(s_scr, UI_WEDGE_CANCEL);

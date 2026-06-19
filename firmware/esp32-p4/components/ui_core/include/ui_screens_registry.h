@@ -9,6 +9,7 @@
 #include "ui_nav.h"
 
 void ui_screen_splash_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
+void ui_screen_first_boot_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
 void ui_screen_startup_theme_wizard_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
 void ui_screen_startup_theme_wizard_on_show(void);
 void ui_screen_startup_wifi_wizard_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
@@ -33,6 +34,7 @@ void ui_screens_build_all(lv_obj_t *screens[UI_SCREEN_COUNT]);
 void ui_theme_apply(void);
 
 void ui_screen_splash_on_show(void);
+void ui_screen_first_boot_on_show(void);
 void ui_screen_loading_on_show(void);
 void ui_screen_loading_set_status(const char *text);
 void ui_screen_loading_set_menu_mode(bool menu);

@@ -73,6 +73,8 @@ typedef struct {
     char timezone_id[APP_TIMEZONE_ID_MAX];
     /** false until user completes theme (favourite colours) startup wizard. */
     bool theme_set;
+    /** false until user completes the one-time first-boot welcome screen. */
+    bool first_boot_done;
 
     uint32_t timeout_splash_sec;
     uint32_t timeout_tod_dim_sec;
@@ -143,6 +145,9 @@ bool app_config_wifi_ssid_missing(void);
 bool app_config_wifi_password_unset(void);
 bool app_config_timezone_unset(void);
 bool app_config_theme_unset(void);
+bool app_config_first_boot_pending(void);
+esp_err_t app_config_mark_first_boot_done(void);
+esp_err_t app_config_factory_reset(void);
 
 /** MAC-derived MQTT device id (e.g. timedisk-AABBCCDDEEFF). */
 bool app_config_get_device_id(char *out, size_t out_len);

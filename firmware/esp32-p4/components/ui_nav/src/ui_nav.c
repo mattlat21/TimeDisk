@@ -358,7 +358,9 @@ static void idle_timer_cb(lv_timer_t *t)
 
     switch (s_current) {
     case UI_SCREEN_SPLASH:
-        if (app_config_theme_unset()) {
+        if (app_config_first_boot_pending()) {
+            ui_nav_go(UI_SCREEN_FIRST_BOOT);
+        } else if (app_config_theme_unset()) {
             ui_nav_go(UI_SCREEN_STARTUP_THEME);
         } else if (app_config_wifi_ssid_missing()) {
             ui_nav_go(UI_SCREEN_STARTUP_SSID);
@@ -410,6 +412,9 @@ static void on_enter(ui_screen_id_t screen)
     case UI_SCREEN_SPLASH:
         arm_idle_timer(cfg->timeout_splash_sec);
         ui_screen_splash_on_show();
+        break;
+    case UI_SCREEN_FIRST_BOOT:
+        ui_screen_first_boot_on_show();
         break;
     case UI_SCREEN_LOADING:
         s_loading_retry_at_ms = 0;

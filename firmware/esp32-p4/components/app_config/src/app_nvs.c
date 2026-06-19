@@ -35,6 +35,7 @@ static const char *TAG = "app_nvs";
 #define KEY_UI_PRIMARY          "ui_primary"   /* uint32 ui_primary_color */
 #define KEY_UI_SECONDARY        "ui_secondary" /* uint32 ui_secondary_color */
 #define KEY_THEME_SET           "theme_set"    /* uint8  theme_set */
+#define KEY_FIRST_BOOT          "first_boot"   /* uint8  first_boot_done */
 #define KEY_TIMER_DUR           "timer_dur"    /* uint32 timer_duration_sec */
 #define KEY_TIMER_STYLE         "timer_style"  /* uint8  timer_style_id */
 #define KEY_WIND_DOWN           "wind_down"    /* uint32 wind_down_sec */
@@ -460,6 +461,14 @@ esp_err_t app_nvs_load(void)
         }
         cfg->theme_set = (theme_set != 0);
     }
+    {
+        uint8_t first_boot = 0;
+        err = get_u8(h, KEY_FIRST_BOOT, &first_boot, 0);
+        if (err != ESP_OK) {
+            goto out;
+        }
+        cfg->first_boot_done = (first_boot != 0);
+    }
 
     err = get_u32(h, KEY_TIMER_DUR, &cfg->timer_duration_sec, 300);
     if (err != ESP_OK) {
@@ -811,7 +820,8 @@ esp_err_t app_nvs_save_all(void)
 
     if ((err = set_u32(h, KEY_UI_PRIMARY, cfg->ui_primary_color)) != ESP_OK ||
         (err = set_u32(h, KEY_UI_SECONDARY, cfg->ui_secondary_color)) != ESP_OK ||
-        (err = set_u8(h, KEY_THEME_SET, cfg->theme_set ? 1 : 0)) != ESP_OK) {
+        (err = set_u8(h, KEY_THEME_SET, cfg->theme_set ? 1 : 0)) != ESP_OK ||
+        (err = set_u8(h, KEY_FIRST_BOOT, cfg->first_boot_done ? 1 : 0)) != ESP_OK) {
         goto out;
     }
 

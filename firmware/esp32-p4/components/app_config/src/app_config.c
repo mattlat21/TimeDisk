@@ -335,6 +335,28 @@ bool app_config_theme_unset(void)
     return !s_cfg.theme_set;
 }
 
+bool app_config_first_boot_pending(void)
+{
+    return !s_cfg.first_boot_done;
+}
+
+esp_err_t app_config_mark_first_boot_done(void)
+{
+    s_cfg.first_boot_done = true;
+    return app_nvs_save_all();
+}
+
+esp_err_t app_config_factory_reset(void)
+{
+    esp_err_t err = app_nvs_erase_all();
+    if (err != ESP_OK) {
+        return err;
+    }
+    app_config_apply_defaults();
+    app_runtime_reset();
+    return ESP_OK;
+}
+
 esp_err_t app_config_save_mqtt(void)
 {
     esp_err_t err = app_nvs_save_mqtt();
