@@ -67,6 +67,8 @@ static lv_obj_t *menu_create_image_btn(lv_obj_t *parent, const void *src, int w,
     lv_obj_t *img = lv_image_create(btn);
     lv_image_set_src(img, src);
     lv_obj_set_size(img, w, h);
+    lv_image_set_inner_align(img, LV_IMAGE_ALIGN_STRETCH);
+    lv_image_set_antialias(img, false);
     lv_obj_set_pos(img, 0, 0);
     lv_obj_remove_flag(img, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
 

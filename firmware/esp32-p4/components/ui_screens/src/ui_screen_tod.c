@@ -65,6 +65,8 @@ static lv_obj_t *create_mode_background(lv_obj_t *scr)
     lv_obj_t *img = lv_image_create(scr);
     lv_image_set_src(img, ui_assets_spiffs_path("tod_wake"));
     lv_obj_set_size(img, UI_DISP, UI_DISP);
+    lv_image_set_inner_align(img, LV_IMAGE_ALIGN_STRETCH);
+    lv_image_set_antialias(img, false);
     lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
     lv_obj_remove_flag(img, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(img, LV_OBJ_FLAG_EVENT_BUBBLE);
