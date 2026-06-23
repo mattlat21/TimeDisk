@@ -46,7 +46,7 @@ static ui_screen_id_t s_deferred_screen = UI_SCREEN_COUNT;
 #define LOADING_RETRY_MS 10000U
 
 #define TOD_FADE_TO_DIM_MS    5000U
-#define TOD_FADE_TO_BRIGHT_MS 300U
+#define TOD_FADE_TO_BRIGHT_MS 500U
 #define TOD_FADE_TICK_MS      8U
 
 /** Matches BSP LEDC_TIMER_10_BIT (see bsp_display_brightness_set). */
@@ -245,7 +245,7 @@ static void tod_fade_timer_cb(lv_timer_t *t)
     }
 }
 
-static void tod_fade_start(bool to_dim)
+static void backlight_fade_start(bool to_dim, ui_screen_id_t end_screen)
 {
     tod_fade_cancel();
 
@@ -254,7 +254,7 @@ static void tod_fade_start(bool to_dim)
     s_tod_fade.start_ms = now_ms();
     s_tod_fade.to_dim = to_dim;
     s_tod_fade.duration_ms = to_dim ? TOD_FADE_TO_DIM_MS : TOD_FADE_TO_BRIGHT_MS;
-    s_tod_fade.end_screen = to_dim ? UI_SCREEN_TOD_DIM : UI_SCREEN_TOD_BRIGHT;
+    s_tod_fade.end_screen = end_screen;
 
     if (to_dim) {
         uint8_t current = app_runtime_get()->display_brightness;
@@ -285,6 +285,11 @@ static void tod_fade_start(bool to_dim)
     tod_fade_timer_cb(s_tod_fade_timer);
 }
 
+static void tod_fade_start(bool to_dim)
+{
+    backlight_fade_start(to_dim, to_dim ? UI_SCREEN_TOD_DIM : UI_SCREEN_TOD_BRIGHT);
+}
+
 void ui_nav_tod_fade_to_dim(void)
 {
     if (s_current != UI_SCREEN_TOD_BRIGHT || s_tod_fade.active) {
@@ -307,18 +312,25 @@ void ui_nav_tod_wake(void)
         return;
     }
 
-    tod_fade_cancel();
-
     if (s_current == UI_SCREEN_TOD_DIM) {
-        s_current = UI_SCREEN_TOD_BRIGHT;
-        if (s_screens[UI_SCREEN_TOD_BRIGHT] != NULL) {
-            lv_screen_load(s_screens[UI_SCREEN_TOD_BRIGHT]);
+        if (!s_tod_fade.active) {
+            backlight_fade_start(false, UI_SCREEN_TOD_BRIGHT);
         }
+        return;
     }
 
+    tod_fade_cancel();
     ui_screen_tod_on_show(false);
     ui_nav_apply_dim(false);
     arm_tod_timers();
+}
+
+void ui_nav_timer_wake_from_dim(void)
+{
+    if (s_current != UI_SCREEN_TIMER_DIM || s_tod_fade.active) {
+        return;
+    }
+    backlight_fade_start(false, UI_SCREEN_TIMER_BRIGHT);
 }
 
 static void aa_generate_maths(void)

@@ -449,12 +449,12 @@ esp_err_t app_nvs_load(void)
 
     {
         uint8_t bright_pct = 100;
-        uint8_t dim_pct = 30;
+        uint8_t dim_pct = 25;
         err = get_u8(h, KEY_BL_BRIGHT_PCT, &bright_pct, 100);
         if (err != ESP_OK) {
             goto out;
         }
-        err = get_u8(h, KEY_BL_DIM_PCT, &dim_pct, 30);
+        err = get_u8(h, KEY_BL_DIM_PCT, &dim_pct, 25);
         if (err != ESP_OK) {
             goto out;
         }

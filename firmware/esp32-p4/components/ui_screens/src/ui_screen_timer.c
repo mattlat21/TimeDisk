@@ -532,7 +532,7 @@ static void timer_tap_cb(lv_event_t *e)
 {
     (void)e;
     if (ui_nav_current() == UI_SCREEN_TIMER_DIM) {
-        ui_nav_go(UI_SCREEN_TIMER_BRIGHT);
+        ui_nav_timer_wake_from_dim();
     }
 }
 
