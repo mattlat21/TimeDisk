@@ -8,6 +8,8 @@
 #include "ui_theme.h"
 #include "ui_widgets.h"
 
+#include <stdio.h>
+
 static ui_duration_editor_bundle_t *bundle_from_event(lv_event_t *e)
 {
     return (ui_duration_editor_bundle_t *)lv_event_get_user_data(e);
@@ -150,6 +152,8 @@ void ui_duration_editor_refresh(const ui_duration_editor_t *ed, const ui_duratio
 
     if (cfg->display == UI_DURATION_DISPLAY_HUMAN) {
         ui_format_duration_human(dur, sizeof(dur), *cfg->value_sec);
+    } else if (cfg->display == UI_DURATION_DISPLAY_PERCENT) {
+        snprintf(dur, sizeof(dur), "%lu%%", (unsigned long)*cfg->value_sec);
     } else {
         ui_format_duration_minutes(dur, sizeof(dur), *cfg->value_sec);
     }

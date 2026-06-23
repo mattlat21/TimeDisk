@@ -54,6 +54,9 @@ void ui_settings_schedule_sync_from_draft(void);
 lv_obj_t *ui_settings_timeouts_build(void);
 void ui_settings_timeouts_show_list(void);
 
+lv_obj_t *ui_settings_display_build(void);
+void ui_settings_display_show_list(void);
+
 lv_obj_t *ui_settings_adult_auth_build(void);
 void ui_settings_adult_auth_sync_from_draft(void);
 
@@ -225,6 +228,14 @@ static void panel_cancel_cb(lv_event_t *e)
         s_draft.timeout_timer_dim_sec = s_saved.timeout_timer_dim_sec;
         s_draft.timeout_timer_done_sec = s_saved.timeout_timer_done_sec;
         ui_settings_timeouts_show_list();
+        break;
+    case PANEL_DISPLAY:
+        if (ui_settings_display_on_cancel()) {
+            return;
+        }
+        s_draft.backlight_bright_pct = s_saved.backlight_bright_pct;
+        s_draft.backlight_dim_pct = s_saved.backlight_dim_pct;
+        ui_settings_display_show_list();
         break;
     case PANEL_AA:
         s_draft.aa_methods = s_saved.aa_methods;
@@ -517,6 +528,7 @@ static void build_hub_panel(void)
         "Timezone",
         "Schedule",
         "Timeouts",
+        "Display",
         "Adult Auth",
         "MQTT",
         "Update",
@@ -529,6 +541,7 @@ static void build_hub_panel(void)
         PANEL_TIMEZONE,
         PANEL_SCHEDULE,
         PANEL_TIMEOUTS,
+        PANEL_DISPLAY,
         PANEL_AA,
         PANEL_MQTT,
         PANEL_UPDATE,
@@ -592,6 +605,7 @@ void ui_screen_settings_build(lv_obj_t *screens[UI_SCREEN_COUNT])
     s_panels[PANEL_TIMEZONE] = ui_settings_timezone_build();
     s_panels[PANEL_SCHEDULE] = ui_settings_schedule_build();
     s_panels[PANEL_TIMEOUTS] = ui_settings_timeouts_build();
+    s_panels[PANEL_DISPLAY] = ui_settings_display_build();
     s_panels[PANEL_AA] = ui_settings_adult_auth_build();
     s_panels[PANEL_MQTT] = ui_settings_mqtt_build();
     s_panels[PANEL_UPDATE] = ui_settings_update_build();
@@ -612,6 +626,7 @@ void ui_screen_settings_on_show(void)
     ui_settings_timezone_select_from_draft();
     ui_settings_schedule_sync_from_draft();
     ui_settings_timeouts_show_list();
+    ui_settings_display_show_list();
     ui_settings_adult_auth_sync_from_draft();
     ui_settings_mqtt_sync_from_draft();
 

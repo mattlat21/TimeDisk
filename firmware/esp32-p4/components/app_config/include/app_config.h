@@ -86,6 +86,10 @@ typedef struct {
     /** Idle on completed timer before returning to Time of Day. */
     uint32_t timeout_timer_done_sec;
 
+    /** Backlight PWM level (0–100) when the display is bright / dimmed. */
+    uint8_t backlight_bright_pct;
+    uint8_t backlight_dim_pct;
+
     uint32_t ui_primary_color;
     uint32_t ui_secondary_color;
 
@@ -155,6 +159,9 @@ bool app_config_get_device_id(char *out, size_t out_len);
 /** Optional hook after MQTT settings are saved (registered by app_mqtt). */
 void app_config_set_mqtt_saved_hook(void (*hook)(void));
 
+/** Optional hook after display/backlight settings are saved (registered by ui_nav). */
+void app_config_set_display_saved_hook(void (*hook)(void));
+
 int app_config_wifi_network_count(void);
 const app_wifi_network_t *app_config_wifi_network_get(int index);
 bool app_config_wifi_network_password_unset(int index);
@@ -194,6 +201,8 @@ static inline esp_err_t app_config_save_timeouts(void)
 {
     return app_nvs_save_timeouts();
 }
+
+esp_err_t app_config_save_display(void);
 
 static inline esp_err_t app_config_save_theme(void)
 {

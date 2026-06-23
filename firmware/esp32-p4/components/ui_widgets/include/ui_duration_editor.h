@@ -30,6 +30,8 @@ typedef enum {
     UI_DURATION_DISPLAY_MINUTES = 0,
     /** Shows seconds when under 1 minute (timer Set Duration). */
     UI_DURATION_DISPLAY_HUMAN,
+    /** Shows a 0–100 percentage value. */
+    UI_DURATION_DISPLAY_PERCENT,
 } ui_duration_display_t;
 
 typedef struct {

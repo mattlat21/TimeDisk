@@ -68,6 +68,7 @@
         "<a href=\"#\" data-page=\"wifi\">Wi-Fi Networks</a>"
         "<a href=\"#\" data-page=\"schedule\">Schedule</a>"
         "<a href=\"#\" data-page=\"timeouts\">Timeouts</a>"
+        "<a href=\"#\" data-page=\"display\">Display</a>"
         "<a href=\"#\" data-page=\"adult\">Adult Auth</a>"
         "<a href=\"#\" data-page=\"mqtt\">MQTT</a>"
         "<a href=\"#\" data-page=\"update\">Update</a>"
@@ -83,7 +84,7 @@
 
     httpd_resp_sendstr_chunk(req,
         "const PAGES={status:'Status',colours:'Colours',timezone:'Timezone',wifi:'Wi-Fi Networks',"
-        "schedule:'Schedule',timeouts:'Timeouts',adult:'Adult Auth',mqtt:'MQTT',update:'Update',timer:'Timer',ntp:'NTP',images:'Images'};"
+        "schedule:'Schedule',timeouts:'Timeouts',display:'Display',adult:'Adult Auth',mqtt:'MQTT',update:'Update',timer:'Timer',ntp:'NTP',images:'Images'};"
         "let cfg=null,tzData=null,pollTimer=null;"
         "function $(id){return document.getElementById(id)}"
         "function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;')}"
@@ -217,7 +218,9 @@
     );
 
     httpd_resp_sendstr_chunk(req,
-        "function numField(id,label,val){return '<label>'+label+'</label><input type=\"number\" id=\"'+id+'\" value=\"'+val+'\" min=\"0\">'}"
+        "function numField(id,label,val,min,max){let a=' type=\"number\" id=\"'+id+'\" value=\"'+val+'\"';"
+        "if(min!=null)a+=' min=\"'+min+'\"';else a+=' min=\"0\"';if(max!=null)a+=' max=\"'+max+'\"';"
+        "return '<label>'+label+'</label><input'+a+'>'}"
         "const SCHED_DEFAULT_DUR=86400;"
         "function schedFmtTime(m){const h=Math.floor(m/60),mi=m%60,ap=h>=12?'PM':'AM',h12=h%12||12;"
         "return h12+':'+String(mi).padStart(2,'0')+' '+ap}"
@@ -322,6 +325,15 @@
         "patchVal('t1',cfg.timeout_tod_dim_sec);patchVal('t2',cfg.timeout_tod_menu_sec);patchVal('t3',cfg.timeout_aa_sec);"
         "patchVal('t4',cfg.timeout_main_menu_sec);patchVal('t5',cfg.timeout_timer_dim_sec);"
         "patchVal('t6',cfg.timeout_timer_done_sec)}catch(e){}});}"
+        "async function pageDisplay(el){await ensureCfg();"
+        "el.innerHTML='<div class=\"card\"><h2>Backlight levels (%)</h2>'"
+        "+numField('bl-bright','Bright',cfg.backlight_bright_pct,0,100)"
+        "+numField('bl-dim','Dim',cfg.backlight_dim_pct,0,100)"
+        "+'<button class=\"btn\" id=\"save-bl\">Save</button></div>';"
+        "$('save-bl').onclick=async()=>{await saveCfg({backlight_bright_pct:+ $('bl-bright').value,"
+        "backlight_dim_pct:+ $('bl-dim').value})};"
+        "startPoll(5000,async()=>{try{mergeCfgFromApi(await api('/api/config'));"
+        "patchVal('bl-bright',cfg.backlight_bright_pct);patchVal('bl-dim',cfg.backlight_dim_pct)}catch(e){}});}"
     );
 
     httpd_resp_sendstr_chunk(req,
@@ -415,7 +427,7 @@
         "(files||[]).forEach(f=>{h+='<tr><td>'+esc(f.name)+'</td><td>'+f.size_bytes+'</td></tr>'});"
         "h+='</table><p class=\"hint\">Images are baked into SPIFFS at build time.</p></div>';el.innerHTML=h}"
         "const LOADERS={status:pageStatus,colours:pageColours,timezone:pageTimezone,wifi:pageWifi,schedule:pageSchedule,"
-        "timeouts:pageTimeouts,adult:pageAdult,mqtt:pageMqtt,update:pageUpdate,timer:pageTimer,ntp:pageNtp,images:pageImages};"
+        "timeouts:pageTimeouts,display:pageDisplay,adult:pageAdult,mqtt:pageMqtt,update:pageUpdate,timer:pageTimer,ntp:pageNtp,images:pageImages};"
         "async function showPage(id){stopPoll();document.querySelectorAll('.sidebar a').forEach(a=>"
         "a.classList.toggle('active',a.dataset.page===id));$('page-title').textContent=PAGES[id]||id;"
         "const el=$('content');el.innerHTML='<p>Loading...</p>';try{await LOADERS[id](el)}catch(e){el.innerHTML="

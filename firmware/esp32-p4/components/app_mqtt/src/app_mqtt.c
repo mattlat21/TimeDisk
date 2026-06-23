@@ -173,6 +173,8 @@ static char *build_status_json(void)
     cJSON_AddNumberToObject(config, "timeout_main_menu_sec", cfg->timeout_main_menu_sec);
     cJSON_AddNumberToObject(config, "timeout_timer_dim_sec", cfg->timeout_timer_dim_sec);
     cJSON_AddNumberToObject(config, "timeout_timer_done_sec", cfg->timeout_timer_done_sec);
+    cJSON_AddNumberToObject(config, "backlight_bright_pct", cfg->backlight_bright_pct);
+    cJSON_AddNumberToObject(config, "backlight_dim_pct", cfg->backlight_dim_pct);
     cJSON_AddNumberToObject(config, "ui_primary_color", cfg->ui_primary_color);
     cJSON_AddNumberToObject(config, "ui_secondary_color", cfg->ui_secondary_color);
     cJSON_AddNumberToObject(config, "timer_duration_sec", cfg->timer_duration_sec);
@@ -399,6 +401,16 @@ static bool apply_config_field(app_config_t *cfg, const char *key, const cJSON *
         cfg->timeout_timer_done_sec = (uint32_t)val->valuedouble;
         return true;
     }
+    if (strcmp(key, "backlight_bright_pct") == 0 && cJSON_IsNumber(val)) {
+        uint8_t pct = (uint8_t)val->valuedouble;
+        cfg->backlight_bright_pct = pct > 100 ? 100 : pct;
+        return true;
+    }
+    if (strcmp(key, "backlight_dim_pct") == 0 && cJSON_IsNumber(val)) {
+        uint8_t pct = (uint8_t)val->valuedouble;
+        cfg->backlight_dim_pct = pct > 100 ? 100 : pct;
+        return true;
+    }
     if (strcmp(key, "ui_primary_color") == 0 && cJSON_IsNumber(val)) {
         cfg->ui_primary_color = (uint32_t)val->valuedouble;
         return true;
@@ -458,6 +470,7 @@ static void handle_config_set(const char *payload, int len)
     bool changed_schedule = false;
     bool changed_aa = false;
     bool changed_network = false;
+    bool changed_display = false;
 
     for (const cJSON *item = root->child; item != NULL; item = item->next) {
         if (item->string == NULL) {
@@ -473,6 +486,10 @@ static void handle_config_set(const char *payload, int len)
         } else if (strncmp(key, "timeout_", 8) == 0) {
             if (apply_config_field(cfg, key, item)) {
                 changed_timeouts = true;
+            }
+        } else if (strcmp(key, "backlight_bright_pct") == 0 || strcmp(key, "backlight_dim_pct") == 0) {
+            if (apply_config_field(cfg, key, item)) {
+                changed_display = true;
             }
         } else if (strcmp(key, "ui_primary_color") == 0 || strcmp(key, "ui_secondary_color") == 0) {
             if (apply_config_field(cfg, key, item)) {
@@ -507,6 +524,9 @@ static void handle_config_set(const char *payload, int len)
     }
     if (changed_timeouts) {
         app_config_save_timeouts();
+    }
+    if (changed_display) {
+        app_config_save_display();
     }
     if (changed_theme) {
         app_config_save_theme();

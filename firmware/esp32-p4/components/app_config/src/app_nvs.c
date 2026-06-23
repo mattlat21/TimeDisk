@@ -32,6 +32,8 @@ static const char *TAG = "app_nvs";
 #define KEY_TO_MENU             "to_menu"      /* uint32 timeout_main_menu_sec */
 #define KEY_TO_TIMER_DIM        "to_tm_dim"    /* uint32 timeout_timer_dim_sec */
 #define KEY_TO_TIMER_DONE       "to_tm_done"   /* uint32 timeout_timer_done_sec */
+#define KEY_BL_BRIGHT_PCT       "bl_bright"    /* uint8  backlight_bright_pct */
+#define KEY_BL_DIM_PCT          "bl_dim"       /* uint8  backlight_dim_pct */
 #define KEY_UI_PRIMARY          "ui_primary"   /* uint32 ui_primary_color */
 #define KEY_UI_SECONDARY        "ui_secondary" /* uint32 ui_secondary_color */
 #define KEY_THEME_SET           "theme_set"    /* uint8  theme_set */
@@ -445,6 +447,21 @@ esp_err_t app_nvs_load(void)
         goto out;
     }
 
+    {
+        uint8_t bright_pct = 100;
+        uint8_t dim_pct = 30;
+        err = get_u8(h, KEY_BL_BRIGHT_PCT, &bright_pct, 100);
+        if (err != ESP_OK) {
+            goto out;
+        }
+        err = get_u8(h, KEY_BL_DIM_PCT, &dim_pct, 30);
+        if (err != ESP_OK) {
+            goto out;
+        }
+        cfg->backlight_bright_pct = bright_pct > 100 ? 100 : bright_pct;
+        cfg->backlight_dim_pct = dim_pct > 100 ? 100 : dim_pct;
+    }
+
     err = get_u32(h, KEY_UI_PRIMARY, &cfg->ui_primary_color, 0x7A24BC);
     if (err != ESP_OK) {
         goto out;
@@ -653,6 +670,27 @@ esp_err_t app_nvs_save_timeouts(void)
     return err;
 }
 
+esp_err_t app_nvs_save_display(void)
+{
+    const app_config_t *cfg = app_config_get();
+    nvs_handle_t h;
+    esp_err_t err = open_rw(&h);
+    if (err != ESP_OK) {
+        return err;
+    }
+    if ((err = set_u8(h, KEY_BL_BRIGHT_PCT, cfg->backlight_bright_pct)) != ESP_OK ||
+        (err = set_u8(h, KEY_BL_DIM_PCT, cfg->backlight_dim_pct)) != ESP_OK) {
+        nvs_close(h);
+        return err;
+    }
+    err = touch_cfg_ver(h);
+    if (err == ESP_OK) {
+        err = commit(h);
+    }
+    nvs_close(h);
+    return err;
+}
+
 esp_err_t app_nvs_save_theme(void)
 {
     const app_config_t *cfg = app_config_get();
@@ -814,7 +852,9 @@ esp_err_t app_nvs_save_all(void)
         (err = set_u32(h, KEY_TO_AA, cfg->timeout_aa_sec)) != ESP_OK ||
         (err = set_u32(h, KEY_TO_MENU, cfg->timeout_main_menu_sec)) != ESP_OK ||
         (err = set_u32(h, KEY_TO_TIMER_DIM, cfg->timeout_timer_dim_sec)) != ESP_OK ||
-        (err = set_u32(h, KEY_TO_TIMER_DONE, cfg->timeout_timer_done_sec)) != ESP_OK) {
+        (err = set_u32(h, KEY_TO_TIMER_DONE, cfg->timeout_timer_done_sec)) != ESP_OK ||
+        (err = set_u8(h, KEY_BL_BRIGHT_PCT, cfg->backlight_bright_pct)) != ESP_OK ||
+        (err = set_u8(h, KEY_BL_DIM_PCT, cfg->backlight_dim_pct)) != ESP_OK) {
         goto out;
     }
 

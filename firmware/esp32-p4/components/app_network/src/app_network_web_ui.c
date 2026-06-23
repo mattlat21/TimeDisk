@@ -151,6 +151,16 @@ static bool apply_config_field(app_config_t *cfg, const char *key, const cJSON *
         cfg->timeout_timer_done_sec = (uint32_t)val->valuedouble;
         return true;
     }
+    if (strcmp(key, "backlight_bright_pct") == 0 && cJSON_IsNumber(val)) {
+        uint8_t pct = (uint8_t)val->valuedouble;
+        cfg->backlight_bright_pct = pct > 100 ? 100 : pct;
+        return true;
+    }
+    if (strcmp(key, "backlight_dim_pct") == 0 && cJSON_IsNumber(val)) {
+        uint8_t pct = (uint8_t)val->valuedouble;
+        cfg->backlight_dim_pct = pct > 100 ? 100 : pct;
+        return true;
+    }
     if (strcmp(key, "ui_primary_color") == 0 && cJSON_IsNumber(val)) {
         cfg->ui_primary_color = (uint32_t)val->valuedouble;
         cfg->theme_set = true;
@@ -204,6 +214,10 @@ static void save_config_changes(const char *key)
     }
     if (strncmp(key, "timeout_", 8) == 0) {
         app_config_save_timeouts();
+        return;
+    }
+    if (strcmp(key, "backlight_bright_pct") == 0 || strcmp(key, "backlight_dim_pct") == 0) {
+        app_config_save_display();
         return;
     }
     if (strcmp(key, "ui_primary_color") == 0 || strcmp(key, "ui_secondary_color") == 0) {

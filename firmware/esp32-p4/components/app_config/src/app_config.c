@@ -15,6 +15,7 @@ static const char *TAG = "app_config";
 static app_config_t s_cfg;
 static app_runtime_t s_rt;
 static void (*s_mqtt_saved_hook)(void);
+static void (*s_display_saved_hook)(void);
 static char s_device_id[40];
 static bool s_device_id_ready;
 
@@ -34,6 +35,11 @@ static esp_err_t read_device_mac(uint8_t mac[6])
 void app_config_set_mqtt_saved_hook(void (*hook)(void))
 {
     s_mqtt_saved_hook = hook;
+}
+
+void app_config_set_display_saved_hook(void (*hook)(void))
+{
+    s_display_saved_hook = hook;
 }
 
 bool app_config_get_device_id(char *out, size_t out_len)
@@ -68,6 +74,9 @@ void app_config_apply_defaults(void)
     s_cfg.timeout_main_menu_sec = 60;
     s_cfg.timeout_timer_dim_sec = 900;
     s_cfg.timeout_timer_done_sec = 30;
+
+    s_cfg.backlight_bright_pct = 100;
+    s_cfg.backlight_dim_pct = 30;
 
     s_cfg.ui_primary_color = 0x7A24BC;
     s_cfg.ui_secondary_color = 0x6BCA24;
@@ -362,6 +371,15 @@ esp_err_t app_config_save_mqtt(void)
     esp_err_t err = app_nvs_save_mqtt();
     if (err == ESP_OK && s_mqtt_saved_hook != NULL) {
         s_mqtt_saved_hook();
+    }
+    return err;
+}
+
+esp_err_t app_config_save_display(void)
+{
+    esp_err_t err = app_nvs_save_display();
+    if (err == ESP_OK && s_display_saved_hook != NULL) {
+        s_display_saved_hook();
     }
     return err;
 }

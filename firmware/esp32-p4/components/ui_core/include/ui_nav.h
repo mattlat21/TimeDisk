@@ -74,6 +74,9 @@ void ui_nav_aa_new_maths(void);
 void ui_nav_set_brightness(uint8_t pct);
 void ui_nav_apply_dim(bool dim);
 
+/** Re-apply bright/dim backlight from config on the active TOD/timer screen. */
+void ui_nav_reapply_dim_backlight(void);
+
 /** Fade TOD to dim over 5 s (from bright idle timeout). */
 void ui_nav_tod_fade_to_dim(void);
 /** Fade TOD to bright (legacy; tap uses ui_nav_tod_wake for instant bright). */

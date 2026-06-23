@@ -10,6 +10,7 @@ typedef enum {
     PANEL_TIMEZONE,
     PANEL_SCHEDULE,
     PANEL_TIMEOUTS,
+    PANEL_DISPLAY,
     PANEL_AA,
     PANEL_MQTT,
     PANEL_UPDATE,
@@ -36,6 +37,7 @@ void ui_settings_register_overlay_obj(lv_obj_t *obj);
 
 /* Panel-specific helpers needed by shared cancel plumbing. */
 bool ui_settings_timeouts_on_cancel(void);
+bool ui_settings_display_on_cancel(void);
 bool ui_settings_schedule_on_cancel(void);
 
 void ui_settings_schedule_hide_durations(bool hide);

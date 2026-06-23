@@ -45,9 +45,6 @@ static ui_screen_id_t s_deferred_screen = UI_SCREEN_COUNT;
 
 #define LOADING_RETRY_MS 10000U
 
-#define UI_NAV_BRIGHTNESS_BRIGHT  100
-#define UI_NAV_BRIGHTNESS_DIM     30
-
 #define TOD_FADE_TO_DIM_MS    5000U
 #define TOD_FADE_TO_BRIGHT_MS 300U
 #define TOD_FADE_TICK_MS      8U
@@ -66,7 +63,6 @@ typedef struct {
     uint32_t start_duty;
     uint32_t end_duty;
     ui_screen_id_t end_screen;
-    bool on_dim_screen;
     bool to_dim;
 } tod_fade_t;
 
@@ -119,6 +115,18 @@ static uint32_t backlight_percent_to_duty(uint8_t pct)
     return (BACKLIGHT_DUTY_MAX * (uint32_t)pct) / 100U;
 }
 
+static uint8_t cfg_backlight_bright_pct(void)
+{
+    uint8_t pct = app_config_get()->backlight_bright_pct;
+    return pct > 100 ? 100 : pct;
+}
+
+static uint8_t cfg_backlight_dim_pct(void)
+{
+    uint8_t pct = app_config_get()->backlight_dim_pct;
+    return pct > 100 ? 100 : pct;
+}
+
 static void backlight_apply_duty(uint32_t duty, bool force_update)
 {
     if (duty > BACKLIGHT_DUTY_MAX) {
@@ -141,7 +149,23 @@ void ui_nav_set_brightness(uint8_t pct)
 
 void ui_nav_apply_dim(bool dim)
 {
-    ui_nav_set_brightness(dim ? UI_NAV_BRIGHTNESS_DIM : UI_NAV_BRIGHTNESS_BRIGHT);
+    ui_nav_set_brightness(dim ? cfg_backlight_dim_pct() : cfg_backlight_bright_pct());
+}
+
+void ui_nav_reapply_dim_backlight(void)
+{
+    switch (s_current) {
+    case UI_SCREEN_TOD_DIM:
+    case UI_SCREEN_TIMER_DIM:
+        ui_nav_apply_dim(true);
+        break;
+    case UI_SCREEN_TOD_BRIGHT:
+    case UI_SCREEN_TIMER_BRIGHT:
+        ui_nav_apply_dim(false);
+        break;
+    default:
+        break;
+    }
 }
 
 static uint32_t backlight_duty_lerp(uint32_t from, uint32_t to, uint32_t elapsed_ms, uint32_t duration_ms)
@@ -216,16 +240,6 @@ static void tod_fade_timer_cb(lv_timer_t *t)
         backlight_duty_lerp(s_tod_fade.start_duty, s_tod_fade.end_duty, elapsed, duration);
     backlight_apply_duty(duty, true);
 
-    uint8_t blend;
-    if (duration == 0) {
-        blend = s_tod_fade.to_dim ? 255U : 0U;
-    } else if (s_tod_fade.to_dim) {
-        blend = (uint8_t)((uint32_t)elapsed * 255U / duration);
-    } else {
-        blend = (uint8_t)(255U - (uint32_t)elapsed * 255U / duration);
-    }
-    ui_screen_tod_apply_dim_blend(blend, s_tod_fade.on_dim_screen);
-
     if (elapsed >= duration) {
         tod_fade_finish(s_tod_fade.end_screen);
     }
@@ -241,25 +255,26 @@ static void tod_fade_start(bool to_dim)
     s_tod_fade.to_dim = to_dim;
     s_tod_fade.duration_ms = to_dim ? TOD_FADE_TO_DIM_MS : TOD_FADE_TO_BRIGHT_MS;
     s_tod_fade.end_screen = to_dim ? UI_SCREEN_TOD_DIM : UI_SCREEN_TOD_BRIGHT;
-    s_tod_fade.on_dim_screen = !to_dim;
 
     if (to_dim) {
         uint8_t current = app_runtime_get()->display_brightness;
-        if (current > UI_NAV_BRIGHTNESS_BRIGHT) {
-            current = UI_NAV_BRIGHTNESS_BRIGHT;
+        uint8_t bright_pct = cfg_backlight_bright_pct();
+        if (current > bright_pct) {
+            current = bright_pct;
         }
         s_tod_fade.start_duty = backlight_percent_to_duty(current);
-        s_tod_fade.end_duty = backlight_percent_to_duty(UI_NAV_BRIGHTNESS_DIM);
+        s_tod_fade.end_duty = backlight_percent_to_duty(cfg_backlight_dim_pct());
         s_idle_deadline_ms = UINT32_MAX;
         s_tod_menu_deadline_ms = 0;
         ui_screen_tod_set_menu_visible(false);
     } else {
         uint8_t current = app_runtime_get()->display_brightness;
-        if (current < UI_NAV_BRIGHTNESS_DIM) {
-            current = UI_NAV_BRIGHTNESS_DIM;
+        uint8_t dim_pct = cfg_backlight_dim_pct();
+        if (current < dim_pct) {
+            current = dim_pct;
         }
         s_tod_fade.start_duty = backlight_percent_to_duty(current);
-        s_tod_fade.end_duty = backlight_percent_to_duty(UI_NAV_BRIGHTNESS_BRIGHT);
+        s_tod_fade.end_duty = backlight_percent_to_duty(cfg_backlight_bright_pct());
     }
 
     if (s_tod_fade_timer == NULL) {
@@ -1185,6 +1200,8 @@ void ui_nav_init(void)
         ESP_LOGW(TAG, "app_network_init: %s", esp_err_to_name(net_err));
     }
     app_network_set_boot_done_callback(network_boot_done_cb, NULL);
+
+    app_config_set_display_saved_hook(ui_nav_reapply_dim_backlight);
 
     ui_theme_init();
 

@@ -41,6 +41,7 @@ esp_err_t app_nvs_save_all(void);
 esp_err_t app_nvs_save_network(void);
 esp_err_t app_nvs_save_timezone(void);
 esp_err_t app_nvs_save_timeouts(void);
+esp_err_t app_nvs_save_display(void);
 esp_err_t app_nvs_save_theme(void);
 esp_err_t app_nvs_save_timer(void);
 esp_err_t app_nvs_save_schedule(void);

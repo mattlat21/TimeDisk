@@ -46,18 +46,13 @@ static const char *mode_image(app_mode_t mode)
     }
 }
 
-static lv_opa_t dim_blend_opa(uint8_t blend)
-{
-    return (lv_opa_t)(LV_OPA_COVER - (uint32_t)(LV_OPA_COVER - LV_OPA_60) * blend / 255U);
-}
-
-static void apply_mode_background(lv_obj_t *bg, app_mode_t mode, uint8_t blend)
+static void apply_mode_background(lv_obj_t *bg, app_mode_t mode)
 {
     if (bg == NULL) {
         return;
     }
     lv_image_set_src(bg, mode_image(mode));
-    lv_obj_set_style_opa(bg, dim_blend_opa(blend), 0);
+    lv_obj_set_style_opa(bg, LV_OPA_COVER, 0);
 }
 
 static lv_obj_t *create_mode_background(lv_obj_t *scr)
@@ -135,21 +130,7 @@ static void create_clock(lv_obj_t *scr, tod_clock_t *clock)
     layout_ampm(clock);
 }
 
-static void apply_clock_dim_styles(tod_clock_t *clock, uint8_t blend)
-{
-    if (clock->row == NULL) {
-        return;
-    }
-    lv_opa_t opa = dim_blend_opa(blend);
-    if (clock->hm != NULL) {
-        lv_obj_set_style_text_opa(clock->hm, opa, 0);
-    }
-    if (clock->ampm != NULL) {
-        lv_obj_set_style_text_opa(clock->ampm, opa, 0);
-    }
-}
-
-static void refresh_clock(tod_clock_t *clock, uint8_t blend)
+static void refresh_clock(tod_clock_t *clock)
 {
     if (clock->row == NULL) {
         return;
@@ -167,7 +148,12 @@ static void refresh_clock(tod_clock_t *clock, uint8_t blend)
     lv_label_set_text(clock->hm, hm);
     lv_label_set_text(clock->ampm, ampm);
     lv_obj_remove_flag(clock->row, LV_OBJ_FLAG_HIDDEN);
-    apply_clock_dim_styles(clock, blend);
+    if (clock->hm != NULL) {
+        lv_obj_set_style_text_opa(clock->hm, LV_OPA_COVER, 0);
+    }
+    if (clock->ampm != NULL) {
+        lv_obj_set_style_text_opa(clock->ampm, LV_OPA_COVER, 0);
+    }
 
     lv_obj_update_layout(clock->hm);
     lv_obj_set_style_transform_pivot_x(clock->hm, lv_obj_get_width(clock->hm) / 2, 0);
@@ -208,12 +194,10 @@ static void apply_mode(bool dim)
         mode = APP_MODE_WAKE;
     }
 
-    uint8_t blend = dim ? 255U : 0U;
-
-    apply_mode_background(s_bg_bright, mode, blend);
-    apply_mode_background(s_bg_dim, mode, blend);
-    refresh_clock(&s_clock_bright, blend);
-    refresh_clock(&s_clock_dim, blend);
+    apply_mode_background(s_bg_bright, mode);
+    apply_mode_background(s_bg_dim, mode);
+    refresh_clock(&s_clock_bright);
+    refresh_clock(&s_clock_dim);
 
     s_showing_dim = dim;
 }
@@ -222,24 +206,6 @@ void ui_screen_tod_set_menu_visible(bool visible)
 {
     if (s_menu_wedge_bright != NULL) {
         ui_wedge_set_visible(s_menu_wedge_bright, visible);
-    }
-}
-
-void ui_screen_tod_apply_dim_blend(uint8_t blend, bool on_dim_screen)
-{
-    app_runtime_t *rt = app_runtime_get();
-    app_mode_t mode = rt->current_mode;
-    if (mode >= TOD_MODE_COUNT) {
-        mode = APP_MODE_WAKE;
-    }
-
-    tod_clock_t *clock = on_dim_screen ? &s_clock_dim : &s_clock_bright;
-    apply_clock_dim_styles(clock, blend);
-
-    if (on_dim_screen) {
-        apply_mode_background(s_bg_dim, mode, blend);
-    } else {
-        apply_mode_background(s_bg_bright, mode, blend);
     }
 }
 
@@ -260,8 +226,7 @@ void ui_screen_tod_on_show(bool dim)
 void ui_screen_tod_tick(void)
 {
     tod_clock_t *clock = s_showing_dim ? &s_clock_dim : &s_clock_bright;
-    uint8_t blend = s_showing_dim ? 255U : 0U;
-    refresh_clock(clock, blend);
+    refresh_clock(clock);
 }
 
 static void apply_theme_to_clock(tod_clock_t *clock)
