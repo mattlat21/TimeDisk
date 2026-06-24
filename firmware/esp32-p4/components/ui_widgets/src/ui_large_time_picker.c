@@ -3,6 +3,7 @@
  */
 
 #include "ui_large_time_picker.h"
+#include "ui_fonts.h"
 #include "ui_duration_editor.h"
 #include "ui_layout.h"
 #include "ui_theme.h"
@@ -133,6 +134,12 @@ static void add_stepper_corner_covers(lv_obj_t *parent, int col_x, int col_w, in
     make_radius_cover(parent, col_x, minus_y, col_w, r, keypad);
 }
 
+static void apply_font_64(lv_obj_t *lbl)
+{
+    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_64, 0);
+    lv_obj_set_style_text_letter_space(lbl, UI_LARGE_TIME_PICKER_FONT_64_LETTER_SPACE, 0);
+}
+
 static lv_obj_t *make_stepper_btn(lv_obj_t *parent, const char *txt, int x, int y, int w, int h,
                                   lv_event_cb_t cb, ui_large_time_picker_bundle_t *bundle)
 {
@@ -147,7 +154,7 @@ static lv_obj_t *make_stepper_btn(lv_obj_t *parent, const char *txt, int x, int 
     lv_obj_t *l = lv_label_create(btn);
     lv_label_set_text(l, txt);
     lv_obj_set_style_text_color(l, t->white, 0);
-    lv_obj_set_style_text_font(l, &lv_font_montserrat_48, 0);
+    apply_font_64(l);
     lv_obj_center(l);
     lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, bundle);
     return btn;
@@ -177,7 +184,7 @@ static void create_time_column(lv_obj_t *parent, int col_x, lv_obj_t **btn_plus,
     *lbl = lv_label_create(val_panel);
     lv_label_set_text(*lbl, "0");
     lv_obj_set_style_text_color(*lbl, t->white, 0);
-    lv_obj_set_style_text_font(*lbl, &lv_font_montserrat_48, 0);
+    apply_font_64(*lbl);
     lv_obj_center(*lbl);
 
     add_stepper_corner_covers(parent, col_x, col_w, btn_h, minus_y, t->keypad);
@@ -268,6 +275,8 @@ void ui_large_time_picker_create(lv_obj_t *parent, ui_large_time_picker_bundle_t
 
     const int hour_col_x = 0;
     const int min_col_x = col_w + colon_w;
+    const int ampm_x = min_col_x + col_w + UI_LARGE_TIME_PICKER_AMPM_X_OFFSET;
+    const int ampm_lbl_w = ampm_w - UI_LARGE_TIME_PICKER_AMPM_X_OFFSET;
 
     create_time_column(out->box, hour_col_x, &out->btn_h_plus, &out->lbl_hour, &out->btn_h_minus,
                        h_plus_cb, h_minus_cb, bundle, t);
@@ -277,17 +286,17 @@ void ui_large_time_picker_create(lv_obj_t *parent, ui_large_time_picker_bundle_t
     lv_obj_t *colon = lv_label_create(out->box);
     lv_label_set_text(colon, ":");
     lv_obj_set_style_text_color(colon, t->white, 0);
-    lv_obj_set_style_text_font(colon, &lv_font_montserrat_48, 0);
-    lv_obj_set_pos(colon, col_w, val_center_y - UI_LARGE_TIME_PICKER_DIGIT_H / 2);
+    apply_font_64(colon);
+    lv_obj_set_pos(colon, col_w, val_center_y - UI_LARGE_TIME_PICKER_FONT_64_LINE_H / 2);
     lv_obj_set_width(colon, colon_w);
     lv_obj_set_style_text_align(colon, LV_TEXT_ALIGN_CENTER, 0);
 
     out->lbl_ampm = lv_label_create(out->box);
     lv_label_set_text(out->lbl_ampm, "am");
     lv_obj_set_style_text_color(out->lbl_ampm, t->white, 0);
-    lv_obj_set_style_text_font(out->lbl_ampm, &lv_font_montserrat_42, 0);
-    lv_obj_set_pos(out->lbl_ampm, min_col_x + col_w + 12,
-                   val_center_y - UI_LARGE_TIME_PICKER_AMPM_H / 2);
+    apply_font_64(out->lbl_ampm);
+    lv_obj_set_pos(out->lbl_ampm, ampm_x, val_center_y - UI_LARGE_TIME_PICKER_FONT_64_LINE_H / 2);
+    lv_obj_set_width(out->lbl_ampm, ampm_lbl_w);
 
     ui_large_time_picker_refresh(out, cfg);
 }
