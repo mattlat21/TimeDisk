@@ -27,6 +27,9 @@ extern const lv_image_dsc_t icon_cancel;
 /** White check glyph for wedge buttons */
 extern const lv_image_dsc_t icon_check;
 
+/** White circle outline glyph for wedge buttons */
+extern const lv_image_dsc_t icon_circle;
+
 /** White spanner glyph for wedge buttons */
 extern const lv_image_dsc_t icon_spanner;
 

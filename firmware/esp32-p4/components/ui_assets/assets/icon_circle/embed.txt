@@ -1,0 +1,5 @@
+source=icon_circle.svg
+format=RGB565A8
+width=64
+height=64
+description=White circle outline glyph for wedge buttons

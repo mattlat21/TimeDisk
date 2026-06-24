@@ -6,6 +6,7 @@ idf_component_register(
         "src/icon_arrow_right.c"
         "src/icon_cancel.c"
         "src/icon_check.c"
+        "src/icon_circle.c"
         "src/icon_spanner.c"
         "src/wedge_shape_left.c"
         "src/wedge_shape_right.c"
