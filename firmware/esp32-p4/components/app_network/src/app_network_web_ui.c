@@ -904,6 +904,22 @@ static esp_err_t index_get_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+static const char FAVICON_SVG[] =
+    "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 32 32\" fill=\"none\">"
+    "<circle cx=\"16\" cy=\"16\" r=\"16\" fill=\"#7c3aed\"/>"
+    "<circle cx=\"16\" cy=\"16\" r=\"12.5\" stroke=\"#fff\" stroke-opacity=\".22\" stroke-width=\"1.25\"/>"
+    "<path d=\"M16 16V8.5\" stroke=\"#fff\" stroke-width=\"2.25\" stroke-linecap=\"round\"/>"
+    "<path d=\"M16 16L22.5 19.5\" stroke=\"#fff\" stroke-width=\"2.25\" stroke-linecap=\"round\"/>"
+    "<path d=\"M16 16L10 11.5\" stroke=\"#fff\" stroke-width=\"1.75\" stroke-linecap=\"round\"/>"
+    "</svg>";
+
+static esp_err_t favicon_get_handler(httpd_req_t *req)
+{
+    httpd_resp_set_type(req, "image/svg+xml");
+    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=86400");
+    return httpd_resp_send(req, FAVICON_SVG, HTTPD_RESP_USE_STRLEN);
+}
+
 esp_err_t app_network_web_ui_register(httpd_handle_t server)
 {
     if (server == NULL) {
@@ -912,6 +928,8 @@ esp_err_t app_network_web_ui_register(httpd_handle_t server)
 
     static const httpd_uri_t routes[] = {
         {.uri = "/", .method = HTTP_GET, .handler = index_get_handler},
+        {.uri = "/favicon.ico", .method = HTTP_GET, .handler = favicon_get_handler},
+        {.uri = "/favicon.svg", .method = HTTP_GET, .handler = favicon_get_handler},
         {.uri = "/api/status", .method = HTTP_GET, .handler = api_status_get},
         {.uri = "/api/config", .method = HTTP_GET, .handler = api_config_get},
         {.uri = "/api/config", .method = HTTP_POST, .handler = api_config_post},
