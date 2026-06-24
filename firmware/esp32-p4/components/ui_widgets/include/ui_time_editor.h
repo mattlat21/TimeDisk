@@ -8,11 +8,12 @@
 #include "lvgl.h"
 #include <stdint.h>
 
-#define UI_TIME_EDITOR_BOX_W     400
-#define UI_TIME_EDITOR_BOX_H     130
-#define UI_TIME_EDITOR_BOX_Y     315
-#define UI_TIME_EDITOR_STEPPER   44
-#define UI_TIME_EDITOR_COL_W     72
+#define UI_TIME_EDITOR_BOX_W     320
+#define UI_TIME_EDITOR_BOX_H     144
+#define UI_TIME_EDITOR_BOX_Y     210
+#define UI_TIME_EDITOR_STEP_H    44
+#define UI_TIME_EDITOR_VAL_H     56
+#define UI_TIME_EDITOR_COL_W     88
 
 typedef void (*ui_time_editor_cb_t)(void *user_data);
 

@@ -33,6 +33,17 @@ void ui_format_duration_minutes(char *buf, size_t len, uint32_t sec)
     }
 }
 
+void ui_format_hours_and_minutes(char *buf, size_t len, uint32_t sec)
+{
+    const unsigned total_mins = (unsigned)(sec / 60);
+    const unsigned hours = total_mins / 60;
+    const unsigned mins = total_mins % 60;
+    const char *hour_word = (hours == 1) ? "hour" : "hours";
+    const char *min_word = (mins == 1) ? "minute" : "minutes";
+
+    snprintf(buf, len, "%u %s and %u %s", hours, hour_word, mins, min_word);
+}
+
 void ui_format_duration_human(char *buf, size_t len, uint32_t sec)
 {
     if (sec < 60) {

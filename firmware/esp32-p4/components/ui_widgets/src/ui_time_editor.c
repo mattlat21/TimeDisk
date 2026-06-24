@@ -65,7 +65,7 @@ static void end_time_parts(const ui_time_editor_cfg_t *cfg, int *h12_out, int *m
     }
     *h12_out = h12;
     *min_out = tm_info.tm_min;
-    *ampm_out = (h24 >= 12) ? "PM" : "AM";
+    *ampm_out = (h24 >= 12) ? "pm" : "am";
 }
 
 static void adjust_end_time(ui_time_editor_bundle_t *bundle, int delta_minutes)
@@ -98,24 +98,6 @@ static void m_plus_cb(lv_event_t *e)
     adjust_end_time(bundle_from_event(e), 1);
 }
 
-static lv_obj_t *make_stepper_btn(lv_obj_t *parent, const char *txt, int x, int y,
-                                  lv_event_cb_t cb, ui_time_editor_bundle_t *bundle)
-{
-    const ui_theme_t *t = ui_theme_get();
-    lv_obj_t *btn = lv_button_create(parent);
-    lv_obj_set_size(btn, UI_TIME_EDITOR_STEPPER, UI_TIME_EDITOR_STEPPER);
-    lv_obj_set_pos(btn, x, y);
-    lv_obj_set_style_radius(btn, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_color(btn, t->keypad, 0);
-    lv_obj_t *l = lv_label_create(btn);
-    lv_label_set_text(l, txt);
-    lv_obj_set_style_text_color(l, t->white, 0);
-    lv_obj_set_style_text_font(l, &lv_font_montserrat_20, 0);
-    lv_obj_center(l);
-    lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, bundle);
-    return btn;
-}
-
 static void set_obj_visible(lv_obj_t *obj, bool visible)
 {
     if (obj == NULL) {
@@ -128,23 +110,47 @@ static void set_obj_visible(lv_obj_t *obj, bool visible)
     }
 }
 
-static void create_time_column(lv_obj_t *box, int col_x, lv_obj_t **btn_plus, lv_obj_t **lbl,
+static lv_obj_t *make_stepper_btn(lv_obj_t *parent, const char *txt, int x, int y, int w, int h,
+                                  lv_event_cb_t cb, ui_time_editor_bundle_t *bundle)
+{
+    const ui_theme_t *t = ui_theme_get();
+    lv_obj_t *btn = lv_button_create(parent);
+    lv_obj_set_size(btn, w, h);
+    lv_obj_set_pos(btn, x, y);
+    lv_obj_set_style_radius(btn, 10, 0);
+    lv_obj_set_style_bg_color(btn, t->keypad, 0);
+    lv_obj_set_style_shadow_width(btn, 0, 0);
+    lv_obj_set_style_border_width(btn, 0, 0);
+    lv_obj_t *l = lv_label_create(btn);
+    lv_label_set_text(l, txt);
+    lv_obj_set_style_text_color(l, t->white, 0);
+    lv_obj_set_style_text_font(l, &lv_font_montserrat_26, 0);
+    lv_obj_center(l);
+    lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, bundle);
+    return btn;
+}
+
+static void create_time_column(lv_obj_t *parent, int col_x, lv_obj_t **btn_plus, lv_obj_t **lbl,
                                lv_obj_t **btn_minus, lv_event_cb_t plus_cb, lv_event_cb_t minus_cb,
                                ui_time_editor_bundle_t *bundle, const ui_theme_t *t)
 {
-    const int step = UI_TIME_EDITOR_STEPPER;
-    const int btn_x = col_x + (UI_TIME_EDITOR_COL_W - step) / 2;
-    const int lbl_y = 4 + step + 6;
+    const int col_w = UI_TIME_EDITOR_COL_W;
+    const int btn_h = UI_TIME_EDITOR_STEP_H;
+    const int val_h = UI_TIME_EDITOR_VAL_H;
+    int y = 0;
 
-    *btn_plus = make_stepper_btn(box, "+", btn_x, 4, plus_cb, bundle);
-    *lbl = lv_label_create(box);
+    *btn_plus = make_stepper_btn(parent, "+", col_x, y, col_w, btn_h, plus_cb, bundle);
+    y += btn_h;
+
+    lv_obj_t *val_panel = ui_widgets_create_purple_box(parent, col_w, val_h, col_x, y, false);
+    *lbl = lv_label_create(val_panel);
     lv_label_set_text(*lbl, "0");
     lv_obj_set_style_text_color(*lbl, t->white, 0);
-    lv_obj_set_style_text_font(*lbl, &lv_font_montserrat_26, 0);
-    lv_obj_set_pos(*lbl, col_x + (UI_TIME_EDITOR_COL_W - 32) / 2, lbl_y);
-    lv_obj_set_width(*lbl, 32);
-    lv_obj_set_style_text_align(*lbl, LV_TEXT_ALIGN_CENTER, 0);
-    *btn_minus = make_stepper_btn(box, "-", btn_x, lbl_y + 30, minus_cb, bundle);
+    lv_obj_set_style_text_font(*lbl, &lv_font_montserrat_34, 0);
+    lv_obj_center(*lbl);
+
+    y += val_h;
+    *btn_minus = make_stepper_btn(parent, "-", col_x, y, col_w, btn_h, minus_cb, bundle);
 }
 
 void ui_time_editor_set_visible(const ui_time_editor_t *ed, bool visible)
@@ -212,19 +218,30 @@ void ui_time_editor_create(lv_obj_t *parent, ui_time_editor_bundle_t *bundle)
         cfg->box_y = UI_TIME_EDITOR_BOX_Y;
     }
 
-    int box_x = 0;
-    int box_y = 0;
-    {
-        const int box_x_wf = (int)UI_SCREEN_CX - cfg->box_w / 2;
-        ui_layout_parent_pos_from_wf(parent, box_x_wf, cfg->box_y, &box_x, &box_y);
-    }
-
     clamp_duration(cfg);
 
-    out->box = ui_widgets_create_purple_box(parent, cfg->box_w, cfg->box_h, box_x, box_y, false);
+    const int col_w = UI_TIME_EDITOR_COL_W;
+    const int btn_h = UI_TIME_EDITOR_STEP_H;
+    const int val_h = UI_TIME_EDITOR_VAL_H;
+    const int col_h = btn_h + val_h + btn_h;
+    const int colon_w = 24;
+    const int ampm_w = 48;
+    const int content_w = col_w + colon_w + col_w + ampm_w;
+    const int box_x_wf = (int)UI_SCREEN_CX - content_w / 2;
+    int box_x = 0;
+    int box_y = 0;
+    ui_layout_parent_pos_from_wf(parent, box_x_wf, cfg->box_y, &box_x, &box_y);
 
-    const int hour_col_x = 72;
-    const int min_col_x = hour_col_x + UI_TIME_EDITOR_COL_W + 36;
+    out->box = lv_obj_create(parent);
+    lv_obj_set_size(out->box, content_w, col_h);
+    lv_obj_set_pos(out->box, box_x, box_y);
+    lv_obj_set_style_bg_opa(out->box, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(out->box, 0, 0);
+    lv_obj_set_style_pad_all(out->box, 0, 0);
+    lv_obj_remove_flag(out->box, LV_OBJ_FLAG_SCROLLABLE);
+
+    const int hour_col_x = 0;
+    const int min_col_x = col_w + colon_w;
 
     create_time_column(out->box, hour_col_x, &out->btn_h_plus, &out->lbl_hour, &out->btn_h_minus,
                        h_plus_cb, h_minus_cb, bundle, t);
@@ -234,14 +251,14 @@ void ui_time_editor_create(lv_obj_t *parent, ui_time_editor_bundle_t *bundle)
     lv_obj_t *colon = lv_label_create(out->box);
     lv_label_set_text(colon, ":");
     lv_obj_set_style_text_color(colon, t->white, 0);
-    lv_obj_set_style_text_font(colon, &lv_font_montserrat_26, 0);
-    lv_obj_set_pos(colon, hour_col_x + UI_TIME_EDITOR_COL_W + 10, 4 + UI_TIME_EDITOR_STEPPER + 10);
+    lv_obj_set_style_text_font(colon, &lv_font_montserrat_34, 0);
+    lv_obj_set_pos(colon, col_w + 4, btn_h + (val_h - 34) / 2);
 
     out->lbl_ampm = lv_label_create(out->box);
-    lv_label_set_text(out->lbl_ampm, "AM");
-    lv_obj_set_style_text_color(out->lbl_ampm, t->secondary, 0);
+    lv_label_set_text(out->lbl_ampm, "am");
+    lv_obj_set_style_text_color(out->lbl_ampm, t->white, 0);
     lv_obj_set_style_text_font(out->lbl_ampm, &lv_font_montserrat_20, 0);
-    lv_obj_align(out->lbl_ampm, LV_ALIGN_RIGHT_MID, -20, 8);
+    lv_obj_set_pos(out->lbl_ampm, min_col_x + col_w + 8, btn_h + (val_h - 20) / 2);
 
     ui_time_editor_refresh(out, cfg);
 }

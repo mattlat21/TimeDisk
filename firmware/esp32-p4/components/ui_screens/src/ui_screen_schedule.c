@@ -6,6 +6,7 @@
 #include "ui_wedge.h"
 #include "ui_theme.h"
 #include "ui_nav.h"
+#include "ui_format.h"
 #include "app_config.h"
 
 #include <esp_log.h>
@@ -13,19 +14,21 @@
 
 static const char *TAG = "ui_schedule";
 
-#define SCHEDULE_EDITOR_BOX_W  400
-#define SCHEDULE_EDITOR_BOX_H  80
-#define SCHEDULE_EDITOR_BOX_Y  210
-#define REST_TIME_BOX_Y        315
+#define SCHEDULE_EDITOR_BOX_W      400
+#define SCHEDULE_EDITOR_BOX_H      80
+#define SCHEDULE_EDITOR_BOX_Y      210
+#define SCHEDULE_END_TIME_BOX_Y    210
+#define SCHEDULE_DURATION_Y_WF     520
 
 typedef struct {
     lv_obj_t *scr;
     lv_obj_t *lbl_title;
     lv_obj_t *lbl_subtitle;
+    lv_obj_t *lbl_duration;
     ui_screen_id_t id;
     ui_duration_editor_bundle_t bundle;
     ui_time_editor_bundle_t time_bundle;
-    bool has_time_editor;
+    bool end_time_layout;
 } schedule_screen_t;
 
 static schedule_screen_t s_screens[5];
@@ -91,6 +94,19 @@ static const char *s_rest_subtitles_duration[2] = {
     "Wind Down Duration",
 };
 
+static const char *end_time_heading_for_idx(int idx)
+{
+    switch (idx) {
+    case 0:
+        return "Sleep Ends";
+    case 1:
+    case 3:
+        return "Rest Ends";
+    default:
+        return "";
+    }
+}
+
 static bool schedule_time_available(void)
 {
     return app_runtime_get()->time_valid;
@@ -146,7 +162,7 @@ static void apply_editor_constraints(int idx)
         return;
     }
     ui_duration_editor_cfg_t *dcfg = &ss->bundle.cfg;
-    ui_time_editor_cfg_t *tcfg = ss->has_time_editor ? &ss->time_bundle.cfg : NULL;
+    ui_time_editor_cfg_t *tcfg = ss->end_time_layout ? &ss->time_bundle.cfg : NULL;
 
     dcfg->end_time_offset_sec = 0;
     dcfg->max_sec = UI_DURATION_EDITOR_MAX_SEC;
@@ -193,6 +209,16 @@ static void apply_schedule_labels(int idx)
     }
     const bool use_time = schedule_time_available();
 
+    if (ss->end_time_layout) {
+        if (ss->lbl_title != NULL) {
+            lv_label_set_text(ss->lbl_title, end_time_heading_for_idx(idx));
+        }
+        if (ss->lbl_subtitle != NULL) {
+            lv_obj_add_flag(ss->lbl_subtitle, LV_OBJ_FLAG_HIDDEN);
+        }
+        return;
+    }
+
     if (ss->lbl_title != NULL) {
         if (idx < 3) {
             lv_label_set_text(ss->lbl_title, s_sleep_title);
@@ -201,6 +227,7 @@ static void apply_schedule_labels(int idx)
         }
     }
     if (ss->lbl_subtitle != NULL) {
+        lv_obj_remove_flag(ss->lbl_subtitle, LV_OBJ_FLAG_HIDDEN);
         if (idx < 3) {
             lv_label_set_text(ss->lbl_subtitle,
                               use_time ? s_sleep_subtitles[idx] : s_sleep_subtitles_duration[idx]);
@@ -212,6 +239,18 @@ static void apply_schedule_labels(int idx)
     }
 }
 
+static void refresh_duration_label(int idx)
+{
+    schedule_screen_t *ss = schedule_screen_at(idx);
+    if (ss == NULL || ss->lbl_duration == NULL || ss->bundle.cfg.value_sec == NULL) {
+        return;
+    }
+
+    char buf[64];
+    ui_format_hours_and_minutes(buf, sizeof(buf), *ss->bundle.cfg.value_sec);
+    lv_label_set_text(ss->lbl_duration, buf);
+}
+
 static void refresh_schedule_editors(int idx)
 {
     schedule_screen_t *ss = schedule_screen_at(idx);
@@ -221,17 +260,34 @@ static void refresh_schedule_editors(int idx)
     const bool use_time = schedule_time_available();
 
     apply_editor_constraints(idx);
-    ss->bundle.cfg.show_end_time = use_time && !ss->has_time_editor;
-    if (idx == 2 || idx == 4) {
-        ss->bundle.cfg.display = UI_DURATION_DISPLAY_HUMAN;
-    }
-    ui_duration_editor_refresh(&ss->bundle.editor, &ss->bundle.cfg);
-    if (ss->has_time_editor) {
-        ui_time_editor_set_visible(&ss->time_bundle.editor, use_time);
+
+    if (ss->end_time_layout) {
         if (use_time) {
+            ui_duration_editor_set_visible(&ss->bundle.editor, false);
+            ui_time_editor_set_visible(&ss->time_bundle.editor, true);
             ui_time_editor_refresh(&ss->time_bundle.editor, &ss->time_bundle.cfg);
+            refresh_duration_label(idx);
+            if (ss->lbl_duration != NULL) {
+                lv_obj_remove_flag(ss->lbl_duration, LV_OBJ_FLAG_HIDDEN);
+            }
+        } else {
+            ss->bundle.cfg.show_end_time = false;
+            ui_duration_editor_set_visible(&ss->bundle.editor, true);
+            ui_duration_editor_refresh(&ss->bundle.editor, &ss->bundle.cfg);
+            ui_time_editor_set_visible(&ss->time_bundle.editor, false);
+            if (ss->lbl_duration != NULL) {
+                lv_obj_add_flag(ss->lbl_duration, LV_OBJ_FLAG_HIDDEN);
+            }
         }
+    } else {
+        ss->bundle.cfg.show_end_time = use_time;
+        if (idx == 2 || idx == 4) {
+            ss->bundle.cfg.display = UI_DURATION_DISPLAY_HUMAN;
+        }
+        ui_duration_editor_set_visible(&ss->bundle.editor, true);
+        ui_duration_editor_refresh(&ss->bundle.editor, &ss->bundle.cfg);
     }
+
     apply_schedule_labels(idx);
 }
 
@@ -365,58 +421,92 @@ static void attach_wedges(lv_obj_t *scr, ui_screen_id_t id)
     lv_obj_move_foreground(next);
 }
 
-static void build_wizard_screen(lv_obj_t *screens[UI_SCREEN_COUNT], ui_screen_id_t id,
-                                const char *title, const char *subtitle, bool show_time_editor,
-                                int idx)
+static lv_obj_t *create_duration_label(lv_obj_t *scr)
+{
+    const ui_theme_t *t = ui_theme_get();
+    lv_obj_t *lbl = lv_label_create(scr);
+    lv_label_set_text(lbl, "");
+    lv_obj_set_style_text_color(lbl, t->white, 0);
+    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_20, 0);
+    lv_obj_set_width(lbl, UI_DISP - 80);
+    lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, 0);
+    const int y = ui_layout_wf_to_content_y(scr, SCHEDULE_DURATION_Y_WF);
+    lv_obj_align(lbl, LV_ALIGN_TOP_MID, 0, y);
+    lv_obj_add_flag(lbl, LV_OBJ_FLAG_HIDDEN);
+    return lbl;
+}
+
+static void build_end_time_screen(lv_obj_t *screens[UI_SCREEN_COUNT], ui_screen_id_t id,
+                                  const char *heading, int idx)
 {
     schedule_screen_t *ss = &s_screens[idx];
 
     ss->id = id;
-    ss->has_time_editor = show_time_editor;
+    ss->end_time_layout = true;
     ss->scr = ui_widgets_create_screen();
     screens[id] = ss->scr;
 
-    ss->lbl_title = ui_widgets_create_title(ss->scr, title);
-    if (subtitle != NULL) {
-        ss->lbl_subtitle = ui_widgets_create_subtitle(ss->scr, subtitle);
-    }
-
-    const int box_y = show_time_editor ? SCHEDULE_EDITOR_BOX_Y : 220;
-    const int box_h = show_time_editor ? SCHEDULE_EDITOR_BOX_H : 100;
+    ss->lbl_title = ui_widgets_create_title(ss->scr, heading);
+    ss->lbl_subtitle = NULL;
+    ss->lbl_duration = create_duration_label(ss->scr);
 
     ss->bundle.cfg = (ui_duration_editor_cfg_t){
         .value_sec = &s_wizard_vals[idx],
-        .box_y = box_y,
+        .box_y = SCHEDULE_EDITOR_BOX_Y,
         .box_w = SCHEDULE_EDITOR_BOX_W,
-        .box_h = box_h,
-        .show_end_time = !show_time_editor,
+        .box_h = SCHEDULE_EDITOR_BOX_H,
+        .show_end_time = false,
         .on_change = schedule_editor_change_cb,
         .user_data = (void *)(intptr_t)idx,
     };
     ui_duration_editor_create(ss->scr, &ss->bundle);
 
-    if (show_time_editor) {
-        ss->time_bundle.cfg = (ui_time_editor_cfg_t){
-            .value_sec = &s_wizard_vals[idx],
-            .box_y = REST_TIME_BOX_Y,
-            .box_w = UI_TIME_EDITOR_BOX_W,
-            .box_h = UI_TIME_EDITOR_BOX_H,
-            .on_change = schedule_time_change_cb,
-            .user_data = (void *)(intptr_t)idx,
-        };
-        ui_time_editor_create(ss->scr, &ss->time_bundle);
-    }
+    ss->time_bundle.cfg = (ui_time_editor_cfg_t){
+        .value_sec = &s_wizard_vals[idx],
+        .box_y = SCHEDULE_END_TIME_BOX_Y,
+        .on_change = schedule_time_change_cb,
+        .user_data = (void *)(intptr_t)idx,
+    };
+    ui_time_editor_create(ss->scr, &ss->time_bundle);
+
+    attach_wedges(ss->scr, id);
+}
+
+static void build_duration_wizard_screen(lv_obj_t *screens[UI_SCREEN_COUNT], ui_screen_id_t id,
+                                         const char *title, const char *subtitle, int idx)
+{
+    schedule_screen_t *ss = &s_screens[idx];
+
+    ss->id = id;
+    ss->end_time_layout = false;
+    ss->scr = ui_widgets_create_screen();
+    screens[id] = ss->scr;
+
+    ss->lbl_title = ui_widgets_create_title(ss->scr, title);
+    ss->lbl_subtitle = ui_widgets_create_subtitle(ss->scr, subtitle);
+    ss->lbl_duration = NULL;
+
+    ss->bundle.cfg = (ui_duration_editor_cfg_t){
+        .value_sec = &s_wizard_vals[idx],
+        .box_y = 220,
+        .box_w = SCHEDULE_EDITOR_BOX_W,
+        .box_h = 100,
+        .show_end_time = true,
+        .on_change = schedule_editor_change_cb,
+        .user_data = (void *)(intptr_t)idx,
+    };
+    ui_duration_editor_create(ss->scr, &ss->bundle);
 
     attach_wedges(ss->scr, id);
 }
 
 void ui_screen_schedule_build(lv_obj_t *screens[UI_SCREEN_COUNT])
 {
-    build_wizard_screen(screens, UI_SCREEN_SLEEP_WAKE, s_sleep_title, s_sleep_subtitles[0], true, 0);
-    build_wizard_screen(screens, UI_SCREEN_SLEEP_REST_END, s_sleep_title, s_sleep_subtitles[1], true, 1);
-    build_wizard_screen(screens, UI_SCREEN_SLEEP_WIND_DOWN, s_sleep_title, s_sleep_subtitles[2], true, 2);
-    build_wizard_screen(screens, UI_SCREEN_REST_REST_END, s_rest_titles[0], s_rest_subtitles[0], true, 3);
-    build_wizard_screen(screens, UI_SCREEN_REST_WIND_DOWN, s_rest_titles[1], s_rest_subtitles[1], true, 4);
+    build_end_time_screen(screens, UI_SCREEN_SLEEP_WAKE, "Sleep Ends", 0);
+    build_end_time_screen(screens, UI_SCREEN_SLEEP_REST_END, "Rest Ends", 1);
+    build_duration_wizard_screen(screens, UI_SCREEN_SLEEP_WIND_DOWN, s_sleep_title, s_sleep_subtitles[2], 2);
+    build_end_time_screen(screens, UI_SCREEN_REST_REST_END, "Rest Ends", 3);
+    build_duration_wizard_screen(screens, UI_SCREEN_REST_WIND_DOWN, s_rest_titles[1], s_rest_subtitles[1], 4);
 }
 
 void ui_screen_schedule_on_show(ui_screen_id_t id)
