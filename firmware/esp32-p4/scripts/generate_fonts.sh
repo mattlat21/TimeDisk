@@ -31,4 +31,16 @@ npx --yes lv_font_conv \
   --lv-font-name lv_font_montserrat_64 \
   -o "${OUT_DIR}/lv_font_montserrat_64.c"
 
+echo "Generating lv_font_montserrat_80..."
+npx --yes lv_font_conv \
+  --font "${MONTSERRAT_TTF}" \
+  --size 80 \
+  --bpp 4 \
+  --format lvgl \
+  --no-prefilter \
+  --symbols "+:-0123456789apm" \
+  --force-fast-kern-format \
+  --lv-font-name lv_font_montserrat_80 \
+  -o "${OUT_DIR}/lv_font_montserrat_80.c"
+
 echo "Done."

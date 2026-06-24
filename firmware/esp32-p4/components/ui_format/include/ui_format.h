@@ -17,6 +17,8 @@ void ui_format_hours_and_minutes(char *buf, size_t len, uint32_t sec);
 void ui_format_duration_human(char *buf, size_t len, uint32_t sec);
 /** 12-hour local time at now + @p offset_sec, e.g. "3:45 PM". */
 void ui_format_hh_mm_ampm_after_sec(char *buf, size_t len, uint32_t offset_sec);
+/** 12-hour local time at now + @p offset_sec without AM/PM, e.g. "3:45". */
+void ui_format_hh_mm_after_sec(char *buf, size_t len, uint32_t offset_sec);
 void ui_format_hh_mm(char *buf, size_t len, int hour, int min);
 /** Format local wall-clock time from the system RTC (after SNTP). */
 void ui_format_hh_mm_now(char *buf, size_t len);

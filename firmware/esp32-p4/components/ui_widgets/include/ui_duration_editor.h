@@ -18,6 +18,25 @@
 #define UI_DURATION_EDITOR_GAP       20
 #define UI_DURATION_EDITOR_STEP_SEC  60
 #define UI_DURATION_EDITOR_MAX_SEC   3600
+#define UI_DURATION_EDITOR_SLIDER_W  400
+#define UI_DURATION_EDITOR_SLIDER_H  8
+#define UI_DURATION_EDITOR_SLIDER_GAP 24
+
+/** Wind-down schedule screen: compact minute box, large steppers, slider. */
+#define UI_DURATION_EDITOR_WD_BOX_Y_WF     255
+#define UI_DURATION_EDITOR_WD_BOX_W        280
+#define UI_DURATION_EDITOR_WD_BOX_PAD      20
+#define UI_DURATION_EDITOR_WD_VALUE_LINE_H 72
+#define UI_DURATION_EDITOR_WD_UNIT_LINE_H  43
+#define UI_DURATION_EDITOR_WD_BOX_H \
+    (UI_DURATION_EDITOR_WD_BOX_PAD + UI_DURATION_EDITOR_WD_VALUE_LINE_H + \
+     UI_DURATION_EDITOR_WD_UNIT_LINE_H + UI_DURATION_EDITOR_WD_BOX_PAD)
+#define UI_DURATION_EDITOR_WD_STEPPER      104
+#define UI_DURATION_EDITOR_WD_GAP          24
+#define UI_DURATION_EDITOR_WD_SLIDER_W     400
+#define UI_DURATION_EDITOR_WD_SLIDER_TRACK 8
+#define UI_DURATION_EDITOR_WD_SLIDER_KNOB  32
+#define UI_DURATION_EDITOR_WD_SLIDER_GAP   64
 /** Max gross/net rest duration in schedule wizards and Settings → Schedule. */
 #define UI_SCHEDULE_REST_MAX_SEC     (24U * 3600U)
 
@@ -32,7 +51,14 @@ typedef enum {
     UI_DURATION_DISPLAY_HUMAN,
     /** Shows a 0–100 percentage value. */
     UI_DURATION_DISPLAY_PERCENT,
+    /** Large minute count with a separate "min" unit label (wind-down screen). */
+    UI_DURATION_DISPLAY_WIND_DOWN,
 } ui_duration_display_t;
+
+typedef enum {
+    UI_DURATION_EDITOR_STYLE_DEFAULT = 0,
+    UI_DURATION_EDITOR_STYLE_WIND_DOWN,
+} ui_duration_editor_style_t;
 
 typedef struct {
     uint32_t *value_sec;
@@ -41,11 +67,14 @@ typedef struct {
     int box_w;
     int box_h;
     bool show_end_time;
+    /** Horizontal slider below the value box (maps min_sec..max_sec in step_sec). */
+    bool show_slider;
     /** Added to *value_sec when computing the end-time subtitle (default 0). */
     uint32_t end_time_offset_sec;
     uint32_t max_sec;
     uint32_t min_sec;
     uint32_t step_sec;
+    ui_duration_editor_style_t style;
     ui_duration_display_t display;
     ui_duration_editor_step_fn_t get_step_sec;
     ui_duration_editor_cb_t on_change;
@@ -57,7 +86,9 @@ typedef struct {
     lv_obj_t *btn_minus;
     lv_obj_t *btn_plus;
     lv_obj_t *lbl_value;
+    lv_obj_t *lbl_unit;
     lv_obj_t *lbl_subtitle;
+    lv_obj_t *slider;
 } ui_duration_editor_t;
 
 /** Caller-owned; passed to create and used by stepper event handlers. */

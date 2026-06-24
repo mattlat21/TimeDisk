@@ -85,6 +85,19 @@ void ui_format_hh_mm_ampm_after_sec(char *buf, size_t len, uint32_t offset_sec)
     snprintf(buf, len, "%d:%02d %s", h12, min, ampm);
 }
 
+void ui_format_hh_mm_after_sec(char *buf, size_t len, uint32_t offset_sec)
+{
+    time_t end = time(NULL) + (time_t)offset_sec;
+    struct tm tm_info;
+    localtime_r(&end, &tm_info);
+    int h12;
+    int min;
+    const char *ampm;
+    format_12h_parts(&tm_info, &h12, &min, &ampm);
+    (void)ampm;
+    snprintf(buf, len, "%d:%02d", h12, min);
+}
+
 void ui_format_hh_mm(char *buf, size_t len, int hour, int min)
 {
     snprintf(buf, len, "%02d:%02d", hour, min);

@@ -1,7 +1,7 @@
 /*******************************************************************************
  * Size: 64 px
  * Bpp: 4
- * Opts: --font components/ui_fonts/fonts/Montserrat-Regular.ttf --size 64 --bpp 4 --format lvgl --no-prefilter --symbols +:-0123456789apm --force-fast-kern-format --lv-font-name lv_font_montserrat_64 -o components/ui_fonts/src/lv_font_montserrat_64.c
+ * Opts: --font /Users/matt/Documents/Repos/GitHub/TimeDisk/firmware/esp32-p4/components/ui_fonts/fonts/Montserrat-Regular.ttf --size 64 --bpp 4 --format lvgl --no-prefilter --symbols +:-0123456789apm --force-fast-kern-format --lv-font-name lv_font_montserrat_64 -o /Users/matt/Documents/Repos/GitHub/TimeDisk/firmware/esp32-p4/components/ui_fonts/src/lv_font_montserrat_64.c
  ******************************************************************************/
 
 #ifdef LV_LVGL_H_INCLUDE_SIMPLE
