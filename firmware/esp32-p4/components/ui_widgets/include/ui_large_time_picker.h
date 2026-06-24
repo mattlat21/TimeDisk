@@ -9,11 +9,16 @@
 #include <stdint.h>
 
 #define UI_LARGE_TIME_PICKER_BOX_Y     180
+#define UI_LARGE_TIME_PICKER_X_OFFSET_WF 24
 #define UI_LARGE_TIME_PICKER_COL_W     176
 #define UI_LARGE_TIME_PICKER_STEP_H    88
 #define UI_LARGE_TIME_PICKER_VAL_H     112
 #define UI_LARGE_TIME_PICKER_COLON_W   48
 #define UI_LARGE_TIME_PICKER_AMPM_W    96
+#define UI_LARGE_TIME_PICKER_CORNER_R  20
+#define UI_LARGE_TIME_PICKER_BTN_GAP   7
+#define UI_LARGE_TIME_PICKER_DIGIT_H   48
+#define UI_LARGE_TIME_PICKER_AMPM_H    42
 
 typedef void (*ui_large_time_picker_cb_t)(void *user_data);
 
