@@ -1,0 +1,4 @@
+<!-- Right arrow glyph; white on transparent, tight crop. -->
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M10 24 H32 M24 16 L34 24 L24 32" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

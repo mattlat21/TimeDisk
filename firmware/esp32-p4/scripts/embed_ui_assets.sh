@@ -179,7 +179,7 @@ asset_group() {
     tod_*) printf 'tod' ;;
     btn_start_*) printf 'btn_start' ;;
     wedge_shape_*) printf 'wedge_shape' ;;
-    icon_wedge_*) printf 'icon_wedge' ;;
+    icon_*) printf 'icon' ;;
     *) printf '' ;;
   esac
 }
@@ -219,7 +219,7 @@ generate_header() {
           first_boot) echo "/** First-boot welcome screen (720×720 RGB565, SPIFFS). */" ;;
           btn_start) echo "/** Menu button images (RGB565, SPIFFS). */" ;;
           wedge_shape) echo "/** A8 wedge silhouettes — tint at runtime via image_recolor. */" ;;
-          icon_wedge) echo "/** White icon overlays, composed on top of a wedge button. */" ;;
+          icon) echo "/** Reusable white icon glyphs (RGB565A8, tight crop). */" ;;
         esac
         prev_group="${group}"
       fi

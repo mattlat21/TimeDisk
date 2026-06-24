@@ -3,7 +3,7 @@
  * @brief Corner wedge buttons: recoloured A8 shape + optional icon image overlay.
  *
  * Regenerate assets: ./scripts/embed_ui_assets.sh
- *   (see components/ui_assets/assets/wedge_shape_<side>/ and icon_wedge_<name>/)
+ *   (see components/ui_assets/assets/wedge_shape_<side>/ and icon_<name>/)
  */
 
 #include "ui_wedge.h"
@@ -59,15 +59,15 @@ static const lv_image_dsc_t *icon_for_id(ui_wedge_icon_t icon)
 {
     switch (icon) {
     case UI_WEDGE_ICON_CANCEL_X:
-        return &icon_wedge_cancel;
+        return &icon_cancel;
     case UI_WEDGE_ICON_CONFIRM_CHECK:
-        return &icon_wedge_confirm;
-    case UI_WEDGE_ICON_NEXT_ARROW:
-        return &icon_wedge_next;
-    case UI_WEDGE_ICON_SETTINGS_SPANNER:
-        return &icon_wedge_settings;
-    case UI_WEDGE_ICON_MENU_WIDE_SPANNER:
-        return &icon_wedge_menu_wide;
+        return &icon_check;
+    case UI_WEDGE_ICON_ARROW_RIGHT:
+        return &icon_arrow_right;
+    case UI_WEDGE_ICON_ARROW_LEFT:
+        return &icon_arrow_left;
+    case UI_WEDGE_ICON_SPANNER:
+        return &icon_spanner;
     default:
         return NULL;
     }
@@ -100,6 +100,18 @@ static void apply_shape_color(lv_obj_t *shape, lv_color_t color)
     lv_obj_set_style_image_recolor_opa(shape, LV_OPA_COVER, 0);
 }
 
+static void icon_layout_centered(lv_obj_t *icon_img, const lv_image_dsc_t *src)
+{
+    if (icon_img == NULL || src == NULL) {
+        return;
+    }
+
+    lv_image_set_src(icon_img, src);
+    lv_obj_set_size(icon_img, src->header.w, src->header.h);
+    lv_obj_center(icon_img);
+    lv_obj_move_foreground(icon_img);
+}
+
 static void icon_apply(ui_wedge_button_t *btn, ui_wedge_icon_t icon)
 {
     lv_obj_t *icon_img = wedge_icon_obj(btn);
@@ -113,25 +125,11 @@ static void icon_apply(ui_wedge_button_t *btn, ui_wedge_icon_t icon)
     }
 
     if (icon_img == NULL) {
-        lv_coord_t w = 0;
-        lv_coord_t h = 0;
-        lv_obj_t *shape = wedge_shape_obj(btn);
-        if (shape != NULL) {
-            w = lv_obj_get_width(shape);
-            h = lv_obj_get_height(shape);
-        }
-        if (w <= 0 || h <= 0) {
-            w = UI_WEDGE_W_WF;
-            h = UI_WEDGE_H_WF;
-        }
         icon_img = lv_image_create(btn);
         lv_obj_remove_flag(icon_img, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
-        lv_obj_set_size(icon_img, w, h);
-        lv_obj_set_pos(icon_img, 0, 0);
     }
 
-    lv_image_set_src(icon_img, src);
-    lv_obj_move_foreground(icon_img);
+    icon_layout_centered(icon_img, src);
 }
 
 ui_wedge_config_t ui_wedge_config_default(ui_wedge_side_t side, ui_wedge_icon_t icon)
@@ -160,13 +158,13 @@ ui_wedge_config_t ui_wedge_config_from_type(ui_wedge_type_t type)
         return (ui_wedge_config_t){
             .side = UI_WEDGE_SIDE_RIGHT,
             .color = t->green,
-            .icon = UI_WEDGE_ICON_NEXT_ARROW,
+            .icon = UI_WEDGE_ICON_ARROW_RIGHT,
         };
     case UI_WEDGE_SETTINGS:
         return (ui_wedge_config_t){
             .side = UI_WEDGE_SIDE_RIGHT,
             .color = t->menu_petal,
-            .icon = UI_WEDGE_ICON_SETTINGS_SPANNER,
+            .icon = UI_WEDGE_ICON_SPANNER,
         };
     case UI_WEDGE_MENU:
         return (ui_wedge_config_t){
@@ -212,12 +210,6 @@ static void wedge_apply_geometry(ui_wedge_button_t *btn, const ui_wedge_config_t
         lv_obj_set_size(shape, w, h);
         lv_obj_set_pos(shape, 0, 0);
         apply_shape_color(shape, cfg->color);
-    }
-
-    lv_obj_t *icon_img = wedge_icon_obj(btn);
-    if (icon_img != NULL) {
-        lv_obj_set_size(icon_img, w, h);
-        lv_obj_set_pos(icon_img, 0, 0);
     }
 }
 

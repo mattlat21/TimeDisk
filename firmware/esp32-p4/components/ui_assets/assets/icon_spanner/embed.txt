@@ -1,0 +1,3 @@
+source=icon_spanner.svg
+format=RGB565A8
+description=White spanner glyph for wedge buttons

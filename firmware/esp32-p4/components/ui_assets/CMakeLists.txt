@@ -2,11 +2,11 @@ idf_component_register(
     SRCS
         "src/ui_assets_spiffs.c"
         # BEGIN GENERATED ASSETS
-        "src/icon_wedge_cancel.c"
-        "src/icon_wedge_confirm.c"
-        "src/icon_wedge_menu_wide.c"
-        "src/icon_wedge_next.c"
-        "src/icon_wedge_settings.c"
+        "src/icon_arrow_left.c"
+        "src/icon_arrow_right.c"
+        "src/icon_cancel.c"
+        "src/icon_check.c"
+        "src/icon_spanner.c"
         "src/wedge_shape_left.c"
         "src/wedge_shape_right.c"
         "src/wedge_shape_wide.c"

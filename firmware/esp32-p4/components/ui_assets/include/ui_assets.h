@@ -14,21 +14,21 @@ esp_err_t ui_assets_init(void);
 /** LVGL file path for a SPIFFS asset, e.g. "S:/tod_wake.bin". */
 const char *ui_assets_spiffs_path(const char *name);
 
-/** White icon overlays, composed on top of a wedge button. */
-/** White cancel icon overlay for wedge buttons */
-extern const lv_image_dsc_t icon_wedge_cancel;
+/** Reusable white icon glyphs (RGB565A8, tight crop). */
+/** White left-arrow glyph for wedge buttons */
+extern const lv_image_dsc_t icon_arrow_left;
 
-/** White confirm icon overlay for wedge buttons */
-extern const lv_image_dsc_t icon_wedge_confirm;
+/** White right-arrow glyph for wedge buttons */
+extern const lv_image_dsc_t icon_arrow_right;
 
-/** White menu icon overlay for wide wedge button */
-extern const lv_image_dsc_t icon_wedge_menu_wide;
+/** White cancel (X) glyph for wedge buttons */
+extern const lv_image_dsc_t icon_cancel;
 
-/** White next-arrow icon overlay for wedge buttons */
-extern const lv_image_dsc_t icon_wedge_next;
+/** White check glyph for wedge buttons */
+extern const lv_image_dsc_t icon_check;
 
-/** White settings icon overlay for wedge buttons */
-extern const lv_image_dsc_t icon_wedge_settings;
+/** White spanner glyph for wedge buttons */
+extern const lv_image_dsc_t icon_spanner;
 
 /** A8 wedge silhouettes — tint at runtime via image_recolor. */
 /** A8 wedge silhouette (left) — tint at runtime via image_recolor */

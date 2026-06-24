@@ -2,8 +2,8 @@
  * @file ui_wedge.h
  * @brief Bottom-corner wedge buttons with runtime colour and icon overlay.
  *
- * Shape masks: components/ui_assets/assets/wedge_shape_{left,right}/ (A8)
- * Icons:       components/ui_assets/assets/icon_wedge_<name>/ (RGB565A8)
+ * Shape masks: components/ui_assets/assets/wedge_shape_{left,right,wide}/ (A8)
+ * Icons:       components/ui_assets/assets/icon_<name>/ (RGB565A8, tight crop)
  *
  * Default placement: startup_wizard_ssid.svg / Wi-Fi password screen (LCD wireframe coords).
  * Wedges are always children of the root screen at the same absolute content position.
@@ -22,14 +22,14 @@ typedef enum {
     UI_WEDGE_SIDE_WIDE,
 } ui_wedge_side_t;
 
-/** Built-in white icon overlays (same 200×100 canvas as the wedge). */
+/** Built-in white icon glyphs (centered on wedge at runtime). */
 typedef enum {
     UI_WEDGE_ICON_NONE = 0,
     UI_WEDGE_ICON_CANCEL_X,
     UI_WEDGE_ICON_CONFIRM_CHECK,
-    UI_WEDGE_ICON_NEXT_ARROW,
-    UI_WEDGE_ICON_SETTINGS_SPANNER,
-    UI_WEDGE_ICON_MENU_WIDE_SPANNER,
+    UI_WEDGE_ICON_ARROW_RIGHT,
+    UI_WEDGE_ICON_ARROW_LEFT,
+    UI_WEDGE_ICON_SPANNER,
 } ui_wedge_icon_t;
 
 /** Legacy presets — map to side + default theme colour + icon. */

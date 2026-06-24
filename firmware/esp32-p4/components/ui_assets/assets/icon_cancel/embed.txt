@@ -1,0 +1,3 @@
+source=icon_cancel.svg
+format=RGB565A8
+description=White cancel (X) glyph for wedge buttons

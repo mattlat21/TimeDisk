@@ -23,7 +23,7 @@ static ui_wedge_config_t first_boot_next_wedge_cfg(void)
     return (ui_wedge_config_t){
         .side = UI_WEDGE_SIDE_WIDE,
         .color = t->green,
-        .icon = UI_WEDGE_ICON_NEXT_ARROW,
+        .icon = UI_WEDGE_ICON_ARROW_RIGHT,
     };
 }
 

@@ -59,7 +59,7 @@ Simple `key=value` lines. Lines starting with `#` are comments.
 **Storage split:**
 
 - `storage=spiffs` — large RGB565 (splash, TOD backgrounds, menu buttons); compressed `.bin` on `storage` partition
-- `storage=embedded` (default) — small wedges and icons linked into the app
+- `storage=embedded` (default) — small wedge shapes (A8) and tight-crop icon glyphs (`icon_*`, composed centered on wedges at runtime)
 
 ## Adding a new asset
 
