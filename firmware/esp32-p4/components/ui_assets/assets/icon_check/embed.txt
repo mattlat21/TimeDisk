@@ -1,3 +1,5 @@
 source=icon_check.svg
 format=RGB565A8
+width=64
+height=64
 description=White check glyph for wedge buttons

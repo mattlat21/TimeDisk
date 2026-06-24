@@ -1,3 +1,5 @@
 source=icon_arrow_right.svg
 format=RGB565A8
+width=64
+height=64
 description=White right-arrow glyph for wedge buttons
