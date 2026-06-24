@@ -22,7 +22,7 @@ typedef enum {
     UI_WEDGE_SIDE_WIDE,
 } ui_wedge_side_t;
 
-/** Built-in white icon glyphs (centered on wedge at runtime). */
+/** Built-in white icon glyphs (centered on wedge at runtime, with side-specific nudge). */
 typedef enum {
     UI_WEDGE_ICON_NONE = 0,
     UI_WEDGE_ICON_CANCEL_X,
@@ -62,6 +62,11 @@ typedef struct {
 #define UI_WEDGE_WIDE_H_WF 100
 #define UI_WEDGE_WIDE_X_WF 150
 #define UI_WEDGE_WIDE_Y_WF 590
+
+/** Icon nudge from geometric center on left/right wedges (button-local px). */
+#define UI_WEDGE_ICON_OFFSET_Y -10
+#define UI_WEDGE_ICON_OFFSET_X_LEFT 30
+#define UI_WEDGE_ICON_OFFSET_X_RIGHT -30
 
 /** Opaque handle returned by ui_wedge_button_create (clickable container). */
 typedef lv_obj_t ui_wedge_button_t;

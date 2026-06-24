@@ -100,15 +100,45 @@ static void apply_shape_color(lv_obj_t *shape, lv_color_t color)
     lv_obj_set_style_image_recolor_opa(shape, LV_OPA_COVER, 0);
 }
 
-static void icon_layout_centered(lv_obj_t *icon_img, const lv_image_dsc_t *src)
+static ui_wedge_side_t wedge_side_from_btn(const ui_wedge_button_t *btn)
+{
+    lv_obj_t *shape = wedge_shape_obj(btn);
+    const void *src = shape != NULL ? lv_image_get_src(shape) : NULL;
+
+    if (src == &wedge_shape_left) {
+        return UI_WEDGE_SIDE_LEFT;
+    }
+    if (src == &wedge_shape_wide) {
+        return UI_WEDGE_SIDE_WIDE;
+    }
+    return UI_WEDGE_SIDE_RIGHT;
+}
+
+static void icon_layout_centered(lv_obj_t *icon_img, const lv_image_dsc_t *src, ui_wedge_side_t side)
 {
     if (icon_img == NULL || src == NULL) {
         return;
     }
 
+    lv_coord_t dx = 0;
+    lv_coord_t dy = 0;
+
+    switch (side) {
+    case UI_WEDGE_SIDE_LEFT:
+        dx = UI_WEDGE_ICON_OFFSET_X_LEFT;
+        dy = UI_WEDGE_ICON_OFFSET_Y;
+        break;
+    case UI_WEDGE_SIDE_RIGHT:
+        dx = UI_WEDGE_ICON_OFFSET_X_RIGHT;
+        dy = UI_WEDGE_ICON_OFFSET_Y;
+        break;
+    default:
+        break;
+    }
+
     lv_image_set_src(icon_img, src);
     lv_obj_set_size(icon_img, src->header.w, src->header.h);
-    lv_obj_center(icon_img);
+    lv_obj_align(icon_img, LV_ALIGN_CENTER, dx, dy);
     lv_obj_move_foreground(icon_img);
 }
 
@@ -129,7 +159,7 @@ static void icon_apply(ui_wedge_button_t *btn, ui_wedge_icon_t icon)
         lv_obj_remove_flag(icon_img, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
     }
 
-    icon_layout_centered(icon_img, src);
+    icon_layout_centered(icon_img, src, wedge_side_from_btn(btn));
 }
 
 ui_wedge_config_t ui_wedge_config_default(ui_wedge_side_t side, ui_wedge_icon_t icon)
