@@ -2,7 +2,7 @@
 #include "ui_layout.h"
 #include "ui_widgets.h"
 #include "ui_duration_editor.h"
-#include "ui_time_editor.h"
+#include "ui_end_time_picker.h"
 #include "ui_wedge.h"
 #include "ui_theme.h"
 #include "ui_nav.h"
@@ -17,8 +17,9 @@ static const char *TAG = "ui_schedule";
 #define SCHEDULE_EDITOR_BOX_W      400
 #define SCHEDULE_EDITOR_BOX_H      80
 #define SCHEDULE_EDITOR_BOX_Y      210
-#define SCHEDULE_END_TIME_BOX_Y    210
-#define SCHEDULE_DURATION_Y_WF     520
+#define SCHEDULE_END_TIME_BOX_Y    UI_END_TIME_PICKER_BOX_Y
+#define SCHEDULE_HEADING_Y         34
+#define SCHEDULE_DURATION_Y_WF     530
 
 typedef struct {
     lv_obj_t *scr;
@@ -27,7 +28,7 @@ typedef struct {
     lv_obj_t *lbl_duration;
     ui_screen_id_t id;
     ui_duration_editor_bundle_t bundle;
-    ui_time_editor_bundle_t time_bundle;
+    ui_end_time_picker_bundle_t end_time_picker;
     bool end_time_layout;
 } schedule_screen_t;
 
@@ -162,7 +163,7 @@ static void apply_editor_constraints(int idx)
         return;
     }
     ui_duration_editor_cfg_t *dcfg = &ss->bundle.cfg;
-    ui_time_editor_cfg_t *tcfg = ss->end_time_layout ? &ss->time_bundle.cfg : NULL;
+    ui_end_time_picker_cfg_t *pcfg = ss->end_time_layout ? &ss->end_time_picker.cfg : NULL;
 
     dcfg->end_time_offset_sec = 0;
     dcfg->max_sec = UI_DURATION_EDITOR_MAX_SEC;
@@ -194,10 +195,10 @@ static void apply_editor_constraints(int idx)
     clamp_wizard_val(idx);
     snap_wind_down(idx);
 
-    if (tcfg != NULL) {
-        tcfg->end_time_offset_sec = dcfg->end_time_offset_sec;
-        tcfg->max_sec = dcfg->max_sec;
-        tcfg->min_sec = dcfg->min_sec;
+    if (pcfg != NULL) {
+        pcfg->end_time_offset_sec = dcfg->end_time_offset_sec;
+        pcfg->max_sec = dcfg->max_sec;
+        pcfg->min_sec = dcfg->min_sec;
     }
 }
 
@@ -264,8 +265,8 @@ static void refresh_schedule_editors(int idx)
     if (ss->end_time_layout) {
         if (use_time) {
             ui_duration_editor_set_visible(&ss->bundle.editor, false);
-            ui_time_editor_set_visible(&ss->time_bundle.editor, true);
-            ui_time_editor_refresh(&ss->time_bundle.editor, &ss->time_bundle.cfg);
+            ui_end_time_picker_set_visible(&ss->end_time_picker.picker, true);
+            ui_end_time_picker_refresh(&ss->end_time_picker.picker, &ss->end_time_picker.cfg);
             refresh_duration_label(idx);
             if (ss->lbl_duration != NULL) {
                 lv_obj_remove_flag(ss->lbl_duration, LV_OBJ_FLAG_HIDDEN);
@@ -274,7 +275,7 @@ static void refresh_schedule_editors(int idx)
             ss->bundle.cfg.show_end_time = false;
             ui_duration_editor_set_visible(&ss->bundle.editor, true);
             ui_duration_editor_refresh(&ss->bundle.editor, &ss->bundle.cfg);
-            ui_time_editor_set_visible(&ss->time_bundle.editor, false);
+            ui_end_time_picker_set_visible(&ss->end_time_picker.picker, false);
             if (ss->lbl_duration != NULL) {
                 lv_obj_add_flag(ss->lbl_duration, LV_OBJ_FLAG_HIDDEN);
             }
@@ -421,13 +422,24 @@ static void attach_wedges(lv_obj_t *scr, ui_screen_id_t id)
     lv_obj_move_foreground(next);
 }
 
+static lv_obj_t *create_end_time_heading(lv_obj_t *scr, const char *text)
+{
+    const ui_theme_t *t = ui_theme_get();
+    lv_obj_t *lbl = lv_label_create(scr);
+    lv_label_set_text(lbl, text);
+    lv_obj_set_style_text_color(lbl, t->white, 0);
+    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_34, 0);
+    lv_obj_align(lbl, LV_ALIGN_TOP_MID, 0, SCHEDULE_HEADING_Y);
+    return lbl;
+}
+
 static lv_obj_t *create_duration_label(lv_obj_t *scr)
 {
     const ui_theme_t *t = ui_theme_get();
     lv_obj_t *lbl = lv_label_create(scr);
     lv_label_set_text(lbl, "");
     lv_obj_set_style_text_color(lbl, t->white, 0);
-    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_26, 0);
     lv_obj_set_width(lbl, UI_DISP - 80);
     lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, 0);
     const int y = ui_layout_wf_to_content_y(scr, SCHEDULE_DURATION_Y_WF);
@@ -446,7 +458,7 @@ static void build_end_time_screen(lv_obj_t *screens[UI_SCREEN_COUNT], ui_screen_
     ss->scr = ui_widgets_create_screen();
     screens[id] = ss->scr;
 
-    ss->lbl_title = ui_widgets_create_title(ss->scr, heading);
+    ss->lbl_title = create_end_time_heading(ss->scr, heading);
     ss->lbl_subtitle = NULL;
     ss->lbl_duration = create_duration_label(ss->scr);
 
@@ -461,13 +473,13 @@ static void build_end_time_screen(lv_obj_t *screens[UI_SCREEN_COUNT], ui_screen_
     };
     ui_duration_editor_create(ss->scr, &ss->bundle);
 
-    ss->time_bundle.cfg = (ui_time_editor_cfg_t){
+    ss->end_time_picker.cfg = (ui_end_time_picker_cfg_t){
         .value_sec = &s_wizard_vals[idx],
         .box_y = SCHEDULE_END_TIME_BOX_Y,
         .on_change = schedule_time_change_cb,
         .user_data = (void *)(intptr_t)idx,
     };
-    ui_time_editor_create(ss->scr, &ss->time_bundle);
+    ui_end_time_picker_create(ss->scr, &ss->end_time_picker);
 
     attach_wedges(ss->scr, id);
 }
