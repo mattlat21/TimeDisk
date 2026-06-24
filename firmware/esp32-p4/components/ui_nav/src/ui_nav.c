@@ -42,6 +42,7 @@ typedef enum {
 
 static ui_loading_reason_t s_loading_reason = UI_LOADING_REASON_BOOT;
 static ui_screen_id_t s_deferred_screen = UI_SCREEN_COUNT;
+static bool s_boot_pending_restore;
 
 #define LOADING_RETRY_MS 10000U
 
@@ -447,6 +448,9 @@ static void on_enter(ui_screen_id_t screen)
         s_loading_retry_at_ms = 0;
         if (s_loading_reason == UI_LOADING_REASON_BOOT) {
             ui_screen_loading_on_show();
+            if (s_boot_pending_restore) {
+                ui_nav_apply_dim(true);
+            }
             app_network_start_boot_sync();
         } else {
             ui_screen_loading_set_menu_mode(true);
@@ -856,7 +860,13 @@ ui_screen_id_t mode_engine_restore_from_nvs(void)
 
     if (rt->timer_running) {
         notify_mqtt_status();
-        return UI_SCREEN_TIMER_BRIGHT;
+        return UI_SCREEN_TIMER_DIM;
+    }
+
+    if (rt->cycle_active && rt->current_mode != APP_MODE_WAKE) {
+        mode_engine_refresh_tod_if_visible();
+        notify_mqtt_status();
+        return UI_SCREEN_TOD_DIM;
     }
 
     if (rt->cycle_active) {
@@ -864,6 +874,33 @@ ui_screen_id_t mode_engine_restore_from_nvs(void)
     }
     notify_mqtt_status();
     return UI_SCREEN_TOD_BRIGHT;
+}
+
+void ui_nav_go_restored_session(void)
+{
+    ui_screen_id_t dest = mode_engine_restore_from_nvs();
+    ui_nav_go(dest);
+    ui_nav_apply_dim(dest == UI_SCREEN_TIMER_DIM || dest == UI_SCREEN_TOD_DIM);
+}
+
+void ui_nav_boot_after_time_sync(void)
+{
+    app_runtime_t *rt = app_runtime_get();
+    ui_screen_id_t dest = mode_engine_restore_from_nvs();
+    const bool restorable = rt->timer_running ||
+                            (rt->cycle_active && rt->current_mode != APP_MODE_WAKE);
+
+    if (restorable) {
+        ui_nav_go(dest);
+        ui_nav_apply_dim(true);
+    } else if (s_boot_pending_restore) {
+        ui_nav_go(UI_SCREEN_SPLASH);
+        ui_nav_apply_dim(false);
+    } else {
+        ui_nav_go(UI_SCREEN_TOD_BRIGHT);
+        ui_nav_apply_dim(false);
+    }
+    s_boot_pending_restore = false;
 }
 
 void ui_nav_mqtt_start_sleep_cycle(void)
@@ -1114,10 +1151,11 @@ static void loading_boot_async_cb(void *user_data)
             ui_nav_go(UI_SCREEN_STARTUP_TIMEZONE);
         } else {
             app_time_apply_from_config();
-            ui_nav_go(mode_engine_restore_from_nvs());
+            ui_nav_boot_after_time_sync();
         }
     } else if (app_network_setup_ap_active()) {
         ui_nav_go(UI_SCREEN_TOD_BRIGHT);
+        ui_nav_apply_dim(false);
     } else {
         s_loading_retry_at_ms = now_ms() + LOADING_RETRY_MS;
         ui_screen_loading_set_status(app_network_get_status_text());
@@ -1224,5 +1262,15 @@ void ui_nav_init(void)
     register_web_timer_ops();
     register_web_mode_ops();
     register_schedule_handler();
-    ui_nav_go(UI_SCREEN_SPLASH);
+
+    ui_nav_set_brightness(0);
+    if (app_checkpoint_has_stored_ends()) {
+        s_boot_pending_restore = true;
+        ui_nav_go(UI_SCREEN_LOADING);
+        ui_nav_apply_dim(true);
+    } else {
+        s_boot_pending_restore = false;
+        ui_nav_go(UI_SCREEN_SPLASH);
+        ui_nav_apply_dim(false);
+    }
 }

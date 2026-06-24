@@ -50,3 +50,9 @@ void app_checkpoint_status_at(const app_checkpoint_ends_t *ends,
 
 esp_err_t app_checkpoint_get_status(time_t now, app_checkpoint_status_t *out);
 esp_err_t app_checkpoint_apply_to_runtime(time_t now);
+
+/** True if NVS has any cycle or timer end timestamps (before time sync). */
+bool app_checkpoint_has_stored_ends(void);
+
+/** True after status_at when an active timer or non-wake cycle should be restored. */
+bool app_checkpoint_session_is_restorable(const app_checkpoint_status_t *status);

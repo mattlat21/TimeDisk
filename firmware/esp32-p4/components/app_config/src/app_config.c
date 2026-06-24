@@ -108,7 +108,7 @@ void app_runtime_reset(void)
 {
     memset(&s_rt, 0, sizeof(s_rt));
     s_rt.current_mode = APP_MODE_WAKE;
-    s_rt.display_brightness = 100;
+    s_rt.display_brightness = 0;
 }
 
 esp_err_t app_config_init(void)

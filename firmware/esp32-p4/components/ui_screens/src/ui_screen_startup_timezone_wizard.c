@@ -139,7 +139,7 @@ static void next_cb(lv_event_t *e)
     cfg->timezone_set = true;
     app_time_apply_timezone_id(tz_id);
     app_config_save_timezone();
-    ui_nav_go(mode_engine_restore_from_nvs());
+    ui_nav_boot_after_time_sync();
 }
 
 void ui_screen_startup_timezone_wizard_build(lv_obj_t *screens[UI_SCREEN_COUNT])

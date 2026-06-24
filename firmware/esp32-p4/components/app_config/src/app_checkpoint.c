@@ -171,6 +171,27 @@ esp_err_t app_checkpoint_get_status(time_t now, app_checkpoint_status_t *out)
     return ESP_OK;
 }
 
+bool app_checkpoint_has_stored_ends(void)
+{
+    app_checkpoint_ends_t ends;
+    if (app_checkpoint_load_ends(&ends) != ESP_OK) {
+        return false;
+    }
+    return ends.timer_end != 0 || ends.winddown_end != 0 ||
+           ends.sleep_end != 0 || ends.rest_end != 0;
+}
+
+bool app_checkpoint_session_is_restorable(const app_checkpoint_status_t *status)
+{
+    if (status == NULL) {
+        return false;
+    }
+    if (status->timer_running) {
+        return true;
+    }
+    return status->cycle_active && status->cycle_mode != APP_MODE_WAKE;
+}
+
 esp_err_t app_checkpoint_apply_to_runtime(time_t now)
 {
     app_checkpoint_ends_t ends;

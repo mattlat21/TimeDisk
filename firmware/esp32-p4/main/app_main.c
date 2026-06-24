@@ -30,7 +30,7 @@ void app_main(void)
     bsp_display_start_with_config(&cfg);
     ESP_ERROR_CHECK(ui_display_apply_settings());
     bsp_display_backlight_on();
-    bsp_display_brightness_set(100);
+    bsp_display_brightness_set(0);
 
     ESP_LOGI(TAG, "ESP Hosted init (after display)");
     ESP_ERROR_CHECK(esp_hosted_init());

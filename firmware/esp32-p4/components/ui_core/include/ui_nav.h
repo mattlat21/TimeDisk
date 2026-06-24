@@ -100,8 +100,14 @@ void mode_engine_switch_to_wake(void);
 void ui_nav_apply_mode_action(uint8_t action, uint32_t duration_sec);
 
 /** Restore cycle/timer state from NVS checkpoints after SNTP (when time_valid).
- *  Returns the screen to show after boot (timer bright if a timer was restored). */
+ *  Returns dim screen variants when a session is restored. */
 ui_screen_id_t mode_engine_restore_from_nvs(void);
+
+/** Navigate to restored session screen with matching backlight level. */
+void ui_nav_go_restored_session(void);
+
+/** Post-SNTP boot routing: restore session, splash, or TOD bright. */
+void ui_nav_boot_after_time_sync(void);
 
 /** Optional hook for MQTT status publish (registered by app_mqtt_init). */
 void ui_nav_set_mqtt_status_hook(void (*hook)(void));

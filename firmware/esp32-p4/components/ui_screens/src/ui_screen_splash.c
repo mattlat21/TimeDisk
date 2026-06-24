@@ -14,10 +14,9 @@
  *   - Embed:        ./scripts/embed_ui_assets.sh → spiffs_image/splash.bin
  *
  * Navigation (see ui_nav.c):
- *   - ui_nav_init() loads UI_SCREEN_SPLASH first.
- *   - ui_screen_splash_on_show() arms the idle timer from app_config.timeout_splash_sec;
- *     when it fires, nav advances to WiFi wizard or loading/TOD depending on config.
- *   - This file does not start timers itself — only registers the LVGL screen object.
+ *   - Normal boot: ui_nav_init loads SPLASH at bright backlight.
+ *   - Pending restore boot: LOADING at dim backlight, then restored session after SNTP.
+ *   - ui_screen_splash_on_show() arms idle timeout via on_enter in ui_nav.c.
  */
 
 #include "ui_screens_registry.h"
@@ -68,8 +67,7 @@ void ui_screen_splash_build(lv_obj_t *screens[UI_SCREEN_COUNT])
 
 /*
  * ui_screen_splash_on_show — Hook when nav transitions TO the splash screen.
- * Currently a no-op: timeout and next-screen logic live in ui_nav.c.
- * Reserved for future use (e.g. fade-in, restart animation, backlight ramp).
+ * Timeout and next-screen logic live in ui_nav.c; backlight is set by nav boot routing.
  */
 void ui_screen_splash_on_show(void)
 {
