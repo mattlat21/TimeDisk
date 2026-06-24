@@ -18,7 +18,7 @@ static const char *TAG = "ui_schedule";
 #define SCHEDULE_EDITOR_BOX_H      80
 #define SCHEDULE_EDITOR_BOX_Y      210
 #define SCHEDULE_END_TIME_BOX_Y    UI_END_TIME_PICKER_BOX_Y
-#define SCHEDULE_HEADING_Y         34
+#define SCHEDULE_HEADING_Y         40
 #define SCHEDULE_DURATION_Y_WF     530
 
 typedef struct {
@@ -428,7 +428,7 @@ static lv_obj_t *create_end_time_heading(lv_obj_t *scr, const char *text)
     lv_obj_t *lbl = lv_label_create(scr);
     lv_label_set_text(lbl, text);
     lv_obj_set_style_text_color(lbl, t->white, 0);
-    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_34, 0);
+    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_42, 0);
     lv_obj_align(lbl, LV_ALIGN_TOP_MID, 0, SCHEDULE_HEADING_Y);
     return lbl;
 }
@@ -439,7 +439,7 @@ static lv_obj_t *create_duration_label(lv_obj_t *scr)
     lv_obj_t *lbl = lv_label_create(scr);
     lv_label_set_text(lbl, "");
     lv_obj_set_style_text_color(lbl, t->white, 0);
-    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_26, 0);
+    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_34, 0);
     lv_obj_set_width(lbl, UI_DISP - 80);
     lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, 0);
     const int y = ui_layout_wf_to_content_y(scr, SCHEDULE_DURATION_Y_WF);
