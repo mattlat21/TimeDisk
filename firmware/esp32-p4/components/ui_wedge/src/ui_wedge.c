@@ -208,6 +208,18 @@ ui_wedge_config_t ui_wedge_config_from_type(ui_wedge_type_t type)
             .color = t->orange,
             .icon = UI_WEDGE_ICON_NONE,
         };
+    case UI_WEDGE_BACK:
+        return (ui_wedge_config_t){
+            .side = UI_WEDGE_SIDE_LEFT,
+            .color = t->orange,
+            .icon = UI_WEDGE_ICON_ARROW_LEFT,
+        };
+    case UI_WEDGE_BACK_WIDE:
+        return (ui_wedge_config_t){
+            .side = UI_WEDGE_SIDE_WIDE,
+            .color = t->green,
+            .icon = UI_WEDGE_ICON_ARROW_LEFT,
+        };
     default:
         return (ui_wedge_config_t){
             .side = UI_WEDGE_SIDE_RIGHT,

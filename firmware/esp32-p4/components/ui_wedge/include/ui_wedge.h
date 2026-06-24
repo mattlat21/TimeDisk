@@ -42,6 +42,10 @@ typedef enum {
     UI_WEDGE_MENU,
     /** Wide bar (420×100); water timer end (orange). */
     UI_WEDGE_END_TIMER,
+    /** Left corner wedge; orange, left arrow (navigate back). */
+    UI_WEDGE_BACK,
+    /** Wide bar (420×100); green, left arrow (navigate back). */
+    UI_WEDGE_BACK_WIDE,
 } ui_wedge_type_t;
 
 typedef struct {

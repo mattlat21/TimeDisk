@@ -689,10 +689,10 @@ static void build_style(lv_obj_t *screens[UI_SCREEN_COUNT])
     }
     style_refresh_tiles();
 
-    lv_obj_t *back = ui_wedge_create(s_scr_style, UI_WEDGE_CANCEL);
+    lv_obj_t *back = ui_wedge_create(s_scr_style, UI_WEDGE_BACK);
     lv_obj_add_event_cb(back, style_back_cb, LV_EVENT_CLICKED, NULL);
 
-    lv_obj_t *next = ui_wedge_create(s_scr_style, UI_WEDGE_NEXT);
+    lv_obj_t *next = ui_wedge_create(s_scr_style, UI_WEDGE_CONFIRM);
     lv_obj_add_event_cb(next, style_next_cb, LV_EVENT_CLICKED, NULL);
 
     lv_obj_move_foreground(back);

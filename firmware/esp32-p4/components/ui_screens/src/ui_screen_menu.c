@@ -228,7 +228,7 @@ void ui_screen_menu_build(lv_obj_t *screens[UI_SCREEN_COUNT])
     /* Ring above buttons; wedge positions unchanged (created after, raised last). */
     ui_screen_ring_raise_overlay(s_scr);
 
-    s_wedge_back = ui_wedge_create(s_scr, UI_WEDGE_CANCEL);
+    s_wedge_back = ui_wedge_create(s_scr, UI_WEDGE_BACK);
     lv_obj_add_event_cb(s_wedge_back, back_cb, LV_EVENT_CLICKED, NULL);
 
     s_wedge_settings = ui_wedge_create(s_scr, UI_WEDGE_SETTINGS);

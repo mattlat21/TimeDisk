@@ -586,9 +586,9 @@ static void build_hub_panel(void)
         lv_obj_add_event_cb(btn, factory_reset_btn_cb, LV_EVENT_CLICKED, NULL);
     }
 
-    s_hub_cancel_wedge = ui_wedge_create_overlay(s_scr, UI_WEDGE_CANCEL);
+    s_hub_cancel_wedge = ui_wedge_create_overlay(s_scr, UI_WEDGE_BACK_WIDE);
     if (s_hub_cancel_wedge != NULL) {
-        ui_wedge_bind(s_hub_cancel_wedge, UI_WEDGE_CANCEL, hub_cancel_cb, NULL);
+        ui_wedge_bind(s_hub_cancel_wedge, UI_WEDGE_BACK_WIDE, hub_cancel_cb, NULL);
         ui_wedge_set_visible(s_hub_cancel_wedge, false);
     }
 }
