@@ -1,8 +1,8 @@
 /**
- * @file ui_end_time_picker.c
+ * @file ui_large_time_picker.c
  */
 
-#include "ui_end_time_picker.h"
+#include "ui_large_time_picker.h"
 #include "ui_duration_editor.h"
 #include "ui_layout.h"
 #include "ui_theme.h"
@@ -11,19 +11,19 @@
 #include <stdio.h>
 #include <time.h>
 
-static ui_end_time_picker_bundle_t *bundle_from_event(lv_event_t *e)
+static ui_large_time_picker_bundle_t *bundle_from_event(lv_event_t *e)
 {
-    return (ui_end_time_picker_bundle_t *)lv_event_get_user_data(e);
+    return (ui_large_time_picker_bundle_t *)lv_event_get_user_data(e);
 }
 
-static void notify_change(ui_end_time_picker_bundle_t *bundle)
+static void notify_change(ui_large_time_picker_bundle_t *bundle)
 {
     if (bundle->cfg.on_change != NULL) {
         bundle->cfg.on_change(bundle->cfg.user_data);
     }
 }
 
-static void clamp_duration(ui_end_time_picker_cfg_t *cfg)
+static void clamp_duration(ui_large_time_picker_cfg_t *cfg)
 {
     if (cfg == NULL || cfg->value_sec == NULL) {
         return;
@@ -37,12 +37,12 @@ static void clamp_duration(ui_end_time_picker_cfg_t *cfg)
     }
 }
 
-static time_t end_time_from_cfg(const ui_end_time_picker_cfg_t *cfg)
+static time_t end_time_from_cfg(const ui_large_time_picker_cfg_t *cfg)
 {
     return time(NULL) + (time_t)cfg->end_time_offset_sec + (time_t)*cfg->value_sec;
 }
 
-static void set_value_from_end_time(ui_end_time_picker_cfg_t *cfg, time_t end)
+static void set_value_from_end_time(ui_large_time_picker_cfg_t *cfg, time_t end)
 {
     time_t now = time(NULL);
     int64_t delta = (int64_t)end - (int64_t)now - (int64_t)cfg->end_time_offset_sec;
@@ -53,7 +53,7 @@ static void set_value_from_end_time(ui_end_time_picker_cfg_t *cfg, time_t end)
     clamp_duration(cfg);
 }
 
-static void end_time_parts(const ui_end_time_picker_cfg_t *cfg, int *h12_out, int *min_out, const char **ampm_out)
+static void end_time_parts(const ui_large_time_picker_cfg_t *cfg, int *h12_out, int *min_out, const char **ampm_out)
 {
     time_t end = end_time_from_cfg(cfg);
     struct tm tm_info;
@@ -68,13 +68,13 @@ static void end_time_parts(const ui_end_time_picker_cfg_t *cfg, int *h12_out, in
     *ampm_out = (h24 >= 12) ? "pm" : "am";
 }
 
-static void adjust_end_time(ui_end_time_picker_bundle_t *bundle, int delta_minutes)
+static void adjust_end_time(ui_large_time_picker_bundle_t *bundle, int delta_minutes)
 {
-    ui_end_time_picker_cfg_t *cfg = &bundle->cfg;
+    ui_large_time_picker_cfg_t *cfg = &bundle->cfg;
     time_t end = end_time_from_cfg(cfg);
     end += (time_t)delta_minutes * 60;
     set_value_from_end_time(cfg, end);
-    ui_end_time_picker_refresh(&bundle->picker, cfg);
+    ui_large_time_picker_refresh(&bundle->picker, cfg);
     notify_change(bundle);
 }
 
@@ -111,7 +111,7 @@ static void set_obj_visible(lv_obj_t *obj, bool visible)
 }
 
 static lv_obj_t *make_stepper_btn(lv_obj_t *parent, const char *txt, int x, int y, int w, int h,
-                                  lv_event_cb_t cb, ui_end_time_picker_bundle_t *bundle)
+                                  lv_event_cb_t cb, ui_large_time_picker_bundle_t *bundle)
 {
     const ui_theme_t *t = ui_theme_get();
     lv_obj_t *btn = lv_button_create(parent);
@@ -132,11 +132,11 @@ static lv_obj_t *make_stepper_btn(lv_obj_t *parent, const char *txt, int x, int 
 
 static void create_time_column(lv_obj_t *parent, int col_x, lv_obj_t **btn_plus, lv_obj_t **lbl,
                                lv_obj_t **btn_minus, lv_event_cb_t plus_cb, lv_event_cb_t minus_cb,
-                               ui_end_time_picker_bundle_t *bundle, const ui_theme_t *t)
+                               ui_large_time_picker_bundle_t *bundle, const ui_theme_t *t)
 {
-    const int col_w = UI_END_TIME_PICKER_COL_W;
-    const int btn_h = UI_END_TIME_PICKER_STEP_H;
-    const int val_h = UI_END_TIME_PICKER_VAL_H;
+    const int col_w = UI_LARGE_TIME_PICKER_COL_W;
+    const int btn_h = UI_LARGE_TIME_PICKER_STEP_H;
+    const int val_h = UI_LARGE_TIME_PICKER_VAL_H;
     int y = 0;
 
     *btn_plus = make_stepper_btn(parent, "+", col_x, y, col_w, btn_h, plus_cb, bundle);
@@ -154,7 +154,7 @@ static void create_time_column(lv_obj_t *parent, int col_x, lv_obj_t **btn_plus,
     *btn_minus = make_stepper_btn(parent, "-", col_x, y, col_w, btn_h, minus_cb, bundle);
 }
 
-void ui_end_time_picker_set_visible(const ui_end_time_picker_t *picker, bool visible)
+void ui_large_time_picker_set_visible(const ui_large_time_picker_t *picker, bool visible)
 {
     if (picker == NULL) {
         return;
@@ -162,13 +162,13 @@ void ui_end_time_picker_set_visible(const ui_end_time_picker_t *picker, bool vis
     set_obj_visible(picker->box, visible);
 }
 
-void ui_end_time_picker_refresh(const ui_end_time_picker_t *picker, const ui_end_time_picker_cfg_t *cfg)
+void ui_large_time_picker_refresh(const ui_large_time_picker_t *picker, const ui_large_time_picker_cfg_t *cfg)
 {
     if (picker == NULL || cfg == NULL || cfg->value_sec == NULL) {
         return;
     }
 
-    clamp_duration((ui_end_time_picker_cfg_t *)cfg);
+    clamp_duration((ui_large_time_picker_cfg_t *)cfg);
 
     int h12;
     int min;
@@ -191,11 +191,11 @@ void ui_end_time_picker_refresh(const ui_end_time_picker_t *picker, const ui_end
     }
 }
 
-void ui_end_time_picker_create(lv_obj_t *parent, ui_end_time_picker_bundle_t *bundle)
+void ui_large_time_picker_create(lv_obj_t *parent, ui_large_time_picker_bundle_t *bundle)
 {
     const ui_theme_t *t = ui_theme_get();
-    ui_end_time_picker_cfg_t *cfg = &bundle->cfg;
-    ui_end_time_picker_t *out = &bundle->picker;
+    ui_large_time_picker_cfg_t *cfg = &bundle->cfg;
+    ui_large_time_picker_t *out = &bundle->picker;
 
     out->box = NULL;
     out->lbl_hour = NULL;
@@ -210,17 +210,17 @@ void ui_end_time_picker_create(lv_obj_t *parent, ui_end_time_picker_bundle_t *bu
         return;
     }
     if (cfg->box_y < 0) {
-        cfg->box_y = UI_END_TIME_PICKER_BOX_Y;
+        cfg->box_y = UI_LARGE_TIME_PICKER_BOX_Y;
     }
 
     clamp_duration(cfg);
 
-    const int col_w = UI_END_TIME_PICKER_COL_W;
-    const int btn_h = UI_END_TIME_PICKER_STEP_H;
-    const int val_h = UI_END_TIME_PICKER_VAL_H;
+    const int col_w = UI_LARGE_TIME_PICKER_COL_W;
+    const int btn_h = UI_LARGE_TIME_PICKER_STEP_H;
+    const int val_h = UI_LARGE_TIME_PICKER_VAL_H;
     const int col_h = btn_h + val_h + btn_h;
-    const int colon_w = UI_END_TIME_PICKER_COLON_W;
-    const int ampm_w = UI_END_TIME_PICKER_AMPM_W;
+    const int colon_w = UI_LARGE_TIME_PICKER_COLON_W;
+    const int ampm_w = UI_LARGE_TIME_PICKER_AMPM_W;
     const int content_w = col_w + colon_w + col_w + ampm_w;
     const int box_x_wf = (int)UI_SCREEN_CX - content_w / 2;
     int box_x = 0;
@@ -255,5 +255,5 @@ void ui_end_time_picker_create(lv_obj_t *parent, ui_end_time_picker_bundle_t *bu
     lv_obj_set_style_text_font(out->lbl_ampm, &lv_font_montserrat_34, 0);
     lv_obj_set_pos(out->lbl_ampm, min_col_x + col_w + 12, btn_h + (val_h - 34) / 2);
 
-    ui_end_time_picker_refresh(out, cfg);
+    ui_large_time_picker_refresh(out, cfg);
 }
