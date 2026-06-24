@@ -9,8 +9,11 @@
 #include "ui_theme.h"
 #include "ui_widgets.h"
 
+#include <esp_log.h>
 #include <stdio.h>
 #include <time.h>
+
+static const char *DBG_TAG = "DBG_A0C97E";
 
 static ui_large_time_picker_bundle_t *bundle_from_event(lv_event_t *e)
 {
@@ -225,6 +228,15 @@ void ui_large_time_picker_refresh(const ui_large_time_picker_t *picker, const ui
     if (picker->lbl_ampm != NULL) {
         lv_label_set_text(picker->lbl_ampm, ampm);
     }
+
+    // #region agent log
+    if (picker->lbl_hour != NULL) {
+        lv_area_t hour_a;
+        lv_obj_get_coords(picker->lbl_hour, &hour_a);
+        ESP_LOGI(DBG_TAG, "H1 ltp_refresh hour='%s' min='%s' hour_coords=[%d..%d]", hour_buf, min_buf,
+                 hour_a.y1, hour_a.y2);
+    }
+    // #endregion
 }
 
 void ui_large_time_picker_create(lv_obj_t *parent, ui_large_time_picker_bundle_t *bundle)

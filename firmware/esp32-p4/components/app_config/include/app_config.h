@@ -44,6 +44,8 @@ typedef enum {
     APP_SCHEDULE_ACTION_WAKE = 0,
     APP_SCHEDULE_ACTION_START_SLEEP,
     APP_SCHEDULE_ACTION_START_REST,
+    /** Immediate wind-down only (web UI); not used in wall-clock schedule events. */
+    APP_SCHEDULE_ACTION_START_WIND_DOWN,
 } app_schedule_action_t;
 
 typedef struct {

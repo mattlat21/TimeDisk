@@ -260,12 +260,22 @@ void ui_duration_editor_refresh(const ui_duration_editor_t *ed, const ui_duratio
     char dur[32];
 
     if (cfg->display == UI_DURATION_DISPLAY_WIND_DOWN) {
-        snprintf(dur, sizeof(dur), "%u", (unsigned)(*cfg->value_sec / 60));
+        const uint32_t sec = *cfg->value_sec;
+        const char *unit = "min";
+
+        if (sec < 60) {
+            snprintf(dur, sizeof(dur), "%u", (unsigned)sec);
+            unit = "sec";
+        } else if (sec % 60 != 0) {
+            snprintf(dur, sizeof(dur), "%u:%02u", (unsigned)(sec / 60), (unsigned)(sec % 60));
+        } else {
+            snprintf(dur, sizeof(dur), "%u", (unsigned)(sec / 60));
+        }
         if (ed->lbl_value != NULL) {
             lv_label_set_text(ed->lbl_value, dur);
         }
         if (ed->lbl_unit != NULL) {
-            lv_label_set_text(ed->lbl_unit, "min");
+            lv_label_set_text(ed->lbl_unit, unit);
         }
     } else if (cfg->display == UI_DURATION_DISPLAY_HUMAN) {
         ui_format_duration_human(dur, sizeof(dur), *cfg->value_sec);

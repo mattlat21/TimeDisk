@@ -33,9 +33,9 @@
      UI_DURATION_EDITOR_WD_UNIT_LINE_H + UI_DURATION_EDITOR_WD_BOX_PAD)
 #define UI_DURATION_EDITOR_WD_STEPPER      104
 #define UI_DURATION_EDITOR_WD_GAP          24
-#define UI_DURATION_EDITOR_WD_SLIDER_W     400
-#define UI_DURATION_EDITOR_WD_SLIDER_TRACK 8
-#define UI_DURATION_EDITOR_WD_SLIDER_KNOB  32
+#define UI_DURATION_EDITOR_WD_SLIDER_W     440
+#define UI_DURATION_EDITOR_WD_SLIDER_TRACK 9
+#define UI_DURATION_EDITOR_WD_SLIDER_KNOB  40
 #define UI_DURATION_EDITOR_WD_SLIDER_GAP   64
 /** Max gross/net rest duration in schedule wizards and Settings → Schedule. */
 #define UI_SCHEDULE_REST_MAX_SEC     (24U * 3600U)
@@ -51,7 +51,7 @@ typedef enum {
     UI_DURATION_DISPLAY_HUMAN,
     /** Shows a 0–100 percentage value. */
     UI_DURATION_DISPLAY_PERCENT,
-    /** Large minute count with a separate "min" unit label (wind-down screen). */
+    /** Large value with a separate unit label: sec, mm:ss+min, or minutes+min. */
     UI_DURATION_DISPLAY_WIND_DOWN,
 } ui_duration_display_t;
 

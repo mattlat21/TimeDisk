@@ -31,6 +31,10 @@
 /** Timer Set Duration: minimum and tiered +/- step sizes. */
 #define TIMER_DURATION_MIN_SEC 5
 
+/** Match schedule wind-down screen layout (720×720 wireframe). */
+#define TIMER_DURATION_HEADING_Y         40
+#define TIMER_DURATION_FINISH_Y_WF       515
+
 static uint32_t timer_duration_step_sec(uint32_t value_sec, void *user_data)
 {
     (void)user_data;
@@ -74,6 +78,7 @@ static void timer_vis_reset_cache(timer_countdown_vis_t *vis)
 }
 
 static lv_obj_t *s_scr_duration;
+static lv_obj_t *s_duration_finish_lbl;
 static lv_obj_t *s_scr_style;
 static lv_obj_t *s_scr_bright;
 static lv_obj_t *s_scr_dim;
@@ -476,6 +481,11 @@ static void duration_idle_cb(void *user_data)
 {
     (void)user_data;
     ui_nav_reset_idle_timer();
+    if (s_duration_finish_lbl != NULL && app_runtime_get()->time_valid) {
+        char buf[32];
+        ui_format_hh_mm_ampm_after_sec(buf, sizeof(buf), s_duration_sec);
+        lv_label_set_text(s_duration_finish_lbl, buf);
+    }
 }
 
 static void duration_back_cb(lv_event_t *e)
@@ -624,6 +634,53 @@ static void style_tile_add_water_preview(lv_obj_t *tile)
     lv_obj_remove_flag(water, LV_OBJ_FLAG_CLICKABLE);
 }
 
+static lv_obj_t *timer_create_duration_heading(lv_obj_t *scr, const char *text)
+{
+    const ui_theme_t *t = ui_theme_get();
+    lv_obj_t *lbl = lv_label_create(scr);
+    lv_label_set_text(lbl, text);
+    lv_obj_set_style_text_color(lbl, t->white, 0);
+    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_42, 0);
+    lv_obj_align(lbl, LV_ALIGN_TOP_MID, 0, TIMER_DURATION_HEADING_Y);
+    return lbl;
+}
+
+static lv_obj_t *timer_create_duration_finish_label(lv_obj_t *scr)
+{
+    const ui_theme_t *t = ui_theme_get();
+    lv_obj_t *lbl = lv_label_create(scr);
+    lv_label_set_text(lbl, "");
+    lv_obj_set_style_text_color(lbl, t->white, 0);
+    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_48, 0);
+    lv_obj_set_width(lbl, UI_DISP - 80);
+    lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, 0);
+    const int y = ui_layout_wf_to_content_y(scr, TIMER_DURATION_FINISH_Y_WF);
+    lv_obj_align(lbl, LV_ALIGN_TOP_MID, 0, y);
+    lv_obj_add_flag(lbl, LV_OBJ_FLAG_HIDDEN);
+    return lbl;
+}
+
+static void refresh_duration_screen(void)
+{
+    const bool time_valid = app_runtime_get()->time_valid;
+
+    s_duration_bundle.cfg.show_end_time = false;
+    s_duration_bundle.cfg.show_slider = time_valid;
+    ui_duration_editor_refresh(&s_duration_bundle.editor, &s_duration_bundle.cfg);
+
+    if (s_duration_finish_lbl == NULL) {
+        return;
+    }
+    if (time_valid) {
+        char buf[32];
+        ui_format_hh_mm_ampm_after_sec(buf, sizeof(buf), s_duration_sec);
+        lv_label_set_text(s_duration_finish_lbl, buf);
+        lv_obj_remove_flag(s_duration_finish_lbl, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_add_flag(s_duration_finish_lbl, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
 static void build_duration(lv_obj_t *screens[UI_SCREEN_COUNT])
 {
     s_scr_duration = ui_widgets_create_screen();
@@ -631,16 +688,17 @@ static void build_duration(lv_obj_t *screens[UI_SCREEN_COUNT])
     s_duration_sec = app_config_get()->timer_duration_sec;
     timer_duration_clamp();
 
-    ui_widgets_create_title(s_scr_duration, "Set Duration");
+    timer_create_duration_heading(s_scr_duration, "Set Duration");
+    s_duration_finish_lbl = timer_create_duration_finish_label(s_scr_duration);
 
     s_duration_bundle.cfg = (ui_duration_editor_cfg_t){
         .value_sec = &s_duration_sec,
-        .box_y = UI_DURATION_EDITOR_BOX_Y,
-        .box_w = UI_DURATION_EDITOR_BOX_W,
-        .box_h = UI_DURATION_EDITOR_BOX_H,
-        .show_end_time = true,
+        .box_y = UI_DURATION_EDITOR_WD_BOX_Y_WF,
+        .show_end_time = false,
+        .show_slider = true,
         .min_sec = TIMER_DURATION_MIN_SEC,
-        .display = UI_DURATION_DISPLAY_HUMAN,
+        .style = UI_DURATION_EDITOR_STYLE_WIND_DOWN,
+        .display = UI_DURATION_DISPLAY_WIND_DOWN,
         .get_step_sec = timer_duration_step_sec,
         .on_change = duration_idle_cb,
     };
@@ -845,8 +903,7 @@ void ui_screen_timer_on_show(ui_screen_id_t id)
     if (id == UI_SCREEN_TIMER_DURATION) {
         s_duration_sec = app_config_get()->timer_duration_sec;
         timer_duration_clamp();
-        s_duration_bundle.cfg.show_end_time = rt->time_valid;
-        ui_duration_editor_refresh(&s_duration_bundle.editor, &s_duration_bundle.cfg);
+        refresh_duration_screen();
     }
 
     if (id == UI_SCREEN_TIMER_STYLE) {

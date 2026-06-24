@@ -5,5 +5,5 @@ idf_component_register(
         "src/ui_time_editor.c"
         "src/ui_large_time_picker.c"
     INCLUDE_DIRS "include"
-    REQUIRES ui_fonts ui_theme ui_layout ui_format ui_screen_ring lvgl
+    REQUIRES ui_fonts ui_theme ui_layout ui_format ui_screen_ring lvgl log
 )

@@ -20,6 +20,7 @@ static const char *TAG = "ui_schedule";
 #define SCHEDULE_END_TIME_BOX_Y    UI_LARGE_TIME_PICKER_BOX_Y
 #define SCHEDULE_HEADING_Y         40
 #define SCHEDULE_DURATION_Y_WF     530
+#define SCHEDULE_WIND_DOWN_FINISH_Y_WF  (SCHEDULE_DURATION_Y_WF - 15)
 
 typedef struct {
     lv_obj_t *scr;
@@ -503,7 +504,7 @@ static lv_obj_t *create_wind_down_finish_label(lv_obj_t *scr)
     lv_obj_set_style_text_font(lbl, &lv_font_montserrat_48, 0);
     lv_obj_set_width(lbl, UI_DISP - 80);
     lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, 0);
-    const int y = ui_layout_wf_to_content_y(scr, SCHEDULE_DURATION_Y_WF);
+    const int y = ui_layout_wf_to_content_y(scr, SCHEDULE_WIND_DOWN_FINISH_Y_WF);
     lv_obj_align(lbl, LV_ALIGN_TOP_MID, 0, y);
     lv_obj_add_flag(lbl, LV_OBJ_FLAG_HIDDEN);
     return lbl;

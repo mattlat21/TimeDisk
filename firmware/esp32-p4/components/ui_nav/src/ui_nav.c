@@ -1044,7 +1044,7 @@ static void web_mode_set_async_cb(void *user_data)
     if (req == NULL) {
         return;
     }
-    ui_nav_apply_mode_action(req->action, req->duration_sec);
+    ui_nav_web_apply_mode_action(req->action, req->duration_sec);
     free(req);
 }
 
@@ -1085,6 +1085,42 @@ void ui_nav_apply_mode_action(uint8_t action, uint32_t duration_sec)
     case APP_SCHEDULE_ACTION_START_SLEEP: {
         const uint32_t sleep_sec = duration_sec > 0 ? duration_sec : cfg->sleep_sec;
         mode_engine_start_cycle_durations(cfg->wind_down_sec, sleep_sec, cfg->rest_sec);
+        ui_nav_go(UI_SCREEN_TOD_BRIGHT);
+        break;
+    }
+    case APP_SCHEDULE_ACTION_START_REST: {
+        const uint32_t rest_sec = duration_sec > 0 ? duration_sec : cfg->rest_sec;
+        mode_engine_start_cycle_durations(0, 0, rest_sec);
+        ui_nav_go(UI_SCREEN_TOD_BRIGHT);
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+void ui_nav_web_apply_mode_action(uint8_t action, uint32_t duration_sec)
+{
+    app_config_t *cfg = app_config_get();
+
+    switch ((app_schedule_action_t)action) {
+    case APP_SCHEDULE_ACTION_WAKE:
+        mode_engine_switch_to_wake();
+        if (s_current == UI_SCREEN_TOD_BRIGHT || s_current == UI_SCREEN_TOD_DIM) {
+            ui_nav_tod_wake();
+        } else {
+            ui_nav_go(UI_SCREEN_TOD_BRIGHT);
+        }
+        break;
+    case APP_SCHEDULE_ACTION_START_WIND_DOWN: {
+        const uint32_t wind_down_sec = duration_sec > 0 ? duration_sec : cfg->wind_down_sec;
+        mode_engine_start_cycle_durations(wind_down_sec, 0, 0);
+        ui_nav_go(UI_SCREEN_TOD_BRIGHT);
+        break;
+    }
+    case APP_SCHEDULE_ACTION_START_SLEEP: {
+        const uint32_t sleep_sec = duration_sec > 0 ? duration_sec : cfg->sleep_sec;
+        mode_engine_start_cycle_durations(0, sleep_sec, 0);
         ui_nav_go(UI_SCREEN_TOD_BRIGHT);
         break;
     }

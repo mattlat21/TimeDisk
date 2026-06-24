@@ -483,6 +483,8 @@ static const char *schedule_action_name(uint8_t action)
         return "start_sleep";
     case APP_SCHEDULE_ACTION_START_REST:
         return "start_rest";
+    case APP_SCHEDULE_ACTION_START_WIND_DOWN:
+        return "start_wind_down";
     case APP_SCHEDULE_ACTION_WAKE:
     default:
         return "wake";
@@ -515,6 +517,10 @@ static bool schedule_action_from_json(const cJSON *val, uint8_t *action_out)
     }
     if (strcmp(val->valuestring, "start_rest") == 0) {
         *action_out = APP_SCHEDULE_ACTION_START_REST;
+        return true;
+    }
+    if (strcmp(val->valuestring, "start_wind_down") == 0) {
+        *action_out = APP_SCHEDULE_ACTION_START_WIND_DOWN;
         return true;
     }
     return false;
@@ -826,7 +832,11 @@ static esp_err_t api_mode_set_post(httpd_req_t *req)
     uint32_t duration_sec = 0;
     if (action != APP_SCHEDULE_ACTION_WAKE) {
         const cJSON *duration_j = cJSON_GetObjectItem(root, "duration_sec");
-        duration_sec = cJSON_IsNumber(duration_j) ? (uint32_t)duration_j->valuedouble : 86400;
+        if (action == APP_SCHEDULE_ACTION_START_WIND_DOWN) {
+            duration_sec = cJSON_IsNumber(duration_j) ? (uint32_t)duration_j->valuedouble : 0;
+        } else {
+            duration_sec = cJSON_IsNumber(duration_j) ? (uint32_t)duration_j->valuedouble : 86400;
+        }
     }
 
     cJSON_Delete(root);
