@@ -87,6 +87,12 @@ ensure_idf
 
 if [[ "${SKIP_BUILD}" == "false" ]]; then
   echo "build_firmware: building ${PROJECT_NAME} ${FIRMWARE_VERSION}"
+  ESP_HOSTED_INIT="${FIRMWARE_ROOT}/managed_components/espressif__esp_hosted/host/port/esp/freertos/src/port_esp_hosted_host_init.c"
+  if [[ ! -f "${ESP_HOSTED_INIT}" ]]; then
+    echo "build_firmware: fetching managed components"
+    (cd "${FIRMWARE_ROOT}" && idf.py reconfigure)
+  fi
+  "${FIRMWARE_ROOT}/scripts/apply_managed_patches.sh"
   (cd "${FIRMWARE_ROOT}" && idf.py build)
 fi
 

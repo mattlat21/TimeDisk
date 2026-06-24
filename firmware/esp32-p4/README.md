@@ -4,6 +4,13 @@ ESP-IDF + LVGL application for the **Waveshare ESP32-P4 WiFi6 Touch LCD** (3.4" 
 
 ## Build and flash
 
+After a fresh clone (or when `managed_components/` is missing), fetch dependencies and apply vendored patches:
+
+```bash
+idf.py reconfigure
+./scripts/apply_managed_patches.sh
+```
+
 From this directory:
 
 ```bash
@@ -21,6 +28,7 @@ From the repository root:
 | Script | Purpose |
 |--------|---------|
 | `scripts/build_firmware.sh` | Build and collect binaries under `../../binaries/vX.X.X/` |
+| `scripts/apply_managed_patches.sh` | Apply vendored patches to fetched `managed_components/` |
 | `scripts/upload_firmware.sh` | OTA upload via SFTP (reads `../../.env`) |
 | `scripts/embed_ui_assets.sh` | Regenerate embedded UI assets from `components/ui_assets/assets/` |
 
@@ -36,7 +44,7 @@ MQTT is optional. Enable it under **Settings → MQTT** on the device, then use 
 ```
 firmware/esp32-p4/
   main/           Application entry
-  components/     IDF components (UI, app logic, app_mqtt, BSP extras)
+  components/     IDF components (UI, app logic, app_mqtt, BSP extras, esp_hosted_patches)
   cmake/          Firmware version for builds and OTA
   scripts/        Build, asset, and upload helpers
   partitions.csv
