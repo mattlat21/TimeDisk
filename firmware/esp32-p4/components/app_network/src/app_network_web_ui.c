@@ -894,6 +894,99 @@ static esp_err_t api_images_get(httpd_req_t *req)
     return send_json(req, json);
 }
 
+static int image_filename_valid(const char *name)
+{
+    if (name == NULL || name[0] == '\0') {
+        return 0;
+    }
+
+    size_t len = strlen(name);
+    if (len < 5 || len > 64 || strcmp(name + len - 4, ".bin") != 0) {
+        return 0;
+    }
+
+    if (strstr(name, "..") != NULL) {
+        return 0;
+    }
+
+    for (size_t i = 0; i < len; i++) {
+        const char c = name[i];
+        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
+            c == '.' || c == '_' || c == '-') {
+            continue;
+        }
+        return 0;
+    }
+
+    return 1;
+}
+
+static esp_err_t api_images_file_get(httpd_req_t *req)
+{
+    char name[128];
+    size_t qlen = httpd_req_get_url_query_len(req);
+
+    if (qlen == 0) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing name");
+        return ESP_FAIL;
+    }
+
+    char query[256];
+    if (qlen + 1 > sizeof(query)) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad query");
+        return ESP_FAIL;
+    }
+    if (httpd_req_get_url_query_str(req, query, sizeof(query)) != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad query");
+        return ESP_FAIL;
+    }
+
+    if (httpd_query_key_value(query, "name", name, sizeof(name)) != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing name");
+        return ESP_FAIL;
+    }
+
+    if (!image_filename_valid(name)) {
+        httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Not found");
+        return ESP_FAIL;
+    }
+
+    char path[320];
+    snprintf(path, sizeof(path), "/spiffs/%s", name);
+
+    FILE *fp = fopen(path, "rb");
+    if (fp == NULL) {
+        httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Not found");
+        return ESP_FAIL;
+    }
+
+    httpd_resp_set_type(req, "application/octet-stream");
+    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=3600");
+
+    char buf[4096];
+    esp_err_t err = ESP_OK;
+
+    while (true) {
+        size_t n = fread(buf, 1, sizeof(buf), fp);
+        if (n > 0) {
+            if (httpd_resp_send_chunk(req, buf, n) != ESP_OK) {
+                err = ESP_FAIL;
+                break;
+            }
+        }
+        if (n < sizeof(buf)) {
+            if (ferror(fp)) {
+                err = ESP_FAIL;
+            }
+            break;
+        }
+    }
+
+    fclose(fp);
+    httpd_resp_send_chunk(req, NULL, 0);
+    return err;
+}
+
 static esp_err_t index_get_handler(httpd_req_t *req)
 {
     httpd_resp_set_type(req, "text/html; charset=utf-8");
@@ -951,6 +1044,7 @@ esp_err_t app_network_web_ui_register(httpd_handle_t server)
         {.uri = "/api/timer/cancel", .method = HTTP_POST, .handler = api_timer_cancel_post},
         {.uri = "/api/mode/set", .method = HTTP_POST, .handler = api_mode_set_post},
         {.uri = "/api/images", .method = HTTP_GET, .handler = api_images_get},
+        {.uri = "/api/images/file", .method = HTTP_GET, .handler = api_images_file_get},
     };
 
     for (size_t i = 0; i < sizeof(routes) / sizeof(routes[0]); i++) {

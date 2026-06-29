@@ -23,7 +23,7 @@ static const char *TAG = "app_net_setup";
 #define SETUP_AP_CHANNEL    1
 #define SETUP_AP_MAX_CONN   4
 /** Must be >= every handler in app_network_web_ui_register() routes[] (+ headroom). */
-#define WEB_UI_MAX_URI_HANDLERS 24
+#define WEB_UI_MAX_URI_HANDLERS 26
 
 static httpd_handle_t s_httpd;
 static bool s_setup_ap_active;
