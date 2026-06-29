@@ -33,6 +33,8 @@ void ui_settings_network_sync_from_draft(void);
 #define NET_MAIN_SSID_Y_WF   95
 #define NET_MAIN_MANAGE_Y_WF 210
 #define NET_MAIN_NTP_Y_WF    265
+#define NET_WEB_QR_Y_WF      325
+#define NET_WEB_QR_SIZE      120
 #define NET_LIST_Y0_WF       165
 #define NET_DETAIL_TITLE_Y_WF  (48 + 200)
 #define NET_DETAIL_ROW_Y0_WF   (NET_LIST_Y0_WF + 180)
@@ -61,6 +63,7 @@ static lv_obj_t *s_panel;
 static lv_obj_t *s_net_panel_title;
 static lv_obj_t *s_net_connected_lbl;
 static lv_obj_t *s_net_web_lbl;
+static lv_obj_t *s_net_web_qr;
 static lv_obj_t *s_net_manage_btn;
 static lv_obj_t *s_net_list_btns[APP_WIFI_NETWORK_MAX];
 static lv_obj_t *s_net_add_plus_btn;
@@ -149,13 +152,34 @@ static void net_refresh_connected_label(void)
     lv_label_set_text(s_net_connected_lbl, text);
 }
 
+static void net_refresh_web_ui_qr(bool visible)
+{
+    if (s_net_web_qr == NULL) {
+        return;
+    }
+    if (!visible) {
+        lv_obj_add_flag(s_net_web_qr, LV_OBJ_FLAG_HIDDEN);
+        return;
+    }
+
+    char url[64];
+    if (app_network_get_web_ui_url(url, sizeof(url))) {
+        lv_qrcode_update(s_net_web_qr, url, (uint32_t)strlen(url));
+        lv_obj_clear_flag(s_net_web_qr, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_add_flag(s_net_web_qr, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
 static void net_refresh_web_ui_label(bool visible)
 {
     if (s_net_web_lbl == NULL) {
+        net_refresh_web_ui_qr(visible);
         return;
     }
     if (!visible) {
         lv_obj_add_flag(s_net_web_lbl, LV_OBJ_FLAG_HIDDEN);
+        net_refresh_web_ui_qr(false);
         return;
     }
 
@@ -176,6 +200,7 @@ static void net_refresh_web_ui_label(bool visible)
         }
         lv_label_set_text(s_net_web_lbl, text);
         lv_obj_clear_flag(s_net_web_lbl, LV_OBJ_FLAG_HIDDEN);
+        net_refresh_web_ui_qr(true);
         return;
     }
 
@@ -187,11 +212,13 @@ static void net_refresh_web_ui_label(bool visible)
         }
         lv_label_set_text(s_net_web_lbl, text);
         lv_obj_clear_flag(s_net_web_lbl, LV_OBJ_FLAG_HIDDEN);
+        net_refresh_web_ui_qr(true);
         return;
     }
 
     lv_label_set_text(s_net_web_lbl, "IP: not connected");
     lv_obj_clear_flag(s_net_web_lbl, LV_OBJ_FLAG_HIDDEN);
+    net_refresh_web_ui_qr(false);
 }
 
 static void net_edit_refresh_label(void)
@@ -275,6 +302,9 @@ static void net_hide_main_rows(void)
     }
     if (s_net_ntp_btn != NULL) {
         lv_obj_add_flag(s_net_ntp_btn, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (s_net_web_qr != NULL) {
+        lv_obj_add_flag(s_net_web_qr, LV_OBJ_FLAG_HIDDEN);
     }
 }
 
@@ -926,6 +956,13 @@ lv_obj_t *ui_settings_network_build(void)
     lv_obj_set_width(s_net_web_lbl, 560);
     lv_obj_align(s_net_web_lbl, LV_ALIGN_TOP_MID, 0, ui_settings_wf_y(s_panel, NET_WEB_Y_WF));
     lv_obj_add_flag(s_net_web_lbl, LV_OBJ_FLAG_HIDDEN);
+
+    s_net_web_qr = lv_qrcode_create(s_panel);
+    lv_qrcode_set_size(s_net_web_qr, NET_WEB_QR_SIZE);
+    lv_qrcode_set_dark_color(s_net_web_qr, lv_color_black());
+    lv_qrcode_set_light_color(s_net_web_qr, lv_color_white());
+    lv_obj_align(s_net_web_qr, LV_ALIGN_TOP_MID, 0, ui_settings_wf_y(s_panel, NET_WEB_QR_Y_WF));
+    lv_obj_add_flag(s_net_web_qr, LV_OBJ_FLAG_HIDDEN);
 
     s_net_manage_btn = net_create_row_btn(s_panel, "Manage Wi-Fi", net_manage_cb, NULL);
 
