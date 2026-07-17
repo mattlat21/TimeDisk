@@ -247,13 +247,13 @@
         "{mode:'wind_down',action:'start_wind_down',label:'Wind Down',img:'tod_winddown.bin'},"
         "{mode:'sleep',action:'start_sleep',label:'Sleep',img:'tod_sleep.bin'},"
         "{mode:'rest',action:'start_rest',label:'Rest',img:'tod_rest.bin'}];"
-        "function modeGridCardHtml(current){let h='<div class=\"card\"><h2>Modes</h2><div class=\"mode-grid\">';"
+        "function modeGridCardHtml(current){let h='<div class=\"card\"><div class=\"mode-grid\">';"
         "STATUS_MODES.forEach(m=>{const active=current===m.mode?' active':'';"
         "h+='<button type=\"button\" class=\"mode-tile'+active+'\" data-mode=\"'+m.mode+'\" data-action=\"'+m.action+'\">';"
         "h+='<span class=\"mode-tile-loading\">Loading…</span>';"
         "h+='<canvas class=\"mode-tile-canvas hidden\" data-name=\"'+m.img+'\" width=\"160\" height=\"160\"></canvas>';"
         "h+='<div class=\"mode-tile-label\">'+m.label+'</div></button>'});"
-        "return h+'</div><p class=\"hint\">Tap a mode to switch. Sleep, rest, and wind down ask for a duration (defaults to 24 hours).</p></div>'}"
+        "return h+'</div></div>'}"
     );
 
     httpd_resp_sendstr_chunk(req,
