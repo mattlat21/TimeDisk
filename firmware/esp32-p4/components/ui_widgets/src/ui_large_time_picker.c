@@ -9,11 +9,8 @@
 #include "ui_theme.h"
 #include "ui_widgets.h"
 
-#include <esp_log.h>
 #include <stdio.h>
 #include <time.h>
-
-static const char *DBG_TAG = "DBG_A0C97E";
 
 static ui_large_time_picker_bundle_t *bundle_from_event(lv_event_t *e)
 {
@@ -25,6 +22,11 @@ static void notify_change(ui_large_time_picker_bundle_t *bundle)
     if (bundle->cfg.on_change != NULL) {
         bundle->cfg.on_change(bundle->cfg.user_data);
     }
+}
+
+static bool is_duration_mode(const ui_large_time_picker_cfg_t *cfg)
+{
+    return cfg != NULL && cfg->mode == UI_LARGE_TIME_PICKER_MODE_DURATION;
 }
 
 static void clamp_duration(ui_large_time_picker_cfg_t *cfg)
@@ -72,6 +74,26 @@ static void end_time_parts(const ui_large_time_picker_cfg_t *cfg, int *h12_out, 
     *ampm_out = (h24 >= 12) ? "pm" : "am";
 }
 
+static void duration_parts(const ui_large_time_picker_cfg_t *cfg, int *hours_out, int *min_out)
+{
+    const uint32_t sec = *cfg->value_sec;
+    *hours_out = (int)(sec / 3600U);
+    *min_out = (int)((sec % 3600U) / 60U);
+}
+
+static void adjust_duration(ui_large_time_picker_bundle_t *bundle, int32_t delta_sec)
+{
+    ui_large_time_picker_cfg_t *cfg = &bundle->cfg;
+    int64_t next = (int64_t)*cfg->value_sec + (int64_t)delta_sec;
+    if (next < 0) {
+        next = 0;
+    }
+    *cfg->value_sec = (uint32_t)next;
+    clamp_duration(cfg);
+    ui_large_time_picker_refresh(&bundle->picker, cfg);
+    notify_change(bundle);
+}
+
 static void adjust_end_time(ui_large_time_picker_bundle_t *bundle, int delta_minutes)
 {
     ui_large_time_picker_cfg_t *cfg = &bundle->cfg;
@@ -82,24 +104,33 @@ static void adjust_end_time(ui_large_time_picker_bundle_t *bundle, int delta_min
     notify_change(bundle);
 }
 
+static void adjust_picker(ui_large_time_picker_bundle_t *bundle, int delta_hours, int delta_minutes)
+{
+    if (is_duration_mode(&bundle->cfg)) {
+        adjust_duration(bundle, (int32_t)delta_hours * 3600 + (int32_t)delta_minutes * 60);
+        return;
+    }
+    adjust_end_time(bundle, delta_hours * 60 + delta_minutes);
+}
+
 static void h_minus_cb(lv_event_t *e)
 {
-    adjust_end_time(bundle_from_event(e), -60);
+    adjust_picker(bundle_from_event(e), -1, 0);
 }
 
 static void h_plus_cb(lv_event_t *e)
 {
-    adjust_end_time(bundle_from_event(e), 60);
+    adjust_picker(bundle_from_event(e), 1, 0);
 }
 
 static void m_minus_cb(lv_event_t *e)
 {
-    adjust_end_time(bundle_from_event(e), -1);
+    adjust_picker(bundle_from_event(e), 0, -1);
 }
 
 static void m_plus_cb(lv_event_t *e)
 {
-    adjust_end_time(bundle_from_event(e), 1);
+    adjust_picker(bundle_from_event(e), 0, 1);
 }
 
 static void set_obj_visible(lv_obj_t *obj, bool visible)
@@ -193,6 +224,39 @@ static void create_time_column(lv_obj_t *parent, int col_x, lv_obj_t **btn_plus,
     add_stepper_corner_covers(parent, col_x, col_w, btn_h, minus_y, t->keypad);
 }
 
+/** Full box width always reserves am/pm; duration mode centers on H:MM only. */
+static int picker_box_x_wf(const ui_large_time_picker_cfg_t *cfg)
+{
+    const int col_w = UI_LARGE_TIME_PICKER_COL_W;
+    const int colon_w = UI_LARGE_TIME_PICKER_COLON_W;
+    const int ampm_w = UI_LARGE_TIME_PICKER_AMPM_W;
+    const int hm_w = col_w + colon_w + col_w;
+
+    if (is_duration_mode(cfg)) {
+        /* Columns are left-aligned in the box; shift so H:MM (not am/pm) is centered. */
+        return (int)UI_SCREEN_CX - hm_w / 2;
+    }
+    return (int)UI_SCREEN_CX - (hm_w + ampm_w) / 2 + UI_LARGE_TIME_PICKER_X_OFFSET_WF;
+}
+
+static void layout_picker_box(const ui_large_time_picker_t *picker, const ui_large_time_picker_cfg_t *cfg)
+{
+    if (picker == NULL || picker->box == NULL || cfg == NULL) {
+        return;
+    }
+
+    lv_obj_t *parent = lv_obj_get_parent(picker->box);
+    if (parent == NULL) {
+        return;
+    }
+
+    int box_x = 0;
+    int box_y = 0;
+    const int box_y_wf = cfg->box_y >= 0 ? cfg->box_y : UI_LARGE_TIME_PICKER_BOX_Y;
+    ui_layout_parent_pos_from_wf(parent, picker_box_x_wf(cfg), box_y_wf, &box_x, &box_y);
+    lv_obj_set_pos(picker->box, box_x, box_y);
+}
+
 void ui_large_time_picker_set_visible(const ui_large_time_picker_t *picker, bool visible)
 {
     if (picker == NULL) {
@@ -209,15 +273,29 @@ void ui_large_time_picker_refresh(const ui_large_time_picker_t *picker, const ui
 
     clamp_duration((ui_large_time_picker_cfg_t *)cfg);
 
-    int h12;
-    int min;
-    const char *ampm;
-    end_time_parts(cfg, &h12, &min, &ampm);
-
     char hour_buf[8];
     char min_buf[8];
-    snprintf(hour_buf, sizeof(hour_buf), "%d", h12);
-    snprintf(min_buf, sizeof(min_buf), "%02d", min);
+
+    if (is_duration_mode(cfg)) {
+        int hours;
+        int min;
+        duration_parts(cfg, &hours, &min);
+        snprintf(hour_buf, sizeof(hour_buf), "%d", hours);
+        snprintf(min_buf, sizeof(min_buf), "%02d", min);
+        /* Slot sits beside minutes; omit wall-clock am/pm in duration mode. */
+        set_obj_visible(picker->lbl_ampm, false);
+    } else {
+        int h12;
+        int min;
+        const char *ampm;
+        end_time_parts(cfg, &h12, &min, &ampm);
+        snprintf(hour_buf, sizeof(hour_buf), "%d", h12);
+        snprintf(min_buf, sizeof(min_buf), "%02d", min);
+        if (picker->lbl_ampm != NULL) {
+            lv_label_set_text(picker->lbl_ampm, ampm);
+            set_obj_visible(picker->lbl_ampm, true);
+        }
+    }
 
     if (picker->lbl_hour != NULL) {
         lv_label_set_text(picker->lbl_hour, hour_buf);
@@ -225,18 +303,8 @@ void ui_large_time_picker_refresh(const ui_large_time_picker_t *picker, const ui
     if (picker->lbl_min != NULL) {
         lv_label_set_text(picker->lbl_min, min_buf);
     }
-    if (picker->lbl_ampm != NULL) {
-        lv_label_set_text(picker->lbl_ampm, ampm);
-    }
 
-    // #region agent log
-    if (picker->lbl_hour != NULL) {
-        lv_area_t hour_a;
-        lv_obj_get_coords(picker->lbl_hour, &hour_a);
-        ESP_LOGI(DBG_TAG, "H1 ltp_refresh hour='%s' min='%s' hour_coords=[%d..%d]", hour_buf, min_buf,
-                 hour_a.y1, hour_a.y2);
-    }
-    // #endregion
+    layout_picker_box(picker, cfg);
 }
 
 void ui_large_time_picker_create(lv_obj_t *parent, ui_large_time_picker_bundle_t *bundle)
@@ -272,10 +340,9 @@ void ui_large_time_picker_create(lv_obj_t *parent, ui_large_time_picker_bundle_t
     const int colon_w = UI_LARGE_TIME_PICKER_COLON_W;
     const int ampm_w = UI_LARGE_TIME_PICKER_AMPM_W;
     const int content_w = col_w + colon_w + col_w + ampm_w;
-    const int box_x_wf = (int)UI_SCREEN_CX - content_w / 2 + UI_LARGE_TIME_PICKER_X_OFFSET_WF;
     int box_x = 0;
     int box_y = 0;
-    ui_layout_parent_pos_from_wf(parent, box_x_wf, cfg->box_y, &box_x, &box_y);
+    ui_layout_parent_pos_from_wf(parent, picker_box_x_wf(cfg), cfg->box_y, &box_x, &box_y);
 
     out->box = lv_obj_create(parent);
     lv_obj_set_size(out->box, content_w, col_h);

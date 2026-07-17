@@ -14,9 +14,6 @@
 
 static const char *TAG = "ui_schedule";
 
-#define SCHEDULE_EDITOR_BOX_W      400
-#define SCHEDULE_EDITOR_BOX_H      80
-#define SCHEDULE_EDITOR_BOX_Y      210
 #define SCHEDULE_END_TIME_BOX_Y    UI_LARGE_TIME_PICKER_BOX_Y
 #define SCHEDULE_HEADING_Y         40
 #define SCHEDULE_DURATION_Y_WF     530
@@ -97,8 +94,20 @@ static const char *s_rest_subtitles_duration[2] = {
     "Wind Down Duration",
 };
 
-static const char *end_time_heading_for_idx(int idx)
+static const char *end_time_heading_for_idx(int idx, bool use_time)
 {
+    if (!use_time) {
+        switch (idx) {
+        case 0:
+            return "Sleep Duration";
+        case 1:
+        case 3:
+            return "Rest Duration";
+        default:
+            return "";
+        }
+    }
+
     switch (idx) {
     case 0:
         return "Sleep Ends";
@@ -144,17 +153,29 @@ static void clamp_wizard_val(int idx)
     if (ss == NULL) {
         return;
     }
-    ui_duration_editor_cfg_t *cfg = &ss->bundle.cfg;
-    uint32_t *val = cfg->value_sec;
+
+    uint32_t *val;
+    uint32_t min_sec;
+    uint32_t max_sec;
+
+    if (ss->end_time_layout) {
+        val = ss->large_time_picker.cfg.value_sec;
+        min_sec = ss->large_time_picker.cfg.min_sec;
+        max_sec = ss->large_time_picker.cfg.max_sec;
+    } else {
+        val = ss->bundle.cfg.value_sec;
+        min_sec = ss->bundle.cfg.min_sec;
+        max_sec = ss->bundle.cfg.max_sec;
+    }
 
     if (val == NULL) {
         return;
     }
-    if (cfg->min_sec > 0 && *val < cfg->min_sec) {
-        *val = cfg->min_sec;
+    if (min_sec > 0 && *val < min_sec) {
+        *val = min_sec;
     }
-    if (cfg->max_sec > 0 && *val > cfg->max_sec) {
-        *val = cfg->max_sec;
+    if (max_sec > 0 && *val > max_sec) {
+        *val = max_sec;
     }
 }
 
@@ -164,44 +185,46 @@ static void apply_editor_constraints(int idx)
     if (ss == NULL) {
         return;
     }
-    ui_duration_editor_cfg_t *dcfg = &ss->bundle.cfg;
-    ui_large_time_picker_cfg_t *pcfg = ss->end_time_layout ? &ss->large_time_picker.cfg : NULL;
 
-    dcfg->end_time_offset_sec = 0;
-    dcfg->max_sec = UI_DURATION_EDITOR_MAX_SEC;
-    dcfg->min_sec = 0;
+    uint32_t end_time_offset_sec = 0;
+    uint32_t max_sec = UI_DURATION_EDITOR_MAX_SEC;
+    uint32_t min_sec = 0;
 
     switch (idx) {
     case 0:
-        dcfg->min_sec = UI_DURATION_EDITOR_STEP_SEC;
-        dcfg->max_sec = UI_SCHEDULE_REST_MAX_SEC;
+        min_sec = UI_DURATION_EDITOR_STEP_SEC;
+        max_sec = UI_SCHEDULE_REST_MAX_SEC;
         break;
     case 1:
-        dcfg->end_time_offset_sec = s_wizard_vals[0];
-        dcfg->max_sec = UI_SCHEDULE_REST_MAX_SEC;
+        end_time_offset_sec = s_wizard_vals[0];
+        max_sec = UI_SCHEDULE_REST_MAX_SEC;
         break;
     case 2:
-        dcfg->max_sec = wind_down_max_sec(s_wizard_vals[0]);
+        max_sec = wind_down_max_sec(s_wizard_vals[0]);
         break;
     case 3:
-        dcfg->min_sec = UI_DURATION_EDITOR_STEP_SEC;
-        dcfg->max_sec = UI_SCHEDULE_REST_MAX_SEC;
+        min_sec = UI_DURATION_EDITOR_STEP_SEC;
+        max_sec = UI_SCHEDULE_REST_MAX_SEC;
         break;
     case 4:
-        dcfg->max_sec = wind_down_max_sec(s_wizard_vals[3]);
+        max_sec = wind_down_max_sec(s_wizard_vals[3]);
         break;
     default:
         break;
     }
 
+    if (ss->end_time_layout) {
+        ss->large_time_picker.cfg.end_time_offset_sec = end_time_offset_sec;
+        ss->large_time_picker.cfg.max_sec = max_sec;
+        ss->large_time_picker.cfg.min_sec = min_sec;
+    } else {
+        ss->bundle.cfg.end_time_offset_sec = end_time_offset_sec;
+        ss->bundle.cfg.max_sec = max_sec;
+        ss->bundle.cfg.min_sec = min_sec;
+    }
+
     clamp_wizard_val(idx);
     snap_wind_down(idx);
-
-    if (pcfg != NULL) {
-        pcfg->end_time_offset_sec = dcfg->end_time_offset_sec;
-        pcfg->max_sec = dcfg->max_sec;
-        pcfg->min_sec = dcfg->min_sec;
-    }
 }
 
 static const char *wind_down_heading(void)
@@ -226,7 +249,7 @@ static void apply_schedule_labels(int idx)
 
     if (ss->end_time_layout) {
         if (ss->lbl_title != NULL) {
-            lv_label_set_text(ss->lbl_title, end_time_heading_for_idx(idx));
+            lv_label_set_text(ss->lbl_title, end_time_heading_for_idx(idx, use_time));
         }
         if (ss->lbl_subtitle != NULL) {
             lv_obj_add_flag(ss->lbl_subtitle, LV_OBJ_FLAG_HIDDEN);
@@ -254,28 +277,52 @@ static void apply_schedule_labels(int idx)
     }
 }
 
+static uint32_t *wizard_value_sec(schedule_screen_t *ss)
+{
+    if (ss == NULL) {
+        return NULL;
+    }
+    if (ss->end_time_layout) {
+        return ss->large_time_picker.cfg.value_sec;
+    }
+    return ss->bundle.cfg.value_sec;
+}
+
+static uint32_t wizard_end_time_offset_sec(const schedule_screen_t *ss)
+{
+    if (ss == NULL) {
+        return 0;
+    }
+    if (ss->end_time_layout) {
+        return ss->large_time_picker.cfg.end_time_offset_sec;
+    }
+    return ss->bundle.cfg.end_time_offset_sec;
+}
+
 static void refresh_finish_time_label(int idx)
 {
     schedule_screen_t *ss = schedule_screen_at(idx);
-    if (ss == NULL || ss->lbl_duration == NULL || ss->bundle.cfg.value_sec == NULL) {
+    uint32_t *value_sec = wizard_value_sec(ss);
+    if (ss == NULL || ss->lbl_duration == NULL || value_sec == NULL) {
         return;
     }
 
     char buf[32];
     ui_format_hh_mm_ampm_after_sec(buf, sizeof(buf),
-                                   ss->bundle.cfg.end_time_offset_sec + *ss->bundle.cfg.value_sec);
+                                   wizard_end_time_offset_sec(ss) + *value_sec);
     lv_label_set_text(ss->lbl_duration, buf);
 }
 
 static void refresh_duration_label(int idx)
 {
     schedule_screen_t *ss = schedule_screen_at(idx);
-    if (ss == NULL || ss->lbl_duration == NULL || ss->bundle.cfg.value_sec == NULL) {
+    uint32_t *value_sec = wizard_value_sec(ss);
+    if (ss == NULL || ss->lbl_duration == NULL || value_sec == NULL) {
         return;
     }
 
     char buf[64];
-    ui_format_hours_and_minutes(buf, sizeof(buf), *ss->bundle.cfg.value_sec);
+    ui_format_hours_and_minutes(buf, sizeof(buf), *value_sec);
     lv_label_set_text(ss->lbl_duration, buf);
 }
 
@@ -290,26 +337,17 @@ static void refresh_schedule_editors(int idx)
     apply_editor_constraints(idx);
 
     if (ss->end_time_layout) {
-        if (use_time) {
-            ui_duration_editor_set_visible(&ss->bundle.editor, false);
-            ui_large_time_picker_set_visible(&ss->large_time_picker.picker, true);
-            ui_large_time_picker_refresh(&ss->large_time_picker.picker, &ss->large_time_picker.cfg);
-            refresh_duration_label(idx);
-            if (ss->lbl_duration != NULL) {
-                lv_obj_remove_flag(ss->lbl_duration, LV_OBJ_FLAG_HIDDEN);
-            }
-        } else {
-            ss->bundle.cfg.show_end_time = false;
-            ui_duration_editor_set_visible(&ss->bundle.editor, true);
-            ui_duration_editor_refresh(&ss->bundle.editor, &ss->bundle.cfg);
-            ui_large_time_picker_set_visible(&ss->large_time_picker.picker, false);
-            if (ss->lbl_duration != NULL) {
-                lv_obj_add_flag(ss->lbl_duration, LV_OBJ_FLAG_HIDDEN);
-            }
+        ss->large_time_picker.cfg.mode = use_time ? UI_LARGE_TIME_PICKER_MODE_END_TIME
+                                                  : UI_LARGE_TIME_PICKER_MODE_DURATION;
+        ui_large_time_picker_set_visible(&ss->large_time_picker.picker, true);
+        ui_large_time_picker_refresh(&ss->large_time_picker.picker, &ss->large_time_picker.cfg);
+        refresh_duration_label(idx);
+        if (ss->lbl_duration != NULL) {
+            lv_obj_remove_flag(ss->lbl_duration, LV_OBJ_FLAG_HIDDEN);
         }
     } else if (ss->wind_down_layout) {
         ss->bundle.cfg.show_end_time = false;
-        ss->bundle.cfg.show_slider = use_time;
+        ss->bundle.cfg.show_slider = true;
         ss->bundle.cfg.style = UI_DURATION_EDITOR_STYLE_WIND_DOWN;
         ss->bundle.cfg.display = UI_DURATION_DISPLAY_WIND_DOWN;
         ui_duration_editor_set_visible(&ss->bundle.editor, true);
@@ -525,20 +563,10 @@ static void build_end_time_screen(lv_obj_t *screens[UI_SCREEN_COUNT], ui_screen_
     ss->lbl_subtitle = NULL;
     ss->lbl_duration = create_duration_label(ss->scr);
 
-    ss->bundle.cfg = (ui_duration_editor_cfg_t){
-        .value_sec = &s_wizard_vals[idx],
-        .box_y = SCHEDULE_EDITOR_BOX_Y,
-        .box_w = SCHEDULE_EDITOR_BOX_W,
-        .box_h = SCHEDULE_EDITOR_BOX_H,
-        .show_end_time = false,
-        .on_change = schedule_editor_change_cb,
-        .user_data = (void *)(intptr_t)idx,
-    };
-    ui_duration_editor_create(ss->scr, &ss->bundle);
-
     ss->large_time_picker.cfg = (ui_large_time_picker_cfg_t){
         .value_sec = &s_wizard_vals[idx],
         .box_y = SCHEDULE_END_TIME_BOX_Y,
+        .mode = UI_LARGE_TIME_PICKER_MODE_END_TIME,
         .on_change = schedule_time_change_cb,
         .user_data = (void *)(intptr_t)idx,
     };
