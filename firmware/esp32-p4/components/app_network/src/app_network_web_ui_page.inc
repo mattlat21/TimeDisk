@@ -150,7 +150,6 @@
         ".header-start{display:flex;align-items:center;gap:12px;min-width:0;flex:1}"
         ".header-start h1{min-width:0}"
         "@media(max-width:720px){.mode-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}"
-        "@media(max-width:420px){.mode-grid{grid-template-columns:minmax(0,1fr)}}"
         "@media(max-width:860px){.shell{padding:14px}.sidebar-toggle{display:inline-flex;flex-shrink:0}"
         ".sidebar-backdrop{display:block;position:fixed;inset:0;z-index:1040;background:rgba(16,8,28,.45);"
         "backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .22s ease}"
