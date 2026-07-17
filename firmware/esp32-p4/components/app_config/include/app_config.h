@@ -26,6 +26,7 @@
 #define APP_MQTT_USER_MAX     64
 #define APP_MQTT_PASS_MAX     64
 #define APP_SCHEDULE_EVENT_MAX 16
+#define APP_SCHEDULED_BUTTON_MAX 8
 
 /** Bit flags for enabled adult-auth methods (see app_config_t::aa_methods). */
 #define AA_METHOD_PIN   0x01
@@ -38,6 +39,12 @@ typedef enum {
     APP_MODE_SLEEP,
     APP_MODE_REST,
 } app_mode_t;
+
+/** Bit for app_scheduled_button_t::show_modes (1 << app_mode_t). */
+#define APP_MODE_BIT(mode) (1u << (unsigned)(mode))
+#define APP_MODE_BIT_ALL \
+    (APP_MODE_BIT(APP_MODE_WAKE) | APP_MODE_BIT(APP_MODE_WIND_DOWN) | \
+     APP_MODE_BIT(APP_MODE_SLEEP) | APP_MODE_BIT(APP_MODE_REST))
 
 /** Wall-clock schedule action (local time, minutes since midnight). */
 typedef enum {
@@ -55,6 +62,19 @@ typedef struct {
     /** 0 = use configured cycle duration for wind-down/sleep/rest; else override primary segment. */
     uint32_t duration_sec;
 } app_schedule_event_t;
+
+/** TOD scheduled action button (visible during a local time window). */
+typedef struct {
+    /** Window start: 0–1439 (hour * 60 + minute). */
+    uint16_t start_min;
+    /** Window end: 0–1439; < start_min => overnight; equal => all day. */
+    uint16_t end_min;
+    /** Target mode action (app_schedule_action_t). */
+    uint8_t action;
+    /** Modes where the button may appear: bit (1 << app_mode_t). */
+    uint8_t show_modes;
+    bool enabled;
+} app_scheduled_button_t;
 
 /** One saved Wi-Fi network (SSID + optional WPA passphrase). */
 typedef struct {
@@ -103,6 +123,9 @@ typedef struct {
 
     uint8_t schedule_event_count;
     app_schedule_event_t schedule_events[APP_SCHEDULE_EVENT_MAX];
+
+    uint8_t scheduled_button_count;
+    app_scheduled_button_t scheduled_buttons[APP_SCHEDULED_BUTTON_MAX];
 
     uint8_t aa_methods;
     char aa_pin[APP_AA_PIN_LEN];
@@ -181,6 +204,13 @@ void app_config_schedule_events_sort_buf(app_schedule_event_t *events, uint8_t c
 void app_config_schedule_events_sort(void);
 esp_err_t app_config_schedule_event_set(int index, const app_schedule_event_t *event);
 esp_err_t app_config_schedule_event_delete(int index);
+
+int app_config_scheduled_button_count(void);
+const app_scheduled_button_t *app_config_scheduled_button_get(int index);
+void app_config_scheduled_buttons_copy(app_scheduled_button_t *dst, uint8_t *dst_count,
+                                       const app_scheduled_button_t *src, uint8_t src_count);
+esp_err_t app_config_scheduled_button_set(int index, const app_scheduled_button_t *button);
+esp_err_t app_config_scheduled_button_delete(int index);
 
 /** Convenience wrappers around app_nvs_save_* (see app_nvs.h). */
 static inline esp_err_t app_config_save_all(void)

@@ -45,4 +45,11 @@ void ui_settings_schedule_events_init(lv_obj_t *panel, lv_obj_t *panel_title);
 void ui_settings_schedule_events_open(void);
 void ui_settings_schedule_events_close(void);
 void ui_settings_schedule_events_restore_saved(void);
+bool ui_settings_schedule_events_try_cancel(void);
+
+void ui_settings_scheduled_buttons_init(lv_obj_t *panel, lv_obj_t *panel_title);
+void ui_settings_scheduled_buttons_open(void);
+void ui_settings_scheduled_buttons_close(void);
+void ui_settings_scheduled_buttons_restore_saved(void);
+bool ui_settings_scheduled_buttons_try_cancel(void);
 

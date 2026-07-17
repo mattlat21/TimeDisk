@@ -12,8 +12,13 @@
 #include "ui_nav.h"
 #include "ui_assets.h"
 #include "app_config.h"
+#include "app_scheduled_button.h"
 
 #define TOD_MODE_COUNT 4
+
+/** Top-center scheduled action button (wireframe coords on 720 circle). */
+#define SCHED_BTN_D_WF 180
+#define SCHED_BTN_TOP_WF 36
 
 typedef struct {
     lv_obj_t *row;
@@ -26,6 +31,10 @@ static lv_obj_t *s_scr_dim;
 static lv_obj_t *s_bg_bright;
 static lv_obj_t *s_bg_dim;
 static ui_wedge_t *s_menu_wedge_bright;
+static lv_obj_t *s_sched_btn;
+static lv_obj_t *s_sched_btn_lbl;
+static uint8_t s_sched_btn_action;
+static bool s_menu_idle_visible = true;
 static tod_clock_t s_clock_bright;
 static tod_clock_t s_clock_dim;
 static bool s_showing_dim;
@@ -79,6 +88,12 @@ static void menu_btn_cb(lv_event_t *e)
 {
     (void)e;
     ui_nav_start_aa(UI_SCREEN_TOD_BRIGHT, UI_SCREEN_MENU);
+}
+
+static void sched_btn_cb(lv_event_t *e)
+{
+    (void)e;
+    ui_nav_start_aa_scheduled_button(s_sched_btn_action);
 }
 
 static void layout_ampm(tod_clock_t *clock)
@@ -161,6 +176,71 @@ static void refresh_clock(tod_clock_t *clock)
     layout_ampm(clock);
 }
 
+static void create_scheduled_button(lv_obj_t *scr)
+{
+    const ui_theme_t *t = ui_theme_get();
+    const int x_wf = (UI_DISP - SCHED_BTN_D_WF) / 2;
+    int x = 0;
+    int y = 0;
+
+    ui_layout_screen_pos_from_wf(scr, x_wf, SCHED_BTN_TOP_WF, &x, &y);
+
+    s_sched_btn = lv_button_create(scr);
+    lv_obj_set_size(s_sched_btn, SCHED_BTN_D_WF, SCHED_BTN_D_WF);
+    lv_obj_set_pos(s_sched_btn, x, y);
+    lv_obj_set_style_radius(s_sched_btn, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_color(s_sched_btn, t->ring, 0);
+    lv_obj_set_style_bg_opa(s_sched_btn, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(s_sched_btn, 0, 0);
+    lv_obj_set_style_shadow_width(s_sched_btn, 0, 0);
+    lv_obj_set_style_pad_all(s_sched_btn, 12, 0);
+    lv_obj_add_flag(s_sched_btn, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_event_cb(s_sched_btn, sched_btn_cb, LV_EVENT_CLICKED, NULL);
+
+    s_sched_btn_lbl = lv_label_create(s_sched_btn);
+    lv_label_set_text(s_sched_btn_lbl, "");
+    lv_label_set_long_mode(s_sched_btn_lbl, LV_LABEL_LONG_WRAP);
+    lv_obj_set_width(s_sched_btn_lbl, SCHED_BTN_D_WF - 24);
+    lv_obj_set_style_text_color(s_sched_btn_lbl, t->white, 0);
+    lv_obj_set_style_text_font(s_sched_btn_lbl, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_align(s_sched_btn_lbl, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_center(s_sched_btn_lbl);
+}
+
+void ui_screen_tod_refresh_scheduled_button(void)
+{
+    if (s_sched_btn == NULL) {
+        return;
+    }
+
+    const app_scheduled_button_t *btn = NULL;
+    if (s_menu_idle_visible && !s_showing_dim) {
+        btn = app_scheduled_button_active();
+    }
+
+    if (btn == NULL) {
+        lv_obj_add_flag(s_sched_btn, LV_OBJ_FLAG_HIDDEN);
+        return;
+    }
+
+    const char *label = app_scheduled_button_label(btn->action);
+    if (label == NULL) {
+        lv_obj_add_flag(s_sched_btn, LV_OBJ_FLAG_HIDDEN);
+        return;
+    }
+
+    s_sched_btn_action = btn->action;
+    if (s_sched_btn_lbl != NULL) {
+        if (btn->action == APP_SCHEDULE_ACTION_START_WIND_DOWN) {
+            lv_label_set_text(s_sched_btn_lbl, "Start\nWind Down");
+        } else {
+            lv_label_set_text(s_sched_btn_lbl, label);
+        }
+    }
+    lv_obj_remove_flag(s_sched_btn, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_move_foreground(s_sched_btn);
+}
+
 static void build_screen(lv_obj_t **scr, lv_obj_t **bg, tod_clock_t *clock, bool dim)
 {
     *scr = ui_widgets_create_screen_no_ring();
@@ -176,6 +256,7 @@ static void build_screen(lv_obj_t **scr, lv_obj_t **bg, tod_clock_t *clock, bool
             ui_wedge_bind(s_menu_wedge_bright, UI_WEDGE_MENU, menu_btn_cb, NULL);
             ui_wedge_set_label(s_menu_wedge_bright, "Menu");
         }
+        create_scheduled_button(*scr);
     }
 
     if (*bg != NULL) {
@@ -183,6 +264,9 @@ static void build_screen(lv_obj_t **scr, lv_obj_t **bg, tod_clock_t *clock, bool
     }
     if (clock->row != NULL) {
         lv_obj_move_foreground(clock->row);
+    }
+    if (!dim && s_sched_btn != NULL) {
+        lv_obj_move_foreground(s_sched_btn);
     }
 }
 
@@ -200,13 +284,16 @@ static void apply_mode(bool dim)
     refresh_clock(&s_clock_dim);
 
     s_showing_dim = dim;
+    ui_screen_tod_refresh_scheduled_button();
 }
 
 void ui_screen_tod_set_menu_visible(bool visible)
 {
+    s_menu_idle_visible = visible;
     if (s_menu_wedge_bright != NULL) {
         ui_wedge_set_visible(s_menu_wedge_bright, visible);
     }
+    ui_screen_tod_refresh_scheduled_button();
 }
 
 void ui_screen_tod_build(lv_obj_t *screens[UI_SCREEN_COUNT])
@@ -227,6 +314,7 @@ void ui_screen_tod_tick(void)
 {
     tod_clock_t *clock = s_showing_dim ? &s_clock_dim : &s_clock_bright;
     refresh_clock(clock);
+    ui_screen_tod_refresh_scheduled_button();
 }
 
 static void apply_theme_to_clock(tod_clock_t *clock)
@@ -244,6 +332,8 @@ static void apply_theme_to_clock(tod_clock_t *clock)
 
 void ui_screen_tod_apply_theme(void)
 {
+    const ui_theme_t *t = ui_theme_get();
+
     if (s_scr_bright != NULL) {
         ui_widgets_style_circle_panel_no_ring(s_scr_bright);
     }
@@ -254,6 +344,12 @@ void ui_screen_tod_apply_theme(void)
     apply_theme_to_clock(&s_clock_dim);
     if (s_menu_wedge_bright != NULL) {
         ui_wedge_refresh_theme(s_menu_wedge_bright);
+    }
+    if (s_sched_btn != NULL) {
+        lv_obj_set_style_bg_color(s_sched_btn, t->ring, 0);
+    }
+    if (s_sched_btn_lbl != NULL) {
+        lv_obj_set_style_text_color(s_sched_btn_lbl, t->white, 0);
     }
     apply_mode(s_showing_dim);
 }

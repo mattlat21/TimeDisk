@@ -214,6 +214,7 @@ static void panel_cancel_cb(lv_event_t *e)
         s_draft.sleep_sec = s_saved.sleep_sec;
         s_draft.rest_sec = s_saved.rest_sec;
         ui_settings_schedule_events_restore_saved();
+        ui_settings_scheduled_buttons_restore_saved();
         ui_settings_schedule_sync_from_draft();
         break;
     case PANEL_TIMEOUTS:

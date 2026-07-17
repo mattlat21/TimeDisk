@@ -44,6 +44,7 @@ static const char *TAG = "app_nvs";
 #define KEY_SLEEP               "sleep_sec"    /* uint32 sleep_sec */
 #define KEY_REST                "rest_sec"     /* uint32 rest_sec */
 #define KEY_SCHED_EVTS          "sched_evts"   /* blob   schedule_events[] + count */
+#define KEY_SCHED_BTNS          "sched_btns"   /* blob   scheduled_buttons[] + count */
 #define KEY_AA_METHODS          "aa_methods"   /* uint8  aa_methods */
 #define KEY_AA_PIN              "aa_pin"       /* string aa_pin */
 #define KEY_MQTT_EN             "mqtt_en"      /* uint8  mqtt_enabled */
@@ -158,6 +159,12 @@ typedef struct {
     uint8_t reserved[3];
     app_schedule_event_t entries[APP_SCHEDULE_EVENT_MAX];
 } schedule_events_nvs_blob_t;
+
+typedef struct {
+    uint8_t count;
+    uint8_t reserved[3];
+    app_scheduled_button_t entries[APP_SCHEDULED_BUTTON_MAX];
+} scheduled_buttons_nvs_blob_t;
 
 static void sanitize_wifi_networks(app_config_t *cfg)
 {
@@ -284,6 +291,44 @@ static esp_err_t save_schedule_events(nvs_handle_t h, const app_config_t *cfg)
     return nvs_set_blob(h, KEY_SCHED_EVTS, &blob, sizeof(blob));
 }
 
+static esp_err_t load_scheduled_buttons(nvs_handle_t h, app_config_t *cfg)
+{
+    scheduled_buttons_nvs_blob_t blob;
+    size_t len = sizeof(blob);
+    esp_err_t err = nvs_get_blob(h, KEY_SCHED_BTNS, &blob, &len);
+    if (err == ESP_ERR_NVS_NOT_FOUND) {
+        cfg->scheduled_button_count = 0;
+        return ESP_OK;
+    }
+    if (err != ESP_OK) {
+        return err;
+    }
+    if (len < sizeof(uint8_t)) {
+        return ESP_ERR_INVALID_SIZE;
+    }
+
+    cfg->scheduled_button_count = blob.count;
+    if (cfg->scheduled_button_count > APP_SCHEDULED_BUTTON_MAX) {
+        cfg->scheduled_button_count = APP_SCHEDULED_BUTTON_MAX;
+    }
+    if (cfg->scheduled_button_count > 0) {
+        memcpy(cfg->scheduled_buttons, blob.entries,
+               (size_t)cfg->scheduled_button_count * sizeof(app_scheduled_button_t));
+    }
+    return ESP_OK;
+}
+
+static esp_err_t save_scheduled_buttons(nvs_handle_t h, const app_config_t *cfg)
+{
+    scheduled_buttons_nvs_blob_t blob = {0};
+    blob.count = cfg->scheduled_button_count;
+    if (blob.count > 0) {
+        memcpy(blob.entries, cfg->scheduled_buttons,
+               (size_t)blob.count * sizeof(app_scheduled_button_t));
+    }
+    return nvs_set_blob(h, KEY_SCHED_BTNS, &blob, sizeof(blob));
+}
+
 static void sanitize_loaded_config(app_config_t *cfg)
 {
     sanitize_wifi_networks(cfg);
@@ -330,6 +375,23 @@ static void sanitize_loaded_config(app_config_t *cfg)
     }
 
     app_config_schedule_events_sort_buf(cfg->schedule_events, cfg->schedule_event_count);
+
+    if (cfg->scheduled_button_count > APP_SCHEDULED_BUTTON_MAX) {
+        ESP_LOGW(TAG, "scheduled_button_count %u out of range, clamping",
+                 (unsigned)cfg->scheduled_button_count);
+        cfg->scheduled_button_count = APP_SCHEDULED_BUTTON_MAX;
+    }
+    for (uint8_t i = 0; i < cfg->scheduled_button_count; i++) {
+        app_scheduled_button_t *btn = &cfg->scheduled_buttons[i];
+        btn->show_modes &= (uint8_t)APP_MODE_BIT_ALL;
+        if (btn->start_min >= 24U * 60U || btn->end_min >= 24U * 60U ||
+            btn->action > APP_SCHEDULE_ACTION_START_WIND_DOWN ||
+            btn->show_modes == 0) {
+            ESP_LOGW(TAG, "invalid scheduled button at %u, truncating list", (unsigned)i);
+            cfg->scheduled_button_count = i;
+            break;
+        }
+    }
 }
 
 esp_err_t app_nvs_init(void)
@@ -510,6 +572,11 @@ esp_err_t app_nvs_load(void)
     }
 
     err = load_schedule_events(h, cfg);
+    if (err != ESP_OK) {
+        goto out;
+    }
+
+    err = load_scheduled_buttons(h, cfg);
     if (err != ESP_OK) {
         goto out;
     }
@@ -753,6 +820,11 @@ esp_err_t app_nvs_save_schedule(void)
         nvs_close(h);
         return err;
     }
+    err = save_scheduled_buttons(h, cfg);
+    if (err != ESP_OK) {
+        nvs_close(h);
+        return err;
+    }
     err = touch_cfg_ver(h);
     if (err == ESP_OK) {
         err = commit(h);
@@ -877,6 +949,11 @@ esp_err_t app_nvs_save_all(void)
     }
 
     err = save_schedule_events(h, cfg);
+    if (err != ESP_OK) {
+        goto out;
+    }
+
+    err = save_scheduled_buttons(h, cfg);
     if (err != ESP_OK) {
         goto out;
     }

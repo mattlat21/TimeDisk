@@ -217,6 +217,22 @@ Wind-down subtraction keeps the rest-end clock time consistent: e.g. rest gross 
 
 Edits **net** `wind_down_sec`, `sleep_sec`, and `rest_sec` directly (no gross/end-time wizard semantics).
 
+Also manages **wall-clock schedule events** (`schedule_events[]`, NVS blob `sched_evts`) and **scheduled TOD buttons** (`scheduled_buttons[]`, NVS blob `sched_btns`).
+
+### Scheduled buttons (TOD)
+
+Optional circle buttons on Time of Day (bright), top-center. Max **8** (`APP_SCHEDULED_BUTTON_MAX`). First matching entry wins.
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `start_min` | uint16 | Local minutes since midnight (0–1439) |
+| `end_min` | uint16 | End of window; `< start_min` = overnight; equal = all day |
+| `action` | uint8 | Same as schedule actions: Wake / Start Sleep / Start Rest / Start Wind Down |
+| `show_modes` | uint8 | Bitmask `(1 << app_mode_t)` — button only while `current_mode` is set |
+| `enabled` | bool | Master enable |
+
+Visibility also follows the TOD menu idle hide (`timeout_tod_menu_sec`). Press starts the mode immediately with a **24 hour** default duration (no adult auth, no duration wizard). Wake has no duration.
+
 ### Screen flow label mapping
 
 Wizard screen names in [screen_flow.md](screen_flow.md). Logical field names:

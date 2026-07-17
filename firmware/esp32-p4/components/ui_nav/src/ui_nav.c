@@ -625,6 +625,9 @@ static void aa_begin_steps(void)
     }
 }
 
+/** Default segment length when a scheduled TOD button starts a mode (matches web schedule default). */
+#define SCHEDULED_BUTTON_DEFAULT_DUR_SEC 86400U
+
 void ui_nav_start_aa(ui_screen_id_t entry, ui_screen_id_t on_pass)
 {
     const app_config_t *cfg = app_config_get();
@@ -660,6 +663,18 @@ void ui_nav_start_aa(ui_screen_id_t entry, ui_screen_id_t on_pass)
         ui_screen_aa_update_maths_labels(s_aa.maths_a, s_aa.maths_b);
         ui_screen_aa_show_maths();
     }
+}
+
+void ui_nav_start_aa_scheduled_button(uint8_t action)
+{
+    if (action > APP_SCHEDULE_ACTION_START_WIND_DOWN) {
+        return;
+    }
+
+    /* Start the mode immediately — no adult auth, no duration wizard. */
+    const uint32_t duration_sec =
+        (action == APP_SCHEDULE_ACTION_WAKE) ? 0 : SCHEDULED_BUTTON_DEFAULT_DUR_SEC;
+    ui_nav_apply_mode_action(action, duration_sec);
 }
 
 void ui_nav_aa_pass(void)

@@ -41,6 +41,7 @@ void ui_screen_loading_set_menu_mode(bool menu);
 void ui_screen_tod_on_show(bool dim);
 void ui_screen_tod_tick(void);
 void ui_screen_tod_set_menu_visible(bool visible);
+void ui_screen_tod_refresh_scheduled_button(void);
 void ui_screen_aa_on_show(void);
 void ui_screen_aa_show_pin(void);
 void ui_screen_aa_show_maths(void);

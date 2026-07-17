@@ -543,7 +543,7 @@ void ui_settings_schedule_events_close(void)
     }
 }
 
-bool ui_settings_schedule_on_cancel(void)
+bool ui_settings_schedule_events_try_cancel(void)
 {
     if (!s_events_ui_open) {
         return false;

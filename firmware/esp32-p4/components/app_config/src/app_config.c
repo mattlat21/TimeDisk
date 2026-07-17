@@ -99,6 +99,7 @@ void app_config_apply_defaults(void)
 
     s_cfg.wifi_network_count = 0;
     s_cfg.schedule_event_count = 0;
+    s_cfg.scheduled_button_count = 0;
     s_cfg.timezone_set = false;
     s_cfg.timezone_id[0] = '\0';
     s_cfg.theme_set = false;
@@ -331,6 +332,89 @@ esp_err_t app_config_schedule_event_delete(int index)
            sizeof(app_schedule_event_t));
     s_cfg.schedule_event_count--;
     app_config_schedule_events_sort();
+    return ESP_OK;
+}
+
+int app_config_scheduled_button_count(void)
+{
+    return (int)s_cfg.scheduled_button_count;
+}
+
+const app_scheduled_button_t *app_config_scheduled_button_get(int index)
+{
+    if (index < 0 || index >= (int)s_cfg.scheduled_button_count) {
+        return NULL;
+    }
+    return &s_cfg.scheduled_buttons[index];
+}
+
+void app_config_scheduled_buttons_copy(app_scheduled_button_t *dst, uint8_t *dst_count,
+                                       const app_scheduled_button_t *src, uint8_t src_count)
+{
+    if (dst == NULL || dst_count == NULL) {
+        return;
+    }
+    if (src_count > APP_SCHEDULED_BUTTON_MAX) {
+        src_count = APP_SCHEDULED_BUTTON_MAX;
+    }
+    *dst_count = src_count;
+    if (src_count > 0 && src != NULL) {
+        memcpy(dst, src, (size_t)src_count * sizeof(app_scheduled_button_t));
+    }
+}
+
+static esp_err_t scheduled_button_sanitize(const app_scheduled_button_t *button)
+{
+    if (button == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (button->start_min >= 24U * 60U || button->end_min >= 24U * 60U) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (button->action > APP_SCHEDULE_ACTION_START_WIND_DOWN) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if ((button->show_modes & (uint8_t)APP_MODE_BIT_ALL) == 0) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    return ESP_OK;
+}
+
+esp_err_t app_config_scheduled_button_set(int index, const app_scheduled_button_t *button)
+{
+    esp_err_t err = scheduled_button_sanitize(button);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    if (index < 0 || index > (int)s_cfg.scheduled_button_count) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (index == (int)s_cfg.scheduled_button_count) {
+        if (s_cfg.scheduled_button_count >= APP_SCHEDULED_BUTTON_MAX) {
+            return ESP_ERR_NO_MEM;
+        }
+        index = (int)s_cfg.scheduled_button_count;
+        s_cfg.scheduled_button_count++;
+    }
+
+    s_cfg.scheduled_buttons[index] = *button;
+    s_cfg.scheduled_buttons[index].show_modes &= (uint8_t)APP_MODE_BIT_ALL;
+    return ESP_OK;
+}
+
+esp_err_t app_config_scheduled_button_delete(int index)
+{
+    if (index < 0 || index >= (int)s_cfg.scheduled_button_count) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    for (int i = index; i < (int)s_cfg.scheduled_button_count - 1; i++) {
+        s_cfg.scheduled_buttons[i] = s_cfg.scheduled_buttons[i + 1];
+    }
+    memset(&s_cfg.scheduled_buttons[s_cfg.scheduled_button_count - 1], 0,
+           sizeof(app_scheduled_button_t));
+    s_cfg.scheduled_button_count--;
     return ESP_OK;
 }
 

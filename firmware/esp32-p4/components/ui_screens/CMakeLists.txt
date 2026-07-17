@@ -18,6 +18,7 @@ idf_component_register(
         "src/ui_settings_timezone.c"
         "src/ui_settings_schedule.c"
         "src/ui_settings_schedule_events.c"
+        "src/ui_settings_scheduled_buttons.c"
         "src/ui_settings_timeouts.c"
         "src/ui_settings_display.c"
         "src/ui_settings_adult_auth.c"

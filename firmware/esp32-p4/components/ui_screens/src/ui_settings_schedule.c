@@ -1,6 +1,6 @@
 /**
  * @file ui_settings_schedule.c
- * @brief Settings -> Schedule sub-panel (cycle durations + scheduled events).
+ * @brief Settings -> Schedule sub-panel (cycle durations + scheduled events/buttons).
  */
 
 #include "ui_screen_settings_internal.h"
@@ -13,8 +13,9 @@
 #include <string.h>
 
 #define SCHED_ROW_Y0_WF      120
-#define SCHED_ROW_STEP_WF    140
-#define SCHED_EVENTS_Y_WF    520
+#define SCHED_ROW_STEP_WF    130
+#define SCHED_EVENTS_Y_WF    500
+#define SCHED_BUTTONS_Y_WF   556
 #define SCHED_BTN_W          248
 #define SCHED_BTN_H          44
 #define SCHED_BTN_RADIUS     16
@@ -22,6 +23,7 @@
 static lv_obj_t *s_panel;
 static lv_obj_t *s_panel_title;
 static lv_obj_t *s_events_btn;
+static lv_obj_t *s_buttons_btn;
 static lv_obj_t *s_row_labels[3];
 static ui_duration_editor_bundle_t s_sched_bundles[3];
 static uint32_t s_sched_vals[3];
@@ -46,6 +48,13 @@ void ui_settings_schedule_hide_durations(bool hide)
             lv_obj_clear_flag(s_events_btn, LV_OBJ_FLAG_HIDDEN);
         }
     }
+    if (s_buttons_btn != NULL) {
+        if (hide) {
+            lv_obj_add_flag(s_buttons_btn, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_clear_flag(s_buttons_btn, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
 }
 
 void ui_settings_schedule_sync_from_draft(void)
@@ -58,12 +67,20 @@ void ui_settings_schedule_sync_from_draft(void)
         ui_duration_editor_refresh(&s_sched_bundles[i].editor, &s_sched_bundles[i].cfg);
     }
     ui_settings_schedule_events_close();
+    ui_settings_scheduled_buttons_close();
 }
 
 static void schedule_events_btn_cb(lv_event_t *e)
 {
     (void)e;
     ui_settings_schedule_events_open();
+    ui_settings_idle_cb(NULL);
+}
+
+static void schedule_buttons_btn_cb(lv_event_t *e)
+{
+    (void)e;
+    ui_settings_scheduled_buttons_open();
     ui_settings_idle_cb(NULL);
 }
 
@@ -86,6 +103,17 @@ static void schedule_save_cb(lv_event_t *e)
 
     app_config_save_schedule();
     ui_settings_show_panel(PANEL_HUB);
+}
+
+bool ui_settings_schedule_on_cancel(void)
+{
+    if (ui_settings_scheduled_buttons_try_cancel()) {
+        return true;
+    }
+    if (ui_settings_schedule_events_try_cancel()) {
+        return true;
+    }
+    return false;
 }
 
 lv_obj_t *ui_settings_schedule_build(void)
@@ -135,7 +163,20 @@ lv_obj_t *ui_settings_schedule_build(void)
     lv_obj_center(evt_lbl);
     lv_obj_add_event_cb(s_events_btn, schedule_events_btn_cb, LV_EVENT_CLICKED, NULL);
 
+    s_buttons_btn = lv_button_create(s_panel);
+    lv_obj_set_size(s_buttons_btn, SCHED_BTN_W, SCHED_BTN_H);
+    lv_obj_set_style_radius(s_buttons_btn, SCHED_BTN_RADIUS, 0);
+    lv_obj_set_style_bg_color(s_buttons_btn, t->menu_petal, 0);
+    lv_obj_align(s_buttons_btn, LV_ALIGN_TOP_MID, 0, ui_settings_wf_y(s_panel, SCHED_BUTTONS_Y_WF));
+    lv_obj_t *btn_lbl = lv_label_create(s_buttons_btn);
+    lv_label_set_text(btn_lbl, "Scheduled buttons");
+    lv_obj_set_style_text_color(btn_lbl, t->white, 0);
+    lv_obj_set_style_text_font(btn_lbl, &lv_font_montserrat_18, 0);
+    lv_obj_center(btn_lbl);
+    lv_obj_add_event_cb(s_buttons_btn, schedule_buttons_btn_cb, LV_EVENT_CLICKED, NULL);
+
     ui_settings_schedule_events_init(s_panel, s_panel_title);
+    ui_settings_scheduled_buttons_init(s_panel, s_panel_title);
     ui_settings_attach_panel_wedges(s_panel, PANEL_SCHEDULE, schedule_save_cb);
     return s_panel;
 }

@@ -653,6 +653,211 @@ static esp_err_t api_schedule_events_delete_post(httpd_req_t *req)
     return send_json_ok(req);
 }
 
+static const char *schedule_mode_name(app_mode_t mode)
+{
+    switch (mode) {
+    case APP_MODE_WIND_DOWN:
+        return "wind_down";
+    case APP_MODE_SLEEP:
+        return "sleep";
+    case APP_MODE_REST:
+        return "rest";
+    case APP_MODE_WAKE:
+    default:
+        return "wake";
+    }
+}
+
+static bool schedule_mode_bit_from_name(const char *name, uint8_t *bit_out)
+{
+    if (name == NULL || bit_out == NULL) {
+        return false;
+    }
+    if (strcmp(name, "wake") == 0) {
+        *bit_out = (uint8_t)APP_MODE_BIT(APP_MODE_WAKE);
+        return true;
+    }
+    if (strcmp(name, "wind_down") == 0) {
+        *bit_out = (uint8_t)APP_MODE_BIT(APP_MODE_WIND_DOWN);
+        return true;
+    }
+    if (strcmp(name, "sleep") == 0) {
+        *bit_out = (uint8_t)APP_MODE_BIT(APP_MODE_SLEEP);
+        return true;
+    }
+    if (strcmp(name, "rest") == 0) {
+        *bit_out = (uint8_t)APP_MODE_BIT(APP_MODE_REST);
+        return true;
+    }
+    return false;
+}
+
+static uint8_t schedule_show_modes_from_json(const cJSON *val)
+{
+    if (cJSON_IsNumber(val)) {
+        return (uint8_t)((unsigned)val->valuedouble & (unsigned)APP_MODE_BIT_ALL);
+    }
+    if (!cJSON_IsArray(val)) {
+        return 0;
+    }
+
+    uint8_t bits = 0;
+    const cJSON *item = NULL;
+    cJSON_ArrayForEach(item, val) {
+        uint8_t bit = 0;
+        if (cJSON_IsString(item) && schedule_mode_bit_from_name(item->valuestring, &bit)) {
+            bits |= bit;
+        } else if (cJSON_IsNumber(item)) {
+            const int mode = (int)item->valuedouble;
+            if (mode >= APP_MODE_WAKE && mode <= APP_MODE_REST) {
+                bits |= (uint8_t)APP_MODE_BIT(mode);
+            }
+        }
+    }
+    return bits;
+}
+
+static bool scheduled_button_from_json(const cJSON *root, app_scheduled_button_t *button_out)
+{
+    if (root == NULL || button_out == NULL || !cJSON_IsObject(root)) {
+        return false;
+    }
+
+    app_scheduled_button_t btn = {0};
+    const cJSON *start_min = cJSON_GetObjectItem(root, "start_min");
+    const cJSON *end_min = cJSON_GetObjectItem(root, "end_min");
+    const cJSON *action = cJSON_GetObjectItem(root, "action");
+    const cJSON *enabled = cJSON_GetObjectItem(root, "enabled");
+    const cJSON *show_modes = cJSON_GetObjectItem(root, "show_modes");
+
+    if (!cJSON_IsNumber(start_min) || start_min->valuedouble < 0 || start_min->valuedouble >= 24 * 60) {
+        return false;
+    }
+    if (!cJSON_IsNumber(end_min) || end_min->valuedouble < 0 || end_min->valuedouble >= 24 * 60) {
+        return false;
+    }
+    if (!schedule_action_from_json(action, &btn.action)) {
+        return false;
+    }
+
+    btn.start_min = (uint16_t)start_min->valuedouble;
+    btn.end_min = (uint16_t)end_min->valuedouble;
+    btn.enabled = !cJSON_IsBool(enabled) || cJSON_IsTrue(enabled);
+    btn.show_modes = schedule_show_modes_from_json(show_modes);
+    if (btn.show_modes == 0) {
+        btn.show_modes = (uint8_t)APP_MODE_BIT_ALL;
+    }
+    *button_out = btn;
+    return true;
+}
+
+static esp_err_t api_schedule_buttons_get(httpd_req_t *req)
+{
+    cJSON *root = cJSON_CreateObject();
+    if (root == NULL) {
+        return ESP_FAIL;
+    }
+
+    cJSON *buttons = cJSON_CreateArray();
+    const app_config_t *cfg = app_config_get();
+    for (int i = 0; i < (int)cfg->scheduled_button_count; i++) {
+        const app_scheduled_button_t *btn = &cfg->scheduled_buttons[i];
+        cJSON *item = cJSON_CreateObject();
+        if (item == NULL) {
+            continue;
+        }
+        cJSON_AddNumberToObject(item, "index", i);
+        cJSON_AddNumberToObject(item, "start_min", btn->start_min);
+        cJSON_AddNumberToObject(item, "end_min", btn->end_min);
+        cJSON_AddStringToObject(item, "action", schedule_action_name(btn->action));
+        cJSON_AddBoolToObject(item, "enabled", btn->enabled);
+
+        cJSON *modes = cJSON_CreateArray();
+        for (int mode = APP_MODE_WAKE; mode <= APP_MODE_REST; mode++) {
+            if ((btn->show_modes & (uint8_t)APP_MODE_BIT(mode)) != 0) {
+                cJSON_AddItemToArray(modes, cJSON_CreateString(schedule_mode_name((app_mode_t)mode)));
+            }
+        }
+        cJSON_AddItemToObject(item, "show_modes", modes);
+        cJSON_AddNumberToObject(item, "show_modes_mask", btn->show_modes);
+        cJSON_AddItemToArray(buttons, item);
+    }
+    cJSON_AddItemToObject(root, "buttons", buttons);
+    cJSON_AddNumberToObject(root, "count", cfg->scheduled_button_count);
+    char *json = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    return send_json(req, json);
+}
+
+static esp_err_t api_schedule_buttons_add_post(httpd_req_t *req)
+{
+    char body[WEB_POST_MAX];
+    if (read_body(req, body, sizeof(body)) != ESP_OK) {
+        return ESP_FAIL;
+    }
+
+    cJSON *root = cJSON_Parse(body);
+    if (root == NULL) {
+        return ESP_FAIL;
+    }
+
+    app_scheduled_button_t btn;
+    if (scheduled_button_from_json(root, &btn)) {
+        int index = app_config_scheduled_button_count();
+        if (app_config_scheduled_button_set(index, &btn) == ESP_OK) {
+            app_config_save_schedule();
+        }
+    }
+
+    cJSON_Delete(root);
+    return send_json_ok(req);
+}
+
+static esp_err_t api_schedule_buttons_edit_post(httpd_req_t *req)
+{
+    char body[WEB_POST_MAX];
+    if (read_body(req, body, sizeof(body)) != ESP_OK) {
+        return ESP_FAIL;
+    }
+
+    cJSON *root = cJSON_Parse(body);
+    if (root == NULL) {
+        return ESP_FAIL;
+    }
+
+    const cJSON *index_j = cJSON_GetObjectItem(root, "index");
+    app_scheduled_button_t btn;
+    if (cJSON_IsNumber(index_j) && scheduled_button_from_json(root, &btn)) {
+        app_config_scheduled_button_set((int)index_j->valuedouble, &btn);
+        app_config_save_schedule();
+    }
+
+    cJSON_Delete(root);
+    return send_json_ok(req);
+}
+
+static esp_err_t api_schedule_buttons_delete_post(httpd_req_t *req)
+{
+    char body[WEB_POST_MAX];
+    if (read_body(req, body, sizeof(body)) != ESP_OK) {
+        return ESP_FAIL;
+    }
+
+    cJSON *root = cJSON_Parse(body);
+    if (root == NULL) {
+        return ESP_FAIL;
+    }
+
+    const cJSON *index = cJSON_GetObjectItem(root, "index");
+    if (cJSON_IsNumber(index)) {
+        app_config_scheduled_button_delete((int)index->valuedouble);
+        app_config_save_schedule();
+    }
+
+    cJSON_Delete(root);
+    return send_json_ok(req);
+}
+
 static void reboot_task(void *arg)
 {
     (void)arg;
@@ -1037,6 +1242,10 @@ esp_err_t app_network_web_ui_register(httpd_handle_t server)
         {.uri = "/api/schedule/events", .method = HTTP_POST, .handler = api_schedule_events_add_post},
         {.uri = "/api/schedule/events/edit", .method = HTTP_POST, .handler = api_schedule_events_edit_post},
         {.uri = "/api/schedule/events/delete", .method = HTTP_POST, .handler = api_schedule_events_delete_post},
+        {.uri = "/api/schedule/buttons", .method = HTTP_GET, .handler = api_schedule_buttons_get},
+        {.uri = "/api/schedule/buttons", .method = HTTP_POST, .handler = api_schedule_buttons_add_post},
+        {.uri = "/api/schedule/buttons/edit", .method = HTTP_POST, .handler = api_schedule_buttons_edit_post},
+        {.uri = "/api/schedule/buttons/delete", .method = HTTP_POST, .handler = api_schedule_buttons_delete_post},
         {.uri = "/api/reboot", .method = HTTP_POST, .handler = api_reboot_post},
         {.uri = "/api/update", .method = HTTP_GET, .handler = api_update_get},
         {.uri = "/api/update/start", .method = HTTP_POST, .handler = api_update_start_post},

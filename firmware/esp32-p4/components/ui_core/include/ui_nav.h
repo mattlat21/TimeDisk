@@ -67,6 +67,8 @@ aa_session_t *ui_nav_aa_session(void);
 void ui_nav_reset_idle_timer(void);
 void ui_nav_aa_touch(void);
 void ui_nav_start_aa(ui_screen_id_t entry, ui_screen_id_t on_pass);
+/** Start the mode immediately (24h default for non-wake; no AA, no duration wizard). */
+void ui_nav_start_aa_scheduled_button(uint8_t action);
 void ui_nav_aa_pass(void);
 void ui_nav_aa_cancel(void);
 void ui_nav_aa_new_maths(void);
