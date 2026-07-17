@@ -94,6 +94,7 @@ void app_network_web_ui_json_add_config(cJSON *root, const app_config_t *cfg)
     cJSON_AddNumberToObject(root, "sleep_sec", cfg->sleep_sec);
     cJSON_AddNumberToObject(root, "rest_sec", cfg->rest_sec);
     cJSON_AddNumberToObject(root, "aa_methods", cfg->aa_methods);
+    cJSON_AddStringToObject(root, "aa_pin", cfg->aa_pin);
     cJSON_AddBoolToObject(root, "aa_pin_set", cfg->aa_pin[0] != '\0');
     cJSON_AddBoolToObject(root, "mqtt_enabled", cfg->mqtt_enabled);
     cJSON_AddStringToObject(root, "mqtt_host", cfg->mqtt_host);
