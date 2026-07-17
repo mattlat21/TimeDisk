@@ -498,7 +498,7 @@ static bool schedule_action_from_json(const cJSON *val, uint8_t *action_out)
     }
     if (cJSON_IsNumber(val)) {
         const int n = (int)val->valuedouble;
-        if (n >= APP_SCHEDULE_ACTION_WAKE && n <= APP_SCHEDULE_ACTION_START_REST) {
+        if (n >= APP_SCHEDULE_ACTION_WAKE && n <= APP_SCHEDULE_ACTION_START_WIND_DOWN) {
             *action_out = (uint8_t)n;
             return true;
         }

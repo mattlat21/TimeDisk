@@ -322,7 +322,7 @@ static void sanitize_loaded_config(app_config_t *cfg)
     }
     for (uint8_t i = 0; i < cfg->schedule_event_count; i++) {
         app_schedule_event_t *ev = &cfg->schedule_events[i];
-        if (ev->time_min >= 24U * 60U || ev->action > APP_SCHEDULE_ACTION_START_REST) {
+        if (ev->time_min >= 24U * 60U || ev->action > APP_SCHEDULE_ACTION_START_WIND_DOWN) {
             ESP_LOGW(TAG, "invalid schedule event at %u, truncating list", (unsigned)i);
             cfg->schedule_event_count = i;
             break;

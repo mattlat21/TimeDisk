@@ -1082,6 +1082,12 @@ void ui_nav_apply_mode_action(uint8_t action, uint32_t duration_sec)
             ui_nav_go(UI_SCREEN_TOD_BRIGHT);
         }
         break;
+    case APP_SCHEDULE_ACTION_START_WIND_DOWN: {
+        const uint32_t wind_down_sec = duration_sec > 0 ? duration_sec : cfg->wind_down_sec;
+        mode_engine_start_cycle_durations(wind_down_sec, 0, 0);
+        ui_nav_go(UI_SCREEN_TOD_BRIGHT);
+        break;
+    }
     case APP_SCHEDULE_ACTION_START_SLEEP: {
         const uint32_t sleep_sec = duration_sec > 0 ? duration_sec : cfg->sleep_sec;
         mode_engine_start_cycle_durations(cfg->wind_down_sec, sleep_sec, cfg->rest_sec);

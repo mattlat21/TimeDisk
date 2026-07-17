@@ -289,7 +289,7 @@ static esp_err_t schedule_event_sanitize(const app_schedule_event_t *event)
     if (event->time_min >= 24U * 60U) {
         return ESP_ERR_INVALID_ARG;
     }
-    if (event->action > APP_SCHEDULE_ACTION_START_REST) {
+    if (event->action > APP_SCHEDULE_ACTION_START_WIND_DOWN) {
         return ESP_ERR_INVALID_ARG;
     }
     return ESP_OK;
