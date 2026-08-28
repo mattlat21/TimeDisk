@@ -14,6 +14,8 @@
 #include "app_config.h"
 #include "app_scheduled_button.h"
 
+#include <time.h>
+
 #define TOD_MODE_COUNT 4
 
 /** Top-center scheduled action button (wireframe coords on 720 circle). */
@@ -40,6 +42,9 @@ static bool s_menu_idle_visible = true;
 static tod_clock_t s_clock_bright;
 static tod_clock_t s_clock_dim;
 static bool s_showing_dim;
+/** Cached local minute (hour*60+min), or -1 when time is invalid / unknown. */
+static int s_last_clock_min = -1;
+static bool s_last_time_valid;
 
 static const char *mode_image(app_mode_t mode)
 {
@@ -298,6 +303,21 @@ static void build_screen(lv_obj_t **scr, lv_obj_t **bg, tod_clock_t *clock, bool
     }
 }
 
+static void note_clock_minute(void)
+{
+    const app_runtime_t *rt = app_runtime_get();
+    s_last_time_valid = rt->time_valid;
+    if (!s_last_time_valid) {
+        s_last_clock_min = -1;
+        return;
+    }
+
+    const time_t now = time(NULL);
+    struct tm tm_local;
+    localtime_r(&now, &tm_local);
+    s_last_clock_min = tm_local.tm_hour * 60 + tm_local.tm_min;
+}
+
 static void apply_mode(bool dim)
 {
     app_runtime_t *rt = app_runtime_get();
@@ -313,6 +333,7 @@ static void apply_mode(bool dim)
 
     s_showing_dim = dim;
     ui_screen_tod_refresh_scheduled_button();
+    note_clock_minute();
 }
 
 void ui_screen_tod_set_menu_visible(bool visible)
@@ -340,6 +361,24 @@ void ui_screen_tod_on_show(bool dim)
 
 void ui_screen_tod_tick(void)
 {
+    /* Clock and scheduled button are minute-granular; skip redraw until either changes. */
+    const app_runtime_t *rt = app_runtime_get();
+    const bool valid = rt->time_valid;
+    int cur_min = -1;
+    if (valid) {
+        const time_t now = time(NULL);
+        struct tm tm_local;
+        localtime_r(&now, &tm_local);
+        cur_min = tm_local.tm_hour * 60 + tm_local.tm_min;
+    }
+
+    if (valid == s_last_time_valid && cur_min == s_last_clock_min) {
+        return;
+    }
+
+    s_last_time_valid = valid;
+    s_last_clock_min = cur_min;
+
     tod_clock_t *clock = s_showing_dim ? &s_clock_dim : &s_clock_bright;
     refresh_clock(clock);
     ui_screen_tod_refresh_scheduled_button();
