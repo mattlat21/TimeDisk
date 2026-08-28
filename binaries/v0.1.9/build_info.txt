@@ -1,0 +1,4 @@
+project=TimeDisk
+version=0.1.9
+version_dir=v0.1.9
+built_utc=2026-08-28T08:26:31Z

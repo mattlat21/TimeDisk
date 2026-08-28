@@ -102,6 +102,24 @@ static void spiffs_img_draw_cb(lv_event_t *e)
     ui_spiffs_pixelart_draw(layer, &coords, path);
 }
 
+static void spiffs_img_draw_cb_contain(lv_event_t *e)
+{
+    if (lv_event_get_code(e) != LV_EVENT_DRAW_MAIN) {
+        return;
+    }
+
+    const char *path = lv_obj_get_user_data(lv_event_get_target(e));
+    if (path == NULL || path[0] == '\0') {
+        return;
+    }
+
+    lv_layer_t *layer = lv_event_get_layer(e);
+    lv_obj_t *obj = lv_event_get_target(e);
+    lv_area_t coords;
+    lv_obj_get_coords(obj, &coords);
+    ui_spiffs_pixelart_draw_contain(layer, &coords, path);
+}
+
 static void apply_mode_background(lv_obj_t *bg, char *path_buf, app_mode_t mode)
 {
     if (bg == NULL || path_buf == NULL) {
@@ -259,7 +277,7 @@ static void create_scheduled_button(lv_obj_t *scr)
     lv_obj_set_pos(s_sched_btn_img, 0, 0);
     lv_obj_set_style_bg_opa(s_sched_btn_img, LV_OPA_TRANSP, 0);
     lv_obj_remove_flag(s_sched_btn_img, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_event_cb(s_sched_btn_img, spiffs_img_draw_cb, LV_EVENT_DRAW_MAIN, NULL);
+    lv_obj_add_event_cb(s_sched_btn_img, spiffs_img_draw_cb_contain, LV_EVENT_DRAW_MAIN, NULL);
     snprintf(s_sched_btn_img_path, sizeof(s_sched_btn_img_path), "%s", ui_assets_spiffs_path("tod_wake"));
     lv_obj_set_user_data(s_sched_btn_img, s_sched_btn_img_path);
 

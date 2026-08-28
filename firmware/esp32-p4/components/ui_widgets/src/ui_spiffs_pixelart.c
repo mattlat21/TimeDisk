@@ -147,17 +147,111 @@ static void draw_block_scaled(lv_layer_t *layer, const lv_area_t *dest, const pi
     }
 }
 
-static void draw_file_1x1(lv_layer_t *layer, const lv_area_t *dest, const char *path)
+static bool try_draw_block_scaled(lv_layer_t *layer, const lv_area_t *dest, const char *path)
 {
+    const int32_t dest_w = lv_area_get_width(dest);
+    const int32_t dest_h = lv_area_get_height(dest);
+
+    if (!ui_spiffs_pixelart_is_block_scalable(path, dest_w, dest_h)) {
+        return false;
+    }
+
+    if (strncmp(s_cache.path, path, sizeof(s_cache.path)) != 0 || s_cache.pixels == NULL) {
+        ui_spiffs_pixelart_cache_preload(path);
+    }
+    if (s_cache.pixels == NULL) {
+        return false;
+    }
+
+    draw_block_scaled(layer, dest, &s_cache);
+    return true;
+}
+
+static void draw_file_fill(lv_layer_t *layer, const lv_area_t *dest, const char *path)
+{
+    lv_image_header_t header;
+    if (lv_image_decoder_get_info(path, &header) != LV_RESULT_OK) {
+        return;
+    }
+    if (header.w == 0 || header.h == 0) {
+        return;
+    }
+
+    const int32_t dest_w = lv_area_get_width(dest);
+    const int32_t dest_h = lv_area_get_height(dest);
+    const int32_t scale_x = dest_w * LV_SCALE_NONE / (int32_t)header.w;
+    const int32_t scale_y = dest_h * LV_SCALE_NONE / (int32_t)header.h;
+    if (scale_x <= 0 || scale_y <= 0) {
+        return;
+    }
+
+    /* Source-sized coords; LVGL applies scale_x/y (STRETCH semantics). */
+    lv_area_t img_area = {
+        .x1 = dest->x1,
+        .y1 = dest->y1,
+        .x2 = dest->x1 + (int32_t)header.w - 1,
+        .y2 = dest->y1 + (int32_t)header.h - 1,
+    };
+
     lv_draw_image_dsc_t draw_dsc;
     lv_draw_image_dsc_init(&draw_dsc);
+    draw_dsc.base.layer = layer;
     draw_dsc.src = path;
-    draw_dsc.scale_x = LV_SCALE_NONE;
-    draw_dsc.scale_y = LV_SCALE_NONE;
+    draw_dsc.scale_x = scale_x;
+    draw_dsc.scale_y = scale_y;
     draw_dsc.antialias = false;
-    draw_dsc.image_area = *dest;
+    draw_dsc.pivot.x = 0;
+    draw_dsc.pivot.y = 0;
+    draw_dsc.image_area = img_area;
 
-    lv_draw_image(layer, &draw_dsc, dest);
+    lv_draw_image(layer, &draw_dsc, &img_area);
+}
+
+static void draw_file_contain(lv_layer_t *layer, const lv_area_t *dest, const char *path)
+{
+    lv_image_header_t header;
+    if (lv_image_decoder_get_info(path, &header) != LV_RESULT_OK) {
+        return;
+    }
+    if (header.w == 0 || header.h == 0) {
+        return;
+    }
+
+    const int32_t dest_w = lv_area_get_width(dest);
+    const int32_t dest_h = lv_area_get_height(dest);
+    const int32_t scale_x = dest_w * LV_SCALE_NONE / (int32_t)header.w;
+    const int32_t scale_y = dest_h * LV_SCALE_NONE / (int32_t)header.h;
+    const int32_t scale = LV_MIN(scale_x, scale_y);
+    if (scale <= 0) {
+        return;
+    }
+
+    /*
+     * LVGL scales from source-sized image_coords (see lv_draw_image + lv_image CONTAIN).
+     * image_area must be header.w × header.h, not the post-scale size.
+     */
+    lv_area_t img_area = {
+        .x1 = dest->x1,
+        .y1 = dest->y1,
+        .x2 = dest->x1 + (int32_t)header.w - 1,
+        .y2 = dest->y1 + (int32_t)header.h - 1,
+    };
+    const int32_t offset_x = (dest_w - (int32_t)header.w * scale / LV_SCALE_NONE) / 2;
+    const int32_t offset_y = (dest_h - (int32_t)header.h * scale / LV_SCALE_NONE) / 2;
+    lv_area_move(&img_area, offset_x, offset_y);
+
+    lv_draw_image_dsc_t draw_dsc;
+    lv_draw_image_dsc_init(&draw_dsc);
+    draw_dsc.base.layer = layer;
+    draw_dsc.src = path;
+    draw_dsc.scale_x = scale;
+    draw_dsc.scale_y = scale;
+    draw_dsc.antialias = false;
+    draw_dsc.pivot.x = 0;
+    draw_dsc.pivot.y = 0;
+    draw_dsc.image_area = img_area;
+
+    lv_draw_image(layer, &draw_dsc, &img_area);
 }
 
 void ui_spiffs_pixelart_draw(lv_layer_t *layer, const lv_area_t *dest, const char *path)
@@ -172,15 +266,28 @@ void ui_spiffs_pixelart_draw(lv_layer_t *layer, const lv_area_t *dest, const cha
         return;
     }
 
-    if (ui_spiffs_pixelart_is_block_scalable(path, dest_w, dest_h)) {
-        if (strncmp(s_cache.path, path, sizeof(s_cache.path)) != 0 || s_cache.pixels == NULL) {
-            ui_spiffs_pixelart_cache_preload(path);
-        }
-        if (s_cache.pixels != NULL) {
-            draw_block_scaled(layer, dest, &s_cache);
-            return;
-        }
+    if (try_draw_block_scaled(layer, dest, path)) {
+        return;
     }
 
-    draw_file_1x1(layer, dest, path);
+    draw_file_fill(layer, dest, path);
+}
+
+void ui_spiffs_pixelart_draw_contain(lv_layer_t *layer, const lv_area_t *dest, const char *path)
+{
+    if (layer == NULL || dest == NULL || path == NULL || path[0] == '\0') {
+        return;
+    }
+
+    const int32_t dest_w = lv_area_get_width(dest);
+    const int32_t dest_h = lv_area_get_height(dest);
+    if (dest_w <= 0 || dest_h <= 0) {
+        return;
+    }
+
+    if (try_draw_block_scaled(layer, dest, path)) {
+        return;
+    }
+
+    draw_file_contain(layer, dest, path);
 }
