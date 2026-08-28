@@ -11,9 +11,11 @@
 #include "ui_theme.h"
 #include "ui_nav.h"
 #include "ui_assets.h"
+#include "ui_spiffs_pixelart.h"
 #include "app_config.h"
 #include "app_scheduled_button.h"
 
+#include <stdio.h>
 #include <time.h>
 
 #define TOD_MODE_COUNT 4
@@ -45,6 +47,9 @@ static bool s_showing_dim;
 /** Cached local minute (hour*60+min), or -1 when time is invalid / unknown. */
 static int s_last_clock_min = -1;
 static bool s_last_time_valid;
+static char s_bg_path_bright[48];
+static char s_bg_path_dim[48];
+static char s_sched_btn_img_path[48];
 
 static const char *mode_image(app_mode_t mode)
 {
@@ -79,27 +84,53 @@ static const char *action_image(uint8_t action)
     }
 }
 
-static void apply_mode_background(lv_obj_t *bg, app_mode_t mode)
+static void spiffs_img_draw_cb(lv_event_t *e)
 {
-    if (bg == NULL) {
+    if (lv_event_get_code(e) != LV_EVENT_DRAW_MAIN) {
         return;
     }
-    lv_image_set_src(bg, mode_image(mode));
-    lv_obj_set_style_opa(bg, LV_OPA_COVER, 0);
+
+    const char *path = lv_obj_get_user_data(lv_event_get_target(e));
+    if (path == NULL || path[0] == '\0') {
+        return;
+    }
+
+    lv_layer_t *layer = lv_event_get_layer(e);
+    lv_obj_t *obj = lv_event_get_target(e);
+    lv_area_t coords;
+    lv_obj_get_coords(obj, &coords);
+    ui_spiffs_pixelart_draw(layer, &coords, path);
 }
 
-static lv_obj_t *create_mode_background(lv_obj_t *scr)
+static void apply_mode_background(lv_obj_t *bg, char *path_buf, app_mode_t mode)
 {
-    lv_obj_t *img = lv_image_create(scr);
-    lv_image_set_src(img, ui_assets_spiffs_path("tod_wake"));
-    lv_obj_set_size(img, UI_DISP, UI_DISP);
-    lv_image_set_inner_align(img, LV_IMAGE_ALIGN_STRETCH);
-    lv_image_set_antialias(img, false);
-    lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_remove_flag(img, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_add_flag(img, LV_OBJ_FLAG_EVENT_BUBBLE);
-    lv_obj_move_background(img);
-    return img;
+    if (bg == NULL || path_buf == NULL) {
+        return;
+    }
+
+    const char *path = mode_image(mode);
+    snprintf(path_buf, 48, "%s", path);
+    lv_obj_set_user_data(bg, path_buf);
+    ui_spiffs_pixelart_cache_preload(path);
+    lv_obj_invalidate(bg);
+}
+
+static lv_obj_t *create_mode_background(lv_obj_t *scr, char *path_buf)
+{
+    lv_obj_t *bg = lv_obj_create(scr);
+    lv_obj_remove_style_all(bg);
+    lv_obj_set_size(bg, UI_DISP, UI_DISP);
+    lv_obj_align(bg, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_style_bg_opa(bg, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(bg, 0, 0);
+    lv_obj_set_style_pad_all(bg, 0, 0);
+    lv_obj_remove_flag(bg, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_flag(bg, LV_OBJ_FLAG_EVENT_BUBBLE);
+    lv_obj_add_event_cb(bg, spiffs_img_draw_cb, LV_EVENT_DRAW_MAIN, NULL);
+    snprintf(path_buf, 48, "%s", ui_assets_spiffs_path("tod_wake"));
+    lv_obj_set_user_data(bg, path_buf);
+    lv_obj_move_background(bg);
+    return bg;
 }
 
 static void screen_tap_cb(lv_event_t *e)
@@ -222,13 +253,15 @@ static void create_scheduled_button(lv_obj_t *scr)
     lv_obj_remove_flag(s_sched_btn, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_event_cb(s_sched_btn, sched_btn_cb, LV_EVENT_CLICKED, NULL);
 
-    s_sched_btn_img = lv_image_create(s_sched_btn);
-    lv_image_set_src(s_sched_btn_img, ui_assets_spiffs_path("tod_wake"));
+    s_sched_btn_img = lv_obj_create(s_sched_btn);
+    lv_obj_remove_style_all(s_sched_btn_img);
     lv_obj_set_size(s_sched_btn_img, SCHED_BTN_D_WF, SCHED_BTN_D_WF);
     lv_obj_set_pos(s_sched_btn_img, 0, 0);
-    lv_image_set_inner_align(s_sched_btn_img, LV_IMAGE_ALIGN_STRETCH);
-    lv_image_set_antialias(s_sched_btn_img, false);
+    lv_obj_set_style_bg_opa(s_sched_btn_img, LV_OPA_TRANSP, 0);
     lv_obj_remove_flag(s_sched_btn_img, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(s_sched_btn_img, spiffs_img_draw_cb, LV_EVENT_DRAW_MAIN, NULL);
+    snprintf(s_sched_btn_img_path, sizeof(s_sched_btn_img_path), "%s", ui_assets_spiffs_path("tod_wake"));
+    lv_obj_set_user_data(s_sched_btn_img, s_sched_btn_img_path);
 
     s_sched_btn_ring = lv_obj_create(s_sched_btn);
     lv_obj_remove_style_all(s_sched_btn_ring);
@@ -268,16 +301,19 @@ void ui_screen_tod_refresh_scheduled_button(void)
 
     s_sched_btn_action = btn->action;
     if (s_sched_btn_img != NULL) {
-        lv_image_set_src(s_sched_btn_img, img);
+        snprintf(s_sched_btn_img_path, sizeof(s_sched_btn_img_path), "%s", img);
+        lv_obj_set_user_data(s_sched_btn_img, s_sched_btn_img_path);
+        ui_spiffs_pixelart_cache_preload(img);
+        lv_obj_invalidate(s_sched_btn_img);
     }
     lv_obj_remove_flag(s_sched_btn, LV_OBJ_FLAG_HIDDEN);
     lv_obj_move_foreground(s_sched_btn);
 }
 
-static void build_screen(lv_obj_t **scr, lv_obj_t **bg, tod_clock_t *clock, bool dim)
+static void build_screen(lv_obj_t **scr, lv_obj_t **bg, char *path_buf, tod_clock_t *clock, bool dim)
 {
     *scr = ui_widgets_create_screen_no_ring();
-    *bg = create_mode_background(*scr);
+    *bg = create_mode_background(*scr, path_buf);
     create_clock(*scr, clock);
 
     lv_obj_add_flag(*scr, LV_OBJ_FLAG_CLICKABLE);
@@ -326,8 +362,8 @@ static void apply_mode(bool dim)
         mode = APP_MODE_WAKE;
     }
 
-    apply_mode_background(s_bg_bright, mode);
-    apply_mode_background(s_bg_dim, mode);
+    apply_mode_background(s_bg_bright, s_bg_path_bright, mode);
+    apply_mode_background(s_bg_dim, s_bg_path_dim, mode);
     refresh_clock(&s_clock_bright);
     refresh_clock(&s_clock_dim);
 
@@ -347,8 +383,8 @@ void ui_screen_tod_set_menu_visible(bool visible)
 
 void ui_screen_tod_build(lv_obj_t *screens[UI_SCREEN_COUNT])
 {
-    build_screen(&s_scr_bright, &s_bg_bright, &s_clock_bright, false);
-    build_screen(&s_scr_dim, &s_bg_dim, &s_clock_dim, true);
+    build_screen(&s_scr_bright, &s_bg_bright, s_bg_path_bright, &s_clock_bright, false);
+    build_screen(&s_scr_dim, &s_bg_dim, s_bg_path_dim, &s_clock_dim, true);
     screens[UI_SCREEN_TOD_BRIGHT] = s_scr_bright;
     screens[UI_SCREEN_TOD_DIM] = s_scr_dim;
 }

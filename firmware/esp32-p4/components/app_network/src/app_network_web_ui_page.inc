@@ -180,7 +180,8 @@
         ".img-table th.sortable .sort-ind{font-size:.65rem;opacity:.75;margin-left:4px}"
         ".img-preview-cell{vertical-align:middle;min-width:120px}"
         ".img-preview-canvas{display:block;max-width:160px;max-height:160px;width:auto;height:auto;"
-        "border-radius:10px;border:1px solid var(--border);background:var(--input-bg);image-rendering:auto;"
+        "border-radius:10px;border:1px solid var(--border);background:var(--input-bg);"
+        "image-rendering:-moz-crisp-edges;image-rendering:pixelated;"
         "cursor:pointer;transition:border-color .15s}"
         ".img-preview-canvas:hover{border-color:var(--primary)}"
         ".img-preview-loading,.img-preview-err{font-size:.78rem;color:var(--muted);display:block;max-width:160px}"
@@ -202,7 +203,7 @@
         ".mode-tile:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--primary) 35%,transparent)}"
         ".mode-tile.active{border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 22%,transparent)}"
         ".mode-tile-canvas{display:block;position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:0;"
-        "background:var(--surface-solid)}"
+        "background:var(--surface-solid);image-rendering:-moz-crisp-edges;image-rendering:pixelated}"
         ".mode-tile-loading{position:absolute;inset:0;color:var(--muted);font-size:.78rem;display:flex;align-items:center;"
         "justify-content:center}"
         ".mode-tile-label{position:absolute;left:8px;right:8px;bottom:8px;z-index:1;margin:0;padding:6px 10px;"
@@ -969,7 +970,8 @@
         "if(!r.ok)throw new Error('Fetch failed');const buf=await r.arrayBuffer();"
         "const img=lvglParseBin(buf);canvas.width=img.w;canvas.height=img.h;"
         "const rgba=lvglRgb565ToRgba(img.pixels,img.w,img.h,img.stride);"
-        "canvas.getContext('2d').putImageData(new ImageData(rgba,img.w,img.h),0,0);"
+        "const ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=false;"
+        "ctx.putImageData(new ImageData(rgba,img.w,img.h),0,0);"
         "if(statusEl)statusEl.remove()}catch(e){if(statusEl){statusEl.textContent='Preview unavailable';"
         "statusEl.className='img-preview-err'}}}"
         "async function decodeImagePreviews(root){const queue=[...root.querySelectorAll("
@@ -1014,7 +1016,8 @@
         "$('img-modal-title').textContent=displayName||name;"
         "$('img-modal-sub').textContent=name+' \\u00b7 '+srcCanvas.width+'\\u00d7'+srcCanvas.height;"
         "const c=$('img-modal-canvas');c.width=srcCanvas.width;c.height=srcCanvas.height;"
-        "c.getContext('2d').drawImage(srcCanvas,0,0);$('img-modal').classList.remove('hidden')}"
+        "const ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;ctx.drawImage(srcCanvas,0,0);"
+        "$('img-modal').classList.remove('hidden')}"
     );
 
     httpd_resp_sendstr_chunk(req,
