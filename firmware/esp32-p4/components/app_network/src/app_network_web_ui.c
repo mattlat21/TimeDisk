@@ -9,6 +9,7 @@
 #include "app_config.h"
 #include "app_ota.h"
 #include "app_time.h"
+#include "app_schedule.h"
 #include "timezone_catalog.h"
 
 #include <cJSON.h>
@@ -479,17 +480,7 @@ static esp_err_t api_wifi_connect_post(httpd_req_t *req)
 
 static const char *schedule_action_name(uint8_t action)
 {
-    switch ((app_schedule_action_t)action) {
-    case APP_SCHEDULE_ACTION_START_SLEEP:
-        return "start_sleep";
-    case APP_SCHEDULE_ACTION_START_REST:
-        return "start_rest";
-    case APP_SCHEDULE_ACTION_START_WIND_DOWN:
-        return "start_wind_down";
-    case APP_SCHEDULE_ACTION_WAKE:
-    default:
-        return "wake";
-    }
+    return app_schedule_action_str(action);
 }
 
 static bool schedule_action_from_json(const cJSON *val, uint8_t *action_out)

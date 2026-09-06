@@ -7,6 +7,7 @@
 #include "app_network.h"
 #include "app_config.h"
 #include "app_checkpoint.h"
+#include "app_schedule.h"
 
 #include <cJSON.h>
 #include <esp_app_desc.h>
@@ -135,6 +136,25 @@ void app_network_web_ui_json_add_live_status(cJSON *root)
     if (rt->time_valid) {
         const time_t now = time(NULL);
         cJSON_AddNumberToObject(root, "device_now_utc", (double)now);
+        cJSON_AddNumberToObject(root, "mode_display_remaining_sec",
+                                app_schedule_mode_display_remaining_sec(now, rt));
+
+        app_schedule_next_tod_t next = {0};
+        if (app_schedule_next_tod_event(now, rt->current_mode, &next)) {
+            cJSON *ev = cJSON_CreateObject();
+            if (ev != NULL) {
+                cJSON_AddNumberToObject(ev, "index", next.index);
+                cJSON_AddNumberToObject(ev, "time_min", next.time_min);
+                cJSON_AddStringToObject(ev, "action", app_schedule_action_str(next.action));
+                cJSON_AddNumberToObject(ev, "duration_sec", next.duration_sec);
+                cJSON_AddNumberToObject(ev, "remaining_sec", next.remaining_sec);
+                cJSON_AddBoolToObject(ev, "changes_mode", next.changes_mode);
+                cJSON_AddItemToObject(root, "next_tod_event", ev);
+            }
+        } else {
+            cJSON_AddNullToObject(root, "next_tod_event");
+        }
+
         if (rt->timer_running && rt->active_timer_end_utc > 0) {
             struct tm tm_end;
             localtime_r(&rt->active_timer_end_utc, &tm_end);
@@ -143,6 +163,9 @@ void app_network_web_ui_json_add_live_status(cJSON *root)
         }
     } else {
         cJSON_AddNumberToObject(root, "device_now_utc", 0);
+        cJSON_AddNumberToObject(root, "mode_display_remaining_sec",
+                                rt->cycle_active ? rt->mode_remaining_sec : 0);
+        cJSON_AddNullToObject(root, "next_tod_event");
     }
     cJSON_AddNumberToObject(root, "uptime_sec", (double)(esp_timer_get_time() / 1000000LL));
     cJSON_AddBoolToObject(root, "cycle_checkpoint_active", cp.cycle_active);
