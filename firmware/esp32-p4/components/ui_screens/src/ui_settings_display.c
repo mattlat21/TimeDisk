@@ -6,6 +6,7 @@
 #include "ui_screen_settings_internal.h"
 
 #include "ui_duration_editor.h"
+#include "ui_screens_registry.h"
 #include "ui_theme.h"
 #include "ui_widgets.h"
 
@@ -16,7 +17,7 @@ void ui_settings_display_show_list(void);
 
 #define HUB_BTN_W           248
 
-#define DISPLAY_LIST_Y0_WF   180
+#define DISPLAY_LIST_Y0_WF   160
 #define DISPLAY_LIST_STEP_WF 76
 #define DISPLAY_EDIT_TITLE_Y_WF 72
 
@@ -29,6 +30,7 @@ static lv_obj_t *s_panel;
 static display_view_t s_display_view;
 static int s_display_edit_idx;
 static lv_obj_t *s_display_row_btns[2];
+static lv_obj_t *s_display_first_boot_btn;
 static lv_obj_t *s_display_panel_title;
 static lv_obj_t *s_display_edit_title;
 static lv_obj_t *s_display_row_lbls[2];
@@ -92,6 +94,9 @@ void ui_settings_display_show_list(void)
             lv_obj_clear_flag(s_display_row_btns[i], LV_OBJ_FLAG_HIDDEN);
         }
     }
+    if (s_display_first_boot_btn != NULL) {
+        lv_obj_clear_flag(s_display_first_boot_btn, LV_OBJ_FLAG_HIDDEN);
+    }
     ui_duration_editor_set_visible(&s_display_bundle.editor, false);
     if (s_display_panel_title != NULL) {
         lv_obj_clear_flag(s_display_panel_title, LV_OBJ_FLAG_HIDDEN);
@@ -100,6 +105,13 @@ void ui_settings_display_show_list(void)
         lv_obj_add_flag(s_display_edit_title, LV_OBJ_FLAG_HIDDEN);
     }
     display_refresh_list_labels();
+}
+
+static void display_first_boot_cb(lv_event_t *e)
+{
+    (void)e;
+    ui_settings_idle_cb(NULL);
+    ui_screen_first_boot_show_preview();
 }
 
 static void display_row_cb(lv_event_t *e)
@@ -113,6 +125,9 @@ static void display_row_cb(lv_event_t *e)
         if (s_display_row_btns[i] != NULL) {
             lv_obj_add_flag(s_display_row_btns[i], LV_OBJ_FLAG_HIDDEN);
         }
+    }
+    if (s_display_first_boot_btn != NULL) {
+        lv_obj_add_flag(s_display_first_boot_btn, LV_OBJ_FLAG_HIDDEN);
     }
     if (s_display_panel_title != NULL) {
         lv_obj_add_flag(s_display_panel_title, LV_OBJ_FLAG_HIDDEN);
@@ -180,6 +195,26 @@ lv_obj_t *ui_settings_display_build(void)
         lv_obj_center(s_display_row_lbls[i]);
         lv_obj_add_event_cb(btn, display_row_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)i);
         s_display_row_btns[i] = btn;
+    }
+
+    {
+        lv_obj_t *btn = lv_button_create(s_panel);
+        lv_obj_set_size(btn, HUB_BTN_W, 64);
+        lv_obj_align(btn, LV_ALIGN_TOP_MID, 0,
+                     ui_settings_wf_y(s_panel,
+                                      DISPLAY_LIST_Y0_WF + 2 * DISPLAY_LIST_STEP_WF));
+        lv_obj_set_style_radius(btn, 16, 0);
+        lv_obj_set_style_bg_color(btn, t->menu_petal, 0);
+        lv_obj_set_style_border_width(btn, 0, 0);
+
+        lv_obj_t *lbl = lv_label_create(btn);
+        lv_label_set_text(lbl, "Show First Boot\nScreen");
+        lv_obj_set_style_text_color(lbl, t->white, 0);
+        lv_obj_set_style_text_font(lbl, &lv_font_montserrat_20, 0);
+        lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_center(lbl);
+        lv_obj_add_event_cb(btn, display_first_boot_cb, LV_EVENT_CLICKED, NULL);
+        s_display_first_boot_btn = btn;
     }
 
     s_display_edit_title = ui_widgets_create_title(s_panel, "Bright level");

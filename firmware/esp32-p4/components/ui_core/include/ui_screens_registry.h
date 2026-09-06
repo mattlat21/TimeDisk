@@ -35,6 +35,8 @@ void ui_theme_apply(void);
 
 void ui_screen_splash_on_show(void);
 void ui_screen_first_boot_on_show(void);
+/** Show first-boot screen as a preview; tap returns to Settings → Display. */
+void ui_screen_first_boot_show_preview(void);
 void ui_screen_loading_on_show(void);
 void ui_screen_loading_set_status(const char *text);
 void ui_screen_loading_set_menu_mode(bool menu);

@@ -4,6 +4,7 @@
  */
 
 #include "ui_screens_registry.h"
+#include "ui_screen_settings_internal.h"
 #include "ui_layout.h"
 #include "ui_widgets.h"
 #include "ui_wedge.h"
@@ -16,6 +17,7 @@
 static lv_obj_t *s_scr;
 static ui_wedge_button_t *s_next_wedge;
 static bool s_wedge_visible;
+static bool s_preview_mode;
 
 static ui_wedge_config_t first_boot_next_wedge_cfg(void)
 {
@@ -45,8 +47,20 @@ static void first_boot_hide_wedge(void)
     }
 }
 
+static void first_boot_preview_return(void)
+{
+    s_preview_mode = false;
+    ui_nav_go(UI_SCREEN_SETTINGS);
+    ui_settings_show_panel(PANEL_DISPLAY);
+    ui_nav_apply_dim(false);
+}
+
 static void first_boot_go_next(void)
 {
+    if (s_preview_mode) {
+        first_boot_preview_return();
+        return;
+    }
     if (app_config_mark_first_boot_done() != ESP_OK) {
         ESP_LOGW("first_boot", "failed to persist first_boot_done");
     }
@@ -56,6 +70,10 @@ static void first_boot_go_next(void)
 static void screen_tap_cb(lv_event_t *e)
 {
     (void)e;
+    if (s_preview_mode) {
+        first_boot_preview_return();
+        return;
+    }
     first_boot_show_wedge();
 }
 
@@ -91,6 +109,12 @@ void ui_screen_first_boot_on_show(void)
 {
     first_boot_hide_wedge();
     ui_nav_set_brightness(100);
+}
+
+void ui_screen_first_boot_show_preview(void)
+{
+    s_preview_mode = true;
+    ui_nav_go(UI_SCREEN_FIRST_BOOT);
 }
 
 void ui_screen_first_boot_apply_theme(void)
