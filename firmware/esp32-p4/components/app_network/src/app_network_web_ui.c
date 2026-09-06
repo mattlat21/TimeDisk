@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 
 static const char *TAG = "web_ui";
 
@@ -995,6 +996,97 @@ static esp_err_t api_timer_start_post(httpd_req_t *req)
     return send_json_ok(req);
 }
 
+static bool timer_remaining_from_end_local(int end_hour, int end_min, uint32_t *remaining_out)
+{
+    if (remaining_out == NULL || end_hour < 0 || end_hour > 23 || end_min < 0 || end_min > 59) {
+        return false;
+    }
+    const app_runtime_t *rt = app_runtime_get();
+    if (!rt->time_valid) {
+        return false;
+    }
+
+    const time_t now = time(NULL);
+    struct tm tm_end;
+    localtime_r(&now, &tm_end);
+    tm_end.tm_hour = end_hour;
+    tm_end.tm_min = end_min;
+    tm_end.tm_sec = 0;
+    time_t end = mktime(&tm_end);
+    if (end == (time_t)-1) {
+        return false;
+    }
+    if (end <= now) {
+        end += 24 * 60 * 60;
+    }
+    *remaining_out = (uint32_t)(end - now);
+    return true;
+}
+
+static esp_err_t api_timer_update_post(httpd_req_t *req)
+{
+    if (!s_timer_ops_set || s_timer_ops.timer_update == NULL) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Timer not ready");
+        return ESP_FAIL;
+    }
+
+    const app_runtime_t *rt = app_runtime_get();
+    if (!rt->timer_running) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "No timer running");
+        return ESP_FAIL;
+    }
+
+    char body[WEB_POST_MAX];
+    esp_err_t err = read_body(req, body, sizeof(body));
+    if (err != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad body");
+        return err;
+    }
+
+    uint32_t remaining_sec = rt->active_timer_remaining_sec;
+    uint8_t style_id = app_config_get()->timer_style_id;
+    bool have_remaining = false;
+
+    if (body[0] != '\0') {
+        cJSON *root = cJSON_Parse(body);
+        if (root != NULL) {
+            const cJSON *style = cJSON_GetObjectItem(root, "style_id");
+            if (cJSON_IsNumber(style)) {
+                style_id = (uint8_t)style->valuedouble;
+            }
+            const cJSON *rem = cJSON_GetObjectItem(root, "remaining_sec");
+            if (cJSON_IsNumber(rem)) {
+                remaining_sec = (uint32_t)rem->valuedouble;
+                have_remaining = true;
+            } else {
+                const cJSON *eh = cJSON_GetObjectItem(root, "end_hour");
+                const cJSON *em = cJSON_GetObjectItem(root, "end_min");
+                if (cJSON_IsNumber(eh) && cJSON_IsNumber(em)) {
+                    uint32_t from_end = 0;
+                    if (timer_remaining_from_end_local((int)eh->valuedouble, (int)em->valuedouble,
+                                                       &from_end)) {
+                        remaining_sec = from_end;
+                        have_remaining = true;
+                    }
+                }
+            }
+            cJSON_Delete(root);
+        }
+    }
+
+    if (!have_remaining) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Need remaining_sec or end_hour/end_min");
+        return ESP_FAIL;
+    }
+    if (remaining_sec < 5) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Remaining must be at least 5 seconds");
+        return ESP_FAIL;
+    }
+
+    s_timer_ops.timer_update(remaining_sec, style_id);
+    return send_json_ok(req);
+}
+
 static esp_err_t api_timer_cancel_post(httpd_req_t *req)
 {
     (void)req;
@@ -1250,6 +1342,7 @@ esp_err_t app_network_web_ui_register(httpd_handle_t server)
         {.uri = "/api/update", .method = HTTP_GET, .handler = api_update_get},
         {.uri = "/api/update/start", .method = HTTP_POST, .handler = api_update_start_post},
         {.uri = "/api/timer/start", .method = HTTP_POST, .handler = api_timer_start_post},
+        {.uri = "/api/timer/update", .method = HTTP_POST, .handler = api_timer_update_post},
         {.uri = "/api/timer/cancel", .method = HTTP_POST, .handler = api_timer_cancel_post},
         {.uri = "/api/mode/set", .method = HTTP_POST, .handler = api_mode_set_post},
         {.uri = "/api/images", .method = HTTP_GET, .handler = api_images_get},

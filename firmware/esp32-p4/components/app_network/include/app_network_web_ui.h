@@ -11,6 +11,7 @@
 
 typedef struct {
     void (*timer_start)(uint32_t duration_sec, uint8_t style_id);
+    void (*timer_update)(uint32_t remaining_sec, uint8_t style_id);
     void (*timer_cancel)(void);
 } app_network_web_ui_timer_ops_t;
 

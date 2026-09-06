@@ -977,6 +977,58 @@ void ui_nav_mqtt_start_timer(uint32_t duration_sec, uint8_t style_id)
     notify_mqtt_status();
 }
 
+void ui_nav_mqtt_update_timer(uint32_t remaining_sec, uint8_t style_id)
+{
+    app_config_t *cfg = app_config_get();
+    app_runtime_t *rt = app_runtime_get();
+
+    if (!rt->timer_running || ui_screen_timer_is_done()) {
+        return;
+    }
+    if (remaining_sec < 5) {
+        remaining_sec = 5;
+    }
+    if (style_id >= APP_TIMER_STYLE_COUNT) {
+        style_id = 0;
+    }
+
+    cfg->timer_style_id = style_id;
+    app_config_save_timer();
+
+    rt->active_timer_remaining_sec = remaining_sec;
+    if (rt->time_valid) {
+        const time_t now = time(NULL);
+        const time_t end = now + (time_t)remaining_sec;
+        time_t start = rt->active_timer_start_utc;
+        if (start <= 0 || start >= end) {
+            start = now;
+        }
+        rt->active_timer_start_utc = start;
+        rt->active_timer_end_utc = end;
+        if (end > start) {
+            rt->active_timer_total_sec = (uint32_t)(end - start);
+        } else {
+            rt->active_timer_total_sec = remaining_sec;
+        }
+        app_checkpoint_set_timer(start, end);
+    } else {
+        if (rt->active_timer_total_sec < remaining_sec) {
+            rt->active_timer_total_sec = remaining_sec;
+        }
+    }
+    ui_screen_timer_sync_anim_from_runtime();
+
+    if (s_current == UI_SCREEN_TIMER_BRIGHT || s_current == UI_SCREEN_TIMER_DIM) {
+        ui_screen_timer_on_show(s_current);
+        ui_nav_reset_idle_timer();
+    } else if (s_current == UI_SCREEN_CONFIRM_END_TIMER) {
+        /* Keep confirm screen; countdown will reflect new remaining when returning. */
+    } else {
+        ui_nav_go(UI_SCREEN_TIMER_BRIGHT);
+    }
+    notify_mqtt_status();
+}
+
 void ui_nav_mqtt_cancel_timer(void)
 {
     app_runtime_t *rt = app_runtime_get();
@@ -1005,6 +1057,11 @@ typedef struct {
     uint8_t style_id;
 } web_timer_start_req_t;
 
+typedef struct {
+    uint32_t remaining_sec;
+    uint8_t style_id;
+} web_timer_update_req_t;
+
 static void web_timer_start_async_cb(void *user_data)
 {
     web_timer_start_req_t *req = (web_timer_start_req_t *)user_data;
@@ -1028,6 +1085,29 @@ static void web_timer_start_cb(uint32_t duration_sec, uint8_t style_id)
     }
 }
 
+static void web_timer_update_async_cb(void *user_data)
+{
+    web_timer_update_req_t *req = (web_timer_update_req_t *)user_data;
+    if (req == NULL) {
+        return;
+    }
+    ui_nav_mqtt_update_timer(req->remaining_sec, req->style_id);
+    free(req);
+}
+
+static void web_timer_update_cb(uint32_t remaining_sec, uint8_t style_id)
+{
+    web_timer_update_req_t *req = calloc(1, sizeof(*req));
+    if (req == NULL) {
+        return;
+    }
+    req->remaining_sec = remaining_sec;
+    req->style_id = style_id;
+    if (lv_async_call(web_timer_update_async_cb, req) != LV_RESULT_OK) {
+        free(req);
+    }
+}
+
 static void web_timer_cancel_async_cb(void *user_data)
 {
     (void)user_data;
@@ -1043,6 +1123,7 @@ static void register_web_timer_ops(void)
 {
     static const app_network_web_ui_timer_ops_t ops = {
         .timer_start = web_timer_start_cb,
+        .timer_update = web_timer_update_cb,
         .timer_cancel = web_timer_cancel_cb,
     };
     app_network_web_ui_set_timer_ops(&ops);

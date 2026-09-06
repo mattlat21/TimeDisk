@@ -130,6 +130,20 @@ void app_network_web_ui_json_add_live_status(cJSON *root)
     cJSON_AddBoolToObject(root, "cycle_active", rt->cycle_active);
     cJSON_AddBoolToObject(root, "timer_running", rt->timer_running);
     cJSON_AddNumberToObject(root, "active_timer_remaining_sec", rt->active_timer_remaining_sec);
+    cJSON_AddNumberToObject(root, "active_timer_start_utc", (double)rt->active_timer_start_utc);
+    cJSON_AddNumberToObject(root, "active_timer_end_utc", (double)rt->active_timer_end_utc);
+    if (rt->time_valid) {
+        const time_t now = time(NULL);
+        cJSON_AddNumberToObject(root, "device_now_utc", (double)now);
+        if (rt->timer_running && rt->active_timer_end_utc > 0) {
+            struct tm tm_end;
+            localtime_r(&rt->active_timer_end_utc, &tm_end);
+            cJSON_AddNumberToObject(root, "active_timer_end_hour", tm_end.tm_hour);
+            cJSON_AddNumberToObject(root, "active_timer_end_min", tm_end.tm_min);
+        }
+    } else {
+        cJSON_AddNumberToObject(root, "device_now_utc", 0);
+    }
     cJSON_AddNumberToObject(root, "uptime_sec", (double)(esp_timer_get_time() / 1000000LL));
     cJSON_AddBoolToObject(root, "cycle_checkpoint_active", cp.cycle_active);
     cJSON_AddStringToObject(root, "cycle_checkpoint_mode", mode_str(cp.cycle_mode));

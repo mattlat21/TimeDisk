@@ -122,4 +122,6 @@ void ui_nav_mqtt_start_sleep_cycle(void);
 void ui_nav_mqtt_start_rest_cycle(void);
 void ui_nav_mqtt_end_cycle(void);
 void ui_nav_mqtt_start_timer(uint32_t duration_sec, uint8_t style_id);
+/** Adjust a running timer's remaining time and/or style (LVGL thread only). */
+void ui_nav_mqtt_update_timer(uint32_t remaining_sec, uint8_t style_id);
 void ui_nav_mqtt_cancel_timer(void);
