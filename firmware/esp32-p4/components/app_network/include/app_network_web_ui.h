@@ -25,4 +25,12 @@ typedef struct {
 /** Register LVGL-thread mode control (called from ui_nav_init). */
 void app_network_web_ui_set_mode_ops(const app_network_web_ui_mode_ops_t *ops);
 
+typedef struct {
+    /** Drop image caches and reload TOD backgrounds after a SPIFFS asset replace. */
+    void (*images_reloaded)(void);
+} app_network_web_ui_image_ops_t;
+
+/** Register LVGL-thread image reload (called from ui_nav_init). */
+void app_network_web_ui_set_image_ops(const app_network_web_ui_image_ops_t *ops);
+
 esp_err_t app_network_web_ui_register(httpd_handle_t server);

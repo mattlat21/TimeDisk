@@ -17,7 +17,7 @@ esp_err_t ui_assets_init(void)
     esp_vfs_spiffs_conf_t conf = {
         .base_path = "/spiffs",
         .partition_label = "storage",
-        .max_files = 8,
+        .max_files = 12,
         .format_if_mount_failed = false,
     };
 

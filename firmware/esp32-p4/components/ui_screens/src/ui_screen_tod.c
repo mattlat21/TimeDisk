@@ -487,6 +487,12 @@ void ui_screen_tod_on_show(bool dim)
     ui_nav_apply_dim(dim);
 }
 
+void ui_screen_tod_reload_background(void)
+{
+    ui_spiffs_pixelart_cache_drop();
+    apply_mode(s_showing_dim);
+}
+
 void ui_screen_tod_tick(void)
 {
     /* Clock, remaining subtitle, and scheduled button are minute-granular. */

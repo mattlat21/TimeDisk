@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <sys/stat.h>
 #include <time.h>
 
@@ -34,6 +35,8 @@ static app_network_web_ui_timer_ops_t s_timer_ops;
 static bool s_timer_ops_set;
 static app_network_web_ui_mode_ops_t s_mode_ops;
 static bool s_mode_ops_set;
+static app_network_web_ui_image_ops_t s_image_ops;
+static bool s_image_ops_set;
 
 void app_network_web_ui_set_timer_ops(const app_network_web_ui_timer_ops_t *ops)
 {
@@ -51,6 +54,15 @@ void app_network_web_ui_set_mode_ops(const app_network_web_ui_mode_ops_t *ops)
     }
     s_mode_ops = *ops;
     s_mode_ops_set = true;
+}
+
+void app_network_web_ui_set_image_ops(const app_network_web_ui_image_ops_t *ops)
+{
+    if (ops == NULL) {
+        return;
+    }
+    s_image_ops = *ops;
+    s_image_ops_set = true;
 }
 
 static esp_err_t read_body(httpd_req_t *req, char *body, size_t body_len)
@@ -1229,6 +1241,172 @@ static int image_filename_valid(const char *name)
     return 1;
 }
 
+typedef struct {
+    const char *name;
+    uint16_t w;
+    uint16_t h;
+} image_upload_slot_t;
+
+static const image_upload_slot_t s_image_upload_slots[] = {
+    { .name = "tod_wake.bin", .w = 90, .h = 90 },
+    { .name = "tod_sleep.bin", .w = 90, .h = 90 },
+    { .name = "tod_rest.bin", .w = 90, .h = 90 },
+    { .name = "tod_winddown.bin", .w = 90, .h = 90 },
+};
+
+#define IMAGE_UPLOAD_MAX_BYTES (512U * 1024U)
+#define LVGL_BIN_MAGIC 0x19U
+#define LVGL_CF_RGB565 0x12U
+
+static const image_upload_slot_t *image_upload_slot_find(const char *name)
+{
+    if (name == NULL) {
+        return NULL;
+    }
+    for (size_t i = 0; i < sizeof(s_image_upload_slots) / sizeof(s_image_upload_slots[0]); i++) {
+        if (strcmp(s_image_upload_slots[i].name, name) == 0) {
+            return &s_image_upload_slots[i];
+        }
+    }
+    return NULL;
+}
+
+static esp_err_t image_upload_validate_header(FILE *fp, const image_upload_slot_t *slot, char *err, size_t err_len)
+{
+    uint8_t hdr[12];
+    if (fseek(fp, 0, SEEK_SET) != 0 || fread(hdr, 1, sizeof(hdr), fp) != sizeof(hdr)) {
+        snprintf(err, err_len, "Could not read image header");
+        return ESP_FAIL;
+    }
+
+    if (hdr[0] != LVGL_BIN_MAGIC) {
+        snprintf(err, err_len, "Bad image magic");
+        return ESP_FAIL;
+    }
+    if (hdr[1] != LVGL_CF_RGB565) {
+        snprintf(err, err_len, "Image must be RGB565");
+        return ESP_FAIL;
+    }
+
+    const uint16_t w = (uint16_t)hdr[4] | ((uint16_t)hdr[5] << 8);
+    const uint16_t h = (uint16_t)hdr[6] | ((uint16_t)hdr[7] << 8);
+    if (w != slot->w || h != slot->h) {
+        snprintf(err, err_len, "Wrong size: got %ux%u, need %ux%u", (unsigned)w, (unsigned)h,
+                 (unsigned)slot->w, (unsigned)slot->h);
+        return ESP_FAIL;
+    }
+    return ESP_OK;
+}
+
+static void image_upload_notify_reloaded(void)
+{
+    if (s_image_ops_set && s_image_ops.images_reloaded != NULL) {
+        s_image_ops.images_reloaded();
+    }
+}
+
+static esp_err_t api_images_upload_post(httpd_req_t *req)
+{
+    char name[128];
+    char err[96];
+    size_t qlen = httpd_req_get_url_query_len(req);
+
+    if (qlen == 0 || qlen + 1 > 256) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing name");
+        return ESP_FAIL;
+    }
+
+    char query[256];
+    if (httpd_req_get_url_query_str(req, query, sizeof(query)) != ESP_OK ||
+        httpd_query_key_value(query, "name", name, sizeof(name)) != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing name");
+        return ESP_FAIL;
+    }
+
+    if (!image_filename_valid(name)) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid name");
+        return ESP_FAIL;
+    }
+
+    const image_upload_slot_t *slot = image_upload_slot_find(name);
+    if (slot == NULL) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Asset not replaceable");
+        return ESP_FAIL;
+    }
+
+    if (req->content_len <= 0 || (size_t)req->content_len > IMAGE_UPLOAD_MAX_BYTES) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid body size");
+        return ESP_FAIL;
+    }
+
+    char path[320];
+    char tmp_path[330];
+    snprintf(path, sizeof(path), "/spiffs/%s", name);
+    snprintf(tmp_path, sizeof(tmp_path), "/spiffs/%s.new", name);
+
+    unlink(tmp_path);
+
+    FILE *fp = fopen(tmp_path, "wb");
+    if (fp == NULL) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Could not open temp file");
+        return ESP_FAIL;
+    }
+
+    size_t remaining = (size_t)req->content_len;
+    char buf[4096];
+    while (remaining > 0) {
+        size_t chunk = remaining > sizeof(buf) ? sizeof(buf) : remaining;
+        int received = httpd_req_recv(req, buf, chunk);
+        if (received <= 0) {
+            fclose(fp);
+            unlink(tmp_path);
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Receive failed");
+            return ESP_FAIL;
+        }
+        if (fwrite(buf, 1, (size_t)received, fp) != (size_t)received) {
+            fclose(fp);
+            unlink(tmp_path);
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Write failed");
+            return ESP_FAIL;
+        }
+        remaining -= (size_t)received;
+    }
+
+    if (fflush(fp) != 0) {
+        fclose(fp);
+        unlink(tmp_path);
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Flush failed");
+        return ESP_FAIL;
+    }
+    fclose(fp);
+
+    fp = fopen(tmp_path, "rb");
+    if (fp == NULL) {
+        unlink(tmp_path);
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Could not reopen temp file");
+        return ESP_FAIL;
+    }
+
+    if (image_upload_validate_header(fp, slot, err, sizeof(err)) != ESP_OK) {
+        fclose(fp);
+        unlink(tmp_path);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, err);
+        return ESP_FAIL;
+    }
+    fclose(fp);
+
+    unlink(path);
+    if (rename(tmp_path, path) != 0) {
+        unlink(tmp_path);
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Replace failed");
+        return ESP_FAIL;
+    }
+
+    ESP_LOGI(TAG, "replaced SPIFFS image %s (%ux%u)", name, (unsigned)slot->w, (unsigned)slot->h);
+    image_upload_notify_reloaded();
+    return send_json_ok(req);
+}
+
 static esp_err_t api_images_file_get(httpd_req_t *req)
 {
     char name[128];
@@ -1358,6 +1536,7 @@ esp_err_t app_network_web_ui_register(httpd_handle_t server)
         {.uri = "/api/mode/set", .method = HTTP_POST, .handler = api_mode_set_post},
         {.uri = "/api/images", .method = HTTP_GET, .handler = api_images_get},
         {.uri = "/api/images/file", .method = HTTP_GET, .handler = api_images_file_get},
+        {.uri = "/api/images/upload", .method = HTTP_POST, .handler = api_images_upload_post},
     };
 
     for (size_t i = 0; i < sizeof(routes) / sizeof(routes[0]); i++) {

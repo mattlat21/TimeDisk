@@ -46,6 +46,8 @@ void ui_screen_tod_on_show(bool dim);
 void ui_screen_tod_tick(void);
 void ui_screen_tod_set_menu_visible(bool visible);
 void ui_screen_tod_refresh_scheduled_button(void);
+/** Drop SPIFFS pixelart cache and re-apply current TOD backgrounds (after runtime image replace). */
+void ui_screen_tod_reload_background(void);
 void ui_screen_aa_on_show(void);
 void ui_screen_aa_show_pin(void);
 void ui_screen_aa_show_maths(void);

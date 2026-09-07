@@ -1253,6 +1253,25 @@ static void register_web_mode_ops(void)
     app_network_web_ui_set_mode_ops(&ops);
 }
 
+static void web_images_reloaded_async_cb(void *user_data)
+{
+    (void)user_data;
+    ui_screen_tod_reload_background();
+}
+
+static void web_images_reloaded_cb(void)
+{
+    (void)lv_async_call(web_images_reloaded_async_cb, NULL);
+}
+
+static void register_web_image_ops(void)
+{
+    static const app_network_web_ui_image_ops_t ops = {
+        .images_reloaded = web_images_reloaded_cb,
+    };
+    app_network_web_ui_set_image_ops(&ops);
+}
+
 void ui_nav_apply_mode_action(uint8_t action, uint32_t duration_sec)
 {
     app_config_t *cfg = app_config_get();
@@ -1487,6 +1506,7 @@ void ui_nav_init(void)
 
     register_web_timer_ops();
     register_web_mode_ops();
+    register_web_image_ops();
     register_schedule_handler();
 
     ui_nav_set_brightness(0);
