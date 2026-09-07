@@ -22,6 +22,8 @@ void ui_screen_aa_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
 void ui_screen_menu_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
 void ui_screen_menu_on_show(void);
 void ui_screen_menu_preload_assets(void);
+/** True when timer + current-mode menu button bitmaps are already decoded in RAM. */
+bool ui_screen_menu_cache_ready(void);
 void ui_screen_timer_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
 void ui_screen_schedule_build(lv_obj_t *screens[UI_SCREEN_COUNT]);
 void ui_screen_schedule_on_show(ui_screen_id_t id);

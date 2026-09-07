@@ -1,4 +1,4 @@
-source=btn_start_sleep.png
+source=btn_start_sleep_64.png
 format=RGB565
 storage=spiffs
 compress=auto

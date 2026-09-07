@@ -547,6 +547,10 @@ static void nav_go_internal(ui_screen_id_t screen)
 void ui_nav_go(ui_screen_id_t screen)
 {
     if (screen == UI_SCREEN_MENU) {
+        if (ui_screen_menu_cache_ready()) {
+            nav_go_internal(UI_SCREEN_MENU);
+            return;
+        }
         s_deferred_screen = screen;
         s_loading_reason = UI_LOADING_REASON_MENU;
         nav_go_internal(UI_SCREEN_LOADING);
