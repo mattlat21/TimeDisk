@@ -91,6 +91,22 @@ void app_network_web_ui_json_add_config(cJSON *root, const app_config_t *cfg)
     cJSON_AddBoolToObject(root, "tod_remaining_dim_enabled", cfg->tod_remaining_dim_enabled);
     cJSON_AddBoolToObject(root, "tod_remaining_threshold_enabled", cfg->tod_remaining_threshold_enabled);
     cJSON_AddNumberToObject(root, "tod_remaining_threshold_sec", cfg->tod_remaining_threshold_sec);
+    {
+        static const char *const mode_keys[] = { "wake", "wind_down", "sleep", "rest" };
+        cJSON *offs = cJSON_CreateObject();
+        if (offs != NULL) {
+            for (int i = 0; i < 4; i++) {
+                cJSON *m = cJSON_CreateObject();
+                if (m == NULL) {
+                    continue;
+                }
+                cJSON_AddNumberToObject(m, "x", cfg->tod_clock_offset_x[i]);
+                cJSON_AddNumberToObject(m, "y", cfg->tod_clock_offset_y[i]);
+                cJSON_AddItemToObject(offs, mode_keys[i], m);
+            }
+            cJSON_AddItemToObject(root, "tod_clock_offsets", offs);
+        }
+    }
     cJSON_AddNumberToObject(root, "ui_primary_color", cfg->ui_primary_color);
     cJSON_AddNumberToObject(root, "ui_secondary_color", cfg->ui_secondary_color);
     cJSON_AddNumberToObject(root, "timer_duration_sec", cfg->timer_duration_sec);

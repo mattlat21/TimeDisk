@@ -191,6 +191,38 @@ static bool apply_config_field(app_config_t *cfg, const char *key, const cJSON *
         cfg->tod_remaining_threshold_sec = (uint32_t)val->valuedouble;
         return true;
     }
+    if (strcmp(key, "tod_clock_offsets") == 0 && cJSON_IsObject(val)) {
+        static const char *const mode_keys[] = { "wake", "wind_down", "sleep", "rest" };
+        for (int i = 0; i < 4; i++) {
+            const cJSON *m = cJSON_GetObjectItem(val, mode_keys[i]);
+            if (!cJSON_IsObject(m)) {
+                continue;
+            }
+            const cJSON *jx = cJSON_GetObjectItem(m, "x");
+            const cJSON *jy = cJSON_GetObjectItem(m, "y");
+            if (cJSON_IsNumber(jx)) {
+                int v = (int)jx->valuedouble;
+                if (v < -300) {
+                    v = -300;
+                }
+                if (v > 300) {
+                    v = 300;
+                }
+                cfg->tod_clock_offset_x[i] = (int16_t)v;
+            }
+            if (cJSON_IsNumber(jy)) {
+                int v = (int)jy->valuedouble;
+                if (v < -300) {
+                    v = -300;
+                }
+                if (v > 300) {
+                    v = 300;
+                }
+                cfg->tod_clock_offset_y[i] = (int16_t)v;
+            }
+        }
+        return true;
+    }
     if (strcmp(key, "ui_primary_color") == 0 && cJSON_IsNumber(val)) {
         cfg->ui_primary_color = (uint32_t)val->valuedouble;
         cfg->theme_set = true;
@@ -250,7 +282,8 @@ static void save_config_changes(const char *key)
         strcmp(key, "tod_remaining_enabled") == 0 ||
         strcmp(key, "tod_remaining_dim_enabled") == 0 ||
         strcmp(key, "tod_remaining_threshold_enabled") == 0 ||
-        strcmp(key, "tod_remaining_threshold_sec") == 0) {
+        strcmp(key, "tod_remaining_threshold_sec") == 0 ||
+        strcmp(key, "tod_clock_offsets") == 0) {
         app_config_save_display();
         return;
     }

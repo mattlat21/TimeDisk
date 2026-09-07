@@ -167,6 +167,7 @@ void ui_nav_reapply_dim_backlight(void)
     default:
         break;
     }
+    ui_screen_tod_apply_clock_layout();
 }
 
 static uint32_t backlight_duty_lerp(uint32_t from, uint32_t to, uint32_t elapsed_ms, uint32_t duration_ms)

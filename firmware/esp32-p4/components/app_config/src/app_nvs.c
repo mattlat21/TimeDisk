@@ -38,6 +38,7 @@ static const char *TAG = "app_nvs";
 #define KEY_TOD_REM_DIM         "tod_rem_dim"  /* uint8  tod_remaining_dim_enabled */
 #define KEY_TOD_REM_TH_EN       "tod_rem_then" /* uint8  tod_remaining_threshold_enabled */
 #define KEY_TOD_REM_TH_SEC      "tod_rem_ths"  /* uint32 tod_remaining_threshold_sec */
+#define KEY_TOD_CLK_OFF         "tod_clk_off"  /* blob   tod_clock_offset_x/y[4] */
 #define KEY_UI_PRIMARY          "ui_primary"   /* uint32 ui_primary_color */
 #define KEY_UI_SECONDARY        "ui_secondary" /* uint32 ui_secondary_color */
 #define KEY_THEME_SET           "theme_set"    /* uint8  theme_set */
@@ -124,6 +125,57 @@ static esp_err_t get_u8(nvs_handle_t h, const char *key, uint8_t *val, uint8_t d
         return ESP_OK;
     }
     return err;
+}
+
+typedef struct {
+    int16_t x[4];
+    int16_t y[4];
+} tod_clock_offsets_blob_t;
+
+static void tod_clock_offsets_from_cfg(tod_clock_offsets_blob_t *blob, const app_config_t *cfg)
+{
+    for (int i = 0; i < 4; i++) {
+        blob->x[i] = cfg->tod_clock_offset_x[i];
+        blob->y[i] = cfg->tod_clock_offset_y[i];
+    }
+}
+
+static void tod_clock_offsets_to_cfg(app_config_t *cfg, const tod_clock_offsets_blob_t *blob)
+{
+    for (int i = 0; i < 4; i++) {
+        cfg->tod_clock_offset_x[i] = blob->x[i];
+        cfg->tod_clock_offset_y[i] = blob->y[i];
+    }
+}
+
+static esp_err_t set_tod_clock_offsets(nvs_handle_t h, const app_config_t *cfg)
+{
+    tod_clock_offsets_blob_t blob;
+    tod_clock_offsets_from_cfg(&blob, cfg);
+    return nvs_set_blob(h, KEY_TOD_CLK_OFF, &blob, sizeof(blob));
+}
+
+static esp_err_t get_tod_clock_offsets(nvs_handle_t h, app_config_t *cfg)
+{
+    tod_clock_offsets_blob_t blob;
+    memset(&blob, 0, sizeof(blob));
+    size_t len = sizeof(blob);
+    esp_err_t err = nvs_get_blob(h, KEY_TOD_CLK_OFF, &blob, &len);
+    if (err == ESP_ERR_NVS_NOT_FOUND) {
+        memset(cfg->tod_clock_offset_x, 0, sizeof(cfg->tod_clock_offset_x));
+        memset(cfg->tod_clock_offset_y, 0, sizeof(cfg->tod_clock_offset_y));
+        return ESP_OK;
+    }
+    if (err != ESP_OK) {
+        return err;
+    }
+    if (len != sizeof(blob)) {
+        memset(cfg->tod_clock_offset_x, 0, sizeof(cfg->tod_clock_offset_x));
+        memset(cfg->tod_clock_offset_y, 0, sizeof(cfg->tod_clock_offset_y));
+        return ESP_OK;
+    }
+    tod_clock_offsets_to_cfg(cfg, &blob);
+    return ESP_OK;
 }
 
 static esp_err_t set_i64(nvs_handle_t h, const char *key, int64_t val)
@@ -553,6 +605,11 @@ esp_err_t app_nvs_load(void)
         }
     }
 
+    err = get_tod_clock_offsets(h, cfg);
+    if (err != ESP_OK) {
+        goto out;
+    }
+
     err = get_u32(h, KEY_UI_PRIMARY, &cfg->ui_primary_color, 0x7A24BC);
     if (err != ESP_OK) {
         goto out;
@@ -779,7 +836,8 @@ esp_err_t app_nvs_save_display(void)
         (err = set_u8(h, KEY_TOD_REM_EN, cfg->tod_remaining_enabled ? 1 : 0)) != ESP_OK ||
         (err = set_u8(h, KEY_TOD_REM_DIM, cfg->tod_remaining_dim_enabled ? 1 : 0)) != ESP_OK ||
         (err = set_u8(h, KEY_TOD_REM_TH_EN, cfg->tod_remaining_threshold_enabled ? 1 : 0)) != ESP_OK ||
-        (err = set_u32(h, KEY_TOD_REM_TH_SEC, cfg->tod_remaining_threshold_sec)) != ESP_OK) {
+        (err = set_u32(h, KEY_TOD_REM_TH_SEC, cfg->tod_remaining_threshold_sec)) != ESP_OK ||
+        (err = set_tod_clock_offsets(h, cfg)) != ESP_OK) {
         nvs_close(h);
         return err;
     }
@@ -963,7 +1021,8 @@ esp_err_t app_nvs_save_all(void)
         (err = set_u8(h, KEY_TOD_REM_EN, cfg->tod_remaining_enabled ? 1 : 0)) != ESP_OK ||
         (err = set_u8(h, KEY_TOD_REM_DIM, cfg->tod_remaining_dim_enabled ? 1 : 0)) != ESP_OK ||
         (err = set_u8(h, KEY_TOD_REM_TH_EN, cfg->tod_remaining_threshold_enabled ? 1 : 0)) != ESP_OK ||
-        (err = set_u32(h, KEY_TOD_REM_TH_SEC, cfg->tod_remaining_threshold_sec)) != ESP_OK) {
+        (err = set_u32(h, KEY_TOD_REM_TH_SEC, cfg->tod_remaining_threshold_sec)) != ESP_OK ||
+        (err = set_tod_clock_offsets(h, cfg)) != ESP_OK) {
         goto out;
     }
 

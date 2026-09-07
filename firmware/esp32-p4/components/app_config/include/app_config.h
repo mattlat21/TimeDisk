@@ -120,6 +120,13 @@ typedef struct {
     /** Threshold in seconds for conditional remaining display. */
     uint32_t tod_remaining_threshold_sec;
 
+    /**
+     * Clock position offset from screen centre for each TOD mode
+     * (Wake, Wind Down, Sleep, Rest). Default 0,0. Positive X right, Y down.
+     */
+    int16_t tod_clock_offset_x[4];
+    int16_t tod_clock_offset_y[4];
+
     uint32_t ui_primary_color;
     uint32_t ui_secondary_color;
 

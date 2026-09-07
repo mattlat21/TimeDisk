@@ -82,6 +82,8 @@ void app_config_apply_defaults(void)
     s_cfg.tod_remaining_dim_enabled = false;
     s_cfg.tod_remaining_threshold_enabled = false;
     s_cfg.tod_remaining_threshold_sec = 3600;
+    memset(s_cfg.tod_clock_offset_x, 0, sizeof(s_cfg.tod_clock_offset_x));
+    memset(s_cfg.tod_clock_offset_y, 0, sizeof(s_cfg.tod_clock_offset_y));
 
     s_cfg.ui_primary_color = 0x7A24BC;
     s_cfg.ui_secondary_color = 0x6BCA24;

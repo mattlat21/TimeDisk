@@ -187,6 +187,26 @@ static void layout_ampm(tod_clock_t *clock)
     lv_obj_align_to(clock->ampm, clock->hm, LV_ALIGN_OUT_RIGHT_BOTTOM, hm_w / 2 + gap, hm_h / 2 - 12);
 }
 
+static void apply_clock_position(tod_clock_t *clock, app_mode_t mode)
+{
+    if (clock == NULL || clock->row == NULL) {
+        return;
+    }
+
+    int16_t ox = 0;
+    int16_t oy = 0;
+    if (mode < TOD_MODE_COUNT) {
+        const app_config_t *cfg = app_config_get();
+        ox = cfg->tod_clock_offset_x[mode];
+        oy = cfg->tod_clock_offset_y[mode];
+    }
+
+    lv_obj_align(clock->row, LV_ALIGN_CENTER, ox, oy);
+    if (clock->remaining != NULL) {
+        lv_obj_align(clock->remaining, LV_ALIGN_CENTER, ox, oy + TOD_REMAINING_Y_OFFSET);
+    }
+}
+
 static void create_clock(lv_obj_t *scr, tod_clock_t *clock)
 {
     const ui_theme_t *t = ui_theme_get();
@@ -204,7 +224,7 @@ static void create_clock(lv_obj_t *scr, tod_clock_t *clock)
     lv_obj_set_style_pad_bottom(clock->row, 28, 0);
     lv_obj_set_style_pad_left(clock->row, 72, 0);
     lv_obj_set_style_pad_right(clock->row, 72, 0);
-    lv_obj_align(clock->row, LV_ALIGN_CENTER, 0, 0);
+    apply_clock_position(clock, APP_MODE_WAKE);
 
     clock->hm = lv_label_create(clock->row);
     lv_label_set_text(clock->hm, "--:--");
@@ -226,10 +246,10 @@ static void create_clock(lv_obj_t *scr, tod_clock_t *clock)
     lv_obj_set_style_text_font(clock->remaining, &lv_font_montserrat_22, 0);
     lv_obj_set_style_text_align(clock->remaining, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_width(clock->remaining, UI_CONTENT_W(0));
-    lv_obj_align(clock->remaining, LV_ALIGN_CENTER, 0, TOD_REMAINING_Y_OFFSET);
     lv_obj_add_flag(clock->remaining, LV_OBJ_FLAG_HIDDEN);
     lv_obj_remove_flag(clock->remaining, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_flag(clock->remaining, LV_OBJ_FLAG_EVENT_BUBBLE);
+    apply_clock_position(clock, APP_MODE_WAKE);
 }
 
 static const char *mode_display_name(app_mode_t mode)
@@ -282,7 +302,14 @@ static void refresh_remaining(tod_clock_t *clock)
     snprintf(line, sizeof(line), "%s in %s", mode_display_name((app_mode_t)next_mode), time_buf);
     lv_label_set_text(clock->remaining, line);
     lv_obj_clear_flag(clock->remaining, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_align(clock->remaining, LV_ALIGN_CENTER, 0, TOD_REMAINING_Y_OFFSET);
+    {
+        app_mode_t mode = APP_MODE_WAKE;
+        const app_runtime_t *rt = app_runtime_get();
+        if (rt != NULL && rt->current_mode < TOD_MODE_COUNT) {
+            mode = rt->current_mode;
+        }
+        apply_clock_position(clock, mode);
+    }
 }
 
 static void refresh_clock(tod_clock_t *clock)
@@ -317,6 +344,13 @@ static void refresh_clock(tod_clock_t *clock)
     lv_obj_set_style_transform_pivot_x(clock->hm, lv_obj_get_width(clock->hm) / 2, 0);
     lv_obj_set_style_transform_pivot_y(clock->hm, lv_obj_get_height(clock->hm) / 2, 0);
     layout_ampm(clock);
+    {
+        app_mode_t mode = APP_MODE_WAKE;
+        if (rt->current_mode < TOD_MODE_COUNT) {
+            mode = rt->current_mode;
+        }
+        apply_clock_position(clock, mode);
+    }
     refresh_remaining(clock);
 }
 
@@ -456,6 +490,8 @@ static void apply_mode(bool dim)
 
     apply_mode_background(s_bg_bright, s_bg_path_bright, mode);
     apply_mode_background(s_bg_dim, s_bg_path_dim, mode);
+    apply_clock_position(&s_clock_bright, mode);
+    apply_clock_position(&s_clock_dim, mode);
     refresh_clock(&s_clock_bright);
     refresh_clock(&s_clock_dim);
 
@@ -491,6 +527,17 @@ void ui_screen_tod_reload_background(void)
 {
     ui_spiffs_pixelart_cache_drop();
     apply_mode(s_showing_dim);
+}
+
+void ui_screen_tod_apply_clock_layout(void)
+{
+    app_runtime_t *rt = app_runtime_get();
+    app_mode_t mode = APP_MODE_WAKE;
+    if (rt != NULL && rt->current_mode < TOD_MODE_COUNT) {
+        mode = rt->current_mode;
+    }
+    apply_clock_position(&s_clock_bright, mode);
+    apply_clock_position(&s_clock_dim, mode);
 }
 
 void ui_screen_tod_tick(void)
