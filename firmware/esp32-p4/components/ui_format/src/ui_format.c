@@ -57,6 +57,38 @@ void ui_format_hours_and_minutes(char *buf, size_t len, uint32_t sec)
     }
 }
 
+void ui_format_tod_remaining(char *buf, size_t len, uint32_t sec)
+{
+    if (sec >= 7200U) {
+        snprintf(buf, len, "%u hours", (unsigned)(sec / 3600U));
+        return;
+    }
+
+    if (sec >= 3600U) {
+        const unsigned mins = (unsigned)((sec / 60U) % 60U);
+        if (mins == 0U) {
+            snprintf(buf, len, "1 hour");
+        } else if (mins == 1U) {
+            snprintf(buf, len, "1 hour and 1 minute");
+        } else {
+            snprintf(buf, len, "1 hour and %u minutes", mins);
+        }
+        return;
+    }
+
+    if (sec > 60U) {
+        const unsigned mins = (unsigned)(sec / 60U);
+        if (mins == 1U) {
+            snprintf(buf, len, "1 minute");
+        } else {
+            snprintf(buf, len, "%u minutes", mins);
+        }
+        return;
+    }
+
+    snprintf(buf, len, "less than a minute");
+}
+
 void ui_format_duration_human(char *buf, size_t len, uint32_t sec)
 {
     if (sec < 60) {

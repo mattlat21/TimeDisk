@@ -1,0 +1,7 @@
+source=btn_start_sleep_mask.png
+format=A8
+storage=spiffs
+compress=auto
+width=320
+height=320
+description=A8 alpha mask for btn_start_sleep (display-size edges)

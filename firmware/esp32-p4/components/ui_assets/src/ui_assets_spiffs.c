@@ -45,11 +45,16 @@ esp_err_t ui_assets_init(void)
 
 const char *ui_assets_spiffs_path(const char *name)
 {
-    static char path[48];
+    /* Ring so consecutive calls (e.g. fill + mask args) don't clobber each other.
+     * Callers that keep the pointer across later path lookups should copy it. */
+    enum { PATH_SLOTS = 8, PATH_LEN = 48 };
+    static char paths[PATH_SLOTS][PATH_LEN];
+    static unsigned slot;
 
     if (name == NULL) {
         return NULL;
     }
-    snprintf(path, sizeof(path), "S:/%s.bin", name);
+    char *path = paths[slot++ % PATH_SLOTS];
+    snprintf(path, PATH_LEN, "S:/%s.bin", name);
     return path;
 }

@@ -20,13 +20,6 @@ static lv_obj_t *s_lbl_switch_wake;
 static lv_obj_t *s_wedge_back;
 static lv_obj_t *s_wedge_settings;
 
-static const char *const s_menu_asset_names[] = {
-    "btn_start_rest",
-    "btn_start_sleep",
-    "btn_start_wake",
-    "btn_start_timer",
-};
-
 #define MENU_BTN_REST_W       320
 #define MENU_BTN_REST_H       320
 #define MENU_BTN_SLEEP_W      320
@@ -45,15 +38,22 @@ static const char *const s_menu_asset_names[] = {
 #define MENU_BTN_TIMER_X_WF   30
 #define MENU_BTN_TIMER_Y_WF   370
 
-static lv_obj_t *menu_create_image_btn(lv_obj_t *parent, const void *src, int w, int h,
-                                       int x_wf, int y_wf, const char *label_text,
+static lv_obj_t *menu_create_image_btn(lv_obj_t *parent, const char *fill_name, const char *mask_name,
+                                       int w, int h, int x_wf, int y_wf, const char *label_text,
                                        const lv_font_t *label_font, int label_ofs_x, int label_ofs_y,
                                        lv_obj_t **label_out, lv_event_cb_t cb)
 {
     int x = 0;
     int y = 0;
+    char fill_path[48];
+    char mask_path[48];
 
     ui_layout_screen_pos_from_wf(parent, x_wf, y_wf, &x, &y);
+
+    snprintf(fill_path, sizeof(fill_path), "%s", ui_assets_spiffs_path(fill_name));
+    if (mask_name != NULL) {
+        snprintf(mask_path, sizeof(mask_path), "%s", ui_assets_spiffs_path(mask_name));
+    }
 
     lv_obj_t *btn = lv_obj_create(parent);
     lv_obj_set_size(btn, w, h);
@@ -65,12 +65,20 @@ static lv_obj_t *menu_create_image_btn(lv_obj_t *parent, const void *src, int w,
     lv_obj_set_style_pad_all(btn, 0, 0);
 
     lv_obj_t *img = lv_image_create(btn);
-    lv_image_set_src(img, src);
+    lv_image_set_src(img, fill_path); /* LVGL strdup's FILE paths */
     lv_obj_set_size(img, w, h);
     lv_image_set_inner_align(img, LV_IMAGE_ALIGN_STRETCH);
     lv_image_set_antialias(img, false);
     lv_obj_set_pos(img, 0, 0);
     lv_obj_remove_flag(img, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+    /* Low-res RGB565 fill stretched to button size; full-res A8 mask keeps sharp edges.
+     * Style stores the pointer (no copy), so keep a durable path string. */
+    if (mask_name != NULL) {
+        char *mask_src = lv_strdup(mask_path);
+        if (mask_src != NULL) {
+            lv_obj_set_style_bitmap_mask_src(img, mask_src, 0);
+        }
+    }
 
     if (label_text != NULL && label_text[0] != '\0') {
         lv_obj_t *lbl = lv_label_create(btn);
@@ -210,16 +218,20 @@ void ui_screen_menu_build(lv_obj_t *screens[UI_SCREEN_COUNT])
     /* Raise ring overlay before layout so wf→content uses a consistent border (0). */
     ui_screen_ring_raise_overlay(s_scr);
 
-    s_btn_rest = menu_create_image_btn(s_scr, ui_assets_spiffs_path("btn_start_rest"), MENU_BTN_REST_W, MENU_BTN_REST_H,
+    s_btn_rest = menu_create_image_btn(s_scr, "btn_start_rest", "btn_start_rest_mask",
+                                       MENU_BTN_REST_W, MENU_BTN_REST_H,
                                        MENU_BTN_REST_X_WF, MENU_BTN_REST_Y_WF, "Start\nRest",
                                        &lv_font_montserrat_48, 30, 60, NULL, rest_cb);
-    s_btn_sleep = menu_create_image_btn(s_scr, ui_assets_spiffs_path("btn_start_sleep"), MENU_BTN_SLEEP_W, MENU_BTN_SLEEP_H,
+    s_btn_sleep = menu_create_image_btn(s_scr, "btn_start_sleep", "btn_start_sleep_mask",
+                                        MENU_BTN_SLEEP_W, MENU_BTN_SLEEP_H,
                                         MENU_BTN_SLEEP_X_WF, MENU_BTN_SLEEP_Y_WF, "Start\nSleep",
                                         &lv_font_montserrat_48, -30, 60, NULL, sleep_cb);
-    s_btn_switch_wake = menu_create_image_btn(s_scr, ui_assets_spiffs_path("btn_start_wake"), MENU_BTN_WAKE_W, MENU_BTN_WAKE_H,
+    s_btn_switch_wake = menu_create_image_btn(s_scr, "btn_start_wake", "btn_start_wake_mask",
+                                              MENU_BTN_WAKE_W, MENU_BTN_WAKE_H,
                                               MENU_BTN_WAKE_X_WF, MENU_BTN_WAKE_Y_WF, "End Rest",
                                               &lv_font_montserrat_48, 0, 60, &s_lbl_switch_wake, switch_wake_cb);
-    s_btn_timer = menu_create_image_btn(s_scr, ui_assets_spiffs_path("btn_start_timer"), MENU_BTN_TIMER_W, MENU_BTN_TIMER_H,
+    s_btn_timer = menu_create_image_btn(s_scr, "btn_start_timer", "btn_start_timer_mask",
+                                        MENU_BTN_TIMER_W, MENU_BTN_TIMER_H,
                                         MENU_BTN_TIMER_X_WF, MENU_BTN_TIMER_Y_WF, "Start Timer",
                                         &lv_font_montserrat_48, 0, 60, NULL, timer_cb);
 
@@ -249,21 +261,39 @@ void ui_screen_menu_on_show(void)
     }
 }
 
-void ui_screen_menu_preload_assets(void)
+static void menu_preload_one(const char *name)
 {
     lv_image_decoder_dsc_t dsc;
     lv_image_decoder_args_t args;
     lv_memzero(&args, sizeof(args));
 
-    for (size_t i = 0; i < sizeof(s_menu_asset_names) / sizeof(s_menu_asset_names[0]); i++) {
-        const char *path = ui_assets_spiffs_path(s_menu_asset_names[i]);
-        if (path == NULL) {
-            continue;
-        }
-        lv_result_t res = lv_image_decoder_open(&dsc, path, &args);
-        if (res == LV_RESULT_OK) {
-            lv_image_decoder_close(&dsc);
-        }
+    const char *path = ui_assets_spiffs_path(name);
+    if (path == NULL) {
+        return;
+    }
+    if (lv_image_decoder_open(&dsc, path, &args) == LV_RESULT_OK) {
+        lv_image_decoder_close(&dsc);
+    }
+}
+
+void ui_screen_menu_preload_assets(void)
+{
+    const app_runtime_t *rt = app_runtime_get();
+    const bool in_wake_mode = (rt != NULL && rt->current_mode == APP_MODE_WAKE);
+
+    /* Always shown. */
+    menu_preload_one("btn_start_timer");
+    menu_preload_one("btn_start_timer_mask");
+
+    /* Mode-dependent row: rest+sleep in wake, else the wake/end-mode button. */
+    if (in_wake_mode) {
+        menu_preload_one("btn_start_rest");
+        menu_preload_one("btn_start_rest_mask");
+        menu_preload_one("btn_start_sleep");
+        menu_preload_one("btn_start_sleep_mask");
+    } else {
+        menu_preload_one("btn_start_wake");
+        menu_preload_one("btn_start_wake_mask");
     }
 
     ui_screen_menu_on_show();

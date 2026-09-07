@@ -1,0 +1,7 @@
+source=btn_start_wake_mask.png
+format=A8
+storage=spiffs
+compress=auto
+width=660
+height=320
+description=A8 alpha mask for btn_start_wake (display-size edges)

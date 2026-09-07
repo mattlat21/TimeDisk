@@ -11,7 +11,8 @@
 /** Mount SPIFFS (storage partition) and prepare LVGL S: drive paths. */
 esp_err_t ui_assets_init(void);
 
-/** LVGL file path for a SPIFFS asset, e.g. "S:/tod_wake.bin". */
+/** LVGL file path for a SPIFFS asset, e.g. "S:/tod_wake.bin".
+ * Uses a small ring of static buffers — copy the result if you keep it across later calls. */
 const char *ui_assets_spiffs_path(const char *name);
 
 /** Reusable white icon glyphs (RGB565A8, tight crop). */

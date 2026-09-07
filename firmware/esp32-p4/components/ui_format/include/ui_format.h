@@ -17,6 +17,11 @@ void ui_format_countdown_xx_yy(char *buf, size_t len, uint32_t sec);
 void ui_format_duration_minutes(char *buf, size_t len, uint32_t sec);
 /** e.g. "22 hours and 40 minutes", "1 hour and 1 minute" (whole minutes from @p sec). */
 void ui_format_hours_and_minutes(char *buf, size_t len, uint32_t sec);
+/**
+ * TOD remaining subtitle duration: "5 hours", "1 hour and 12 minutes",
+ * "8 minutes", or "less than a minute".
+ */
+void ui_format_tod_remaining(char *buf, size_t len, uint32_t sec);
 /** e.g. "5 seconds", "1 minute 30 seconds" (shows seconds when &lt; 1 min). */
 void ui_format_duration_human(char *buf, size_t len, uint32_t sec);
 /** 12-hour local time at now + @p offset_sec, e.g. "3:45 PM". */

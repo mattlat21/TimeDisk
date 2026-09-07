@@ -276,9 +276,9 @@ static void refresh_remaining(tod_clock_t *clock)
         return;
     }
 
-    char time_buf[16];
+    char time_buf[32];
     char line[48];
-    ui_format_countdown_xx_yy(time_buf, sizeof(time_buf), remaining_sec);
+    ui_format_tod_remaining(time_buf, sizeof(time_buf), remaining_sec);
     snprintf(line, sizeof(line), "%s in %s", mode_display_name((app_mode_t)next_mode), time_buf);
     lv_label_set_text(clock->remaining, line);
     lv_obj_clear_flag(clock->remaining, LV_OBJ_FLAG_HIDDEN);
@@ -489,7 +489,7 @@ void ui_screen_tod_on_show(bool dim)
 
 void ui_screen_tod_tick(void)
 {
-    /* Clock and scheduled button are minute-granular; remaining subtitle updates every tick. */
+    /* Clock, remaining subtitle, and scheduled button are minute-granular. */
     const app_runtime_t *rt = app_runtime_get();
     const bool valid = rt->time_valid;
     int cur_min = -1;
@@ -500,16 +500,15 @@ void ui_screen_tod_tick(void)
         cur_min = tm_local.tm_hour * 60 + tm_local.tm_min;
     }
 
-    tod_clock_t *clock = s_showing_dim ? &s_clock_dim : &s_clock_bright;
-    const bool minute_changed = !(valid == s_last_time_valid && cur_min == s_last_clock_min);
-    if (minute_changed) {
-        s_last_time_valid = valid;
-        s_last_clock_min = cur_min;
-        refresh_clock(clock);
-        ui_screen_tod_refresh_scheduled_button();
-    } else {
-        refresh_remaining(clock);
+    if (valid == s_last_time_valid && cur_min == s_last_clock_min) {
+        return;
     }
+
+    s_last_time_valid = valid;
+    s_last_clock_min = cur_min;
+    tod_clock_t *clock = s_showing_dim ? &s_clock_dim : &s_clock_bright;
+    refresh_clock(clock);
+    ui_screen_tod_refresh_scheduled_button();
 }
 
 static void apply_theme_to_clock(tod_clock_t *clock)

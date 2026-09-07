@@ -204,7 +204,8 @@ generate_header() {
     echo "/** Mount SPIFFS (storage partition) and prepare LVGL S: drive paths. */"
     echo "esp_err_t ui_assets_init(void);"
     echo
-    echo "/** LVGL file path for a SPIFFS asset, e.g. \"S:/tod_wake.bin\". */"
+    echo "/** LVGL file path for a SPIFFS asset, e.g. \"S:/tod_wake.bin\"."
+    echo " * Uses a small ring of static buffers — copy the result if you keep it across later calls. */"
     echo "const char *ui_assets_spiffs_path(const char *name);"
     echo
 
