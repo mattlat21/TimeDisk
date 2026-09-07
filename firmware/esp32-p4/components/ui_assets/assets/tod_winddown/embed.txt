@@ -1,7 +1,7 @@
-source=tod_winddown.png
+source=tod_winddown_90.png
 format=RGB565
 storage=spiffs
 compress=auto
-width=720
-height=720
+width=90
+height=90
 description=Time of Day background — wind down
