@@ -163,6 +163,22 @@ static bool apply_config_field(app_config_t *cfg, const char *key, const cJSON *
         cfg->backlight_dim_pct = pct > 100 ? 100 : pct;
         return true;
     }
+    if (strcmp(key, "tod_remaining_enabled") == 0 && cJSON_IsBool(val)) {
+        cfg->tod_remaining_enabled = cJSON_IsTrue(val);
+        return true;
+    }
+    if (strcmp(key, "tod_remaining_dim_enabled") == 0 && cJSON_IsBool(val)) {
+        cfg->tod_remaining_dim_enabled = cJSON_IsTrue(val);
+        return true;
+    }
+    if (strcmp(key, "tod_remaining_threshold_enabled") == 0 && cJSON_IsBool(val)) {
+        cfg->tod_remaining_threshold_enabled = cJSON_IsTrue(val);
+        return true;
+    }
+    if (strcmp(key, "tod_remaining_threshold_sec") == 0 && cJSON_IsNumber(val)) {
+        cfg->tod_remaining_threshold_sec = (uint32_t)val->valuedouble;
+        return true;
+    }
     if (strcmp(key, "ui_primary_color") == 0 && cJSON_IsNumber(val)) {
         cfg->ui_primary_color = (uint32_t)val->valuedouble;
         cfg->theme_set = true;
@@ -218,7 +234,11 @@ static void save_config_changes(const char *key)
         app_config_save_timeouts();
         return;
     }
-    if (strcmp(key, "backlight_bright_pct") == 0 || strcmp(key, "backlight_dim_pct") == 0) {
+    if (strcmp(key, "backlight_bright_pct") == 0 || strcmp(key, "backlight_dim_pct") == 0 ||
+        strcmp(key, "tod_remaining_enabled") == 0 ||
+        strcmp(key, "tod_remaining_dim_enabled") == 0 ||
+        strcmp(key, "tod_remaining_threshold_enabled") == 0 ||
+        strcmp(key, "tod_remaining_threshold_sec") == 0) {
         app_config_save_display();
         return;
     }

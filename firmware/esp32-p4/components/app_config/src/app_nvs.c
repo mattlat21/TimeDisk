@@ -34,6 +34,10 @@ static const char *TAG = "app_nvs";
 #define KEY_TO_TIMER_DONE       "to_tm_done"   /* uint32 timeout_timer_done_sec */
 #define KEY_BL_BRIGHT_PCT       "bl_bright"    /* uint8  backlight_bright_pct */
 #define KEY_BL_DIM_PCT          "bl_dim"       /* uint8  backlight_dim_pct */
+#define KEY_TOD_REM_EN          "tod_rem_en"   /* uint8  tod_remaining_enabled */
+#define KEY_TOD_REM_DIM         "tod_rem_dim"  /* uint8  tod_remaining_dim_enabled */
+#define KEY_TOD_REM_TH_EN       "tod_rem_then" /* uint8  tod_remaining_threshold_enabled */
+#define KEY_TOD_REM_TH_SEC      "tod_rem_ths"  /* uint32 tod_remaining_threshold_sec */
 #define KEY_UI_PRIMARY          "ui_primary"   /* uint32 ui_primary_color */
 #define KEY_UI_SECONDARY        "ui_secondary" /* uint32 ui_secondary_color */
 #define KEY_THEME_SET           "theme_set"    /* uint8  theme_set */
@@ -524,6 +528,31 @@ esp_err_t app_nvs_load(void)
         cfg->backlight_dim_pct = dim_pct > 100 ? 100 : dim_pct;
     }
 
+    {
+        uint8_t rem_en = 0;
+        uint8_t rem_dim = 0;
+        uint8_t rem_th_en = 0;
+        err = get_u8(h, KEY_TOD_REM_EN, &rem_en, 0);
+        if (err != ESP_OK) {
+            goto out;
+        }
+        err = get_u8(h, KEY_TOD_REM_DIM, &rem_dim, 0);
+        if (err != ESP_OK) {
+            goto out;
+        }
+        err = get_u8(h, KEY_TOD_REM_TH_EN, &rem_th_en, 0);
+        if (err != ESP_OK) {
+            goto out;
+        }
+        cfg->tod_remaining_enabled = (rem_en != 0);
+        cfg->tod_remaining_dim_enabled = (rem_dim != 0);
+        cfg->tod_remaining_threshold_enabled = (rem_th_en != 0);
+        err = get_u32(h, KEY_TOD_REM_TH_SEC, &cfg->tod_remaining_threshold_sec, 3600);
+        if (err != ESP_OK) {
+            goto out;
+        }
+    }
+
     err = get_u32(h, KEY_UI_PRIMARY, &cfg->ui_primary_color, 0x7A24BC);
     if (err != ESP_OK) {
         goto out;
@@ -746,7 +775,11 @@ esp_err_t app_nvs_save_display(void)
         return err;
     }
     if ((err = set_u8(h, KEY_BL_BRIGHT_PCT, cfg->backlight_bright_pct)) != ESP_OK ||
-        (err = set_u8(h, KEY_BL_DIM_PCT, cfg->backlight_dim_pct)) != ESP_OK) {
+        (err = set_u8(h, KEY_BL_DIM_PCT, cfg->backlight_dim_pct)) != ESP_OK ||
+        (err = set_u8(h, KEY_TOD_REM_EN, cfg->tod_remaining_enabled ? 1 : 0)) != ESP_OK ||
+        (err = set_u8(h, KEY_TOD_REM_DIM, cfg->tod_remaining_dim_enabled ? 1 : 0)) != ESP_OK ||
+        (err = set_u8(h, KEY_TOD_REM_TH_EN, cfg->tod_remaining_threshold_enabled ? 1 : 0)) != ESP_OK ||
+        (err = set_u32(h, KEY_TOD_REM_TH_SEC, cfg->tod_remaining_threshold_sec)) != ESP_OK) {
         nvs_close(h);
         return err;
     }
@@ -926,7 +959,11 @@ esp_err_t app_nvs_save_all(void)
         (err = set_u32(h, KEY_TO_TIMER_DIM, cfg->timeout_timer_dim_sec)) != ESP_OK ||
         (err = set_u32(h, KEY_TO_TIMER_DONE, cfg->timeout_timer_done_sec)) != ESP_OK ||
         (err = set_u8(h, KEY_BL_BRIGHT_PCT, cfg->backlight_bright_pct)) != ESP_OK ||
-        (err = set_u8(h, KEY_BL_DIM_PCT, cfg->backlight_dim_pct)) != ESP_OK) {
+        (err = set_u8(h, KEY_BL_DIM_PCT, cfg->backlight_dim_pct)) != ESP_OK ||
+        (err = set_u8(h, KEY_TOD_REM_EN, cfg->tod_remaining_enabled ? 1 : 0)) != ESP_OK ||
+        (err = set_u8(h, KEY_TOD_REM_DIM, cfg->tod_remaining_dim_enabled ? 1 : 0)) != ESP_OK ||
+        (err = set_u8(h, KEY_TOD_REM_TH_EN, cfg->tod_remaining_threshold_enabled ? 1 : 0)) != ESP_OK ||
+        (err = set_u32(h, KEY_TOD_REM_TH_SEC, cfg->tod_remaining_threshold_sec)) != ESP_OK) {
         goto out;
     }
 

@@ -78,6 +78,11 @@ void app_config_apply_defaults(void)
     s_cfg.backlight_bright_pct = 100;
     s_cfg.backlight_dim_pct = 25;
 
+    s_cfg.tod_remaining_enabled = false;
+    s_cfg.tod_remaining_dim_enabled = false;
+    s_cfg.tod_remaining_threshold_enabled = false;
+    s_cfg.tod_remaining_threshold_sec = 3600;
+
     s_cfg.ui_primary_color = 0x7A24BC;
     s_cfg.ui_secondary_color = 0x6BCA24;
 

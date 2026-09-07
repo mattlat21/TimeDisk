@@ -723,6 +723,90 @@ static void cycle_durations_clear(void)
     s_cycle_dur.active = false;
 }
 
+static bool peek_cycle_next_mode(app_mode_t current, app_mode_t *next_out)
+{
+    uint32_t wind_down_sec = 0;
+    uint32_t sleep_sec = 0;
+    uint32_t rest_sec = 0;
+
+    if (next_out == NULL) {
+        return false;
+    }
+
+    cycle_durations_get(&wind_down_sec, &sleep_sec, &rest_sec);
+
+    switch (current) {
+    case APP_MODE_WAKE:
+        if (wind_down_sec > 0) {
+            *next_out = APP_MODE_WIND_DOWN;
+            return true;
+        }
+        if (sleep_sec > 0) {
+            *next_out = APP_MODE_SLEEP;
+            return true;
+        }
+        if (rest_sec > 0) {
+            *next_out = APP_MODE_REST;
+            return true;
+        }
+        return false;
+    case APP_MODE_WIND_DOWN:
+        if (sleep_sec > 0) {
+            *next_out = APP_MODE_SLEEP;
+            return true;
+        }
+        if (rest_sec > 0) {
+            *next_out = APP_MODE_REST;
+            return true;
+        }
+        *next_out = APP_MODE_WAKE;
+        return true;
+    case APP_MODE_SLEEP:
+        if (rest_sec > 0) {
+            *next_out = APP_MODE_REST;
+            return true;
+        }
+        *next_out = APP_MODE_WAKE;
+        return true;
+    case APP_MODE_REST:
+        *next_out = APP_MODE_WAKE;
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool ui_nav_tod_next_transition(uint8_t *next_mode_out, uint32_t *remaining_sec_out)
+{
+    if (next_mode_out == NULL || remaining_sec_out == NULL) {
+        return false;
+    }
+
+    const app_runtime_t *rt = app_runtime_get();
+    const uint32_t mode_rem = (rt->cycle_active) ? rt->mode_remaining_sec : 0;
+    app_schedule_next_tod_t next_change = {0};
+    const bool has_sched = rt->time_valid &&
+                           app_schedule_next_mode_change_event(time(NULL), rt->current_mode, &next_change);
+
+    if (mode_rem > 0 && (!has_sched || mode_rem <= next_change.remaining_sec)) {
+        app_mode_t next_mode = APP_MODE_WAKE;
+        if (!peek_cycle_next_mode(rt->current_mode, &next_mode)) {
+            return false;
+        }
+        *next_mode_out = (uint8_t)next_mode;
+        *remaining_sec_out = mode_rem;
+        return true;
+    }
+
+    if (has_sched && next_change.remaining_sec > 0) {
+        *next_mode_out = (uint8_t)app_schedule_action_target_mode(next_change.action);
+        *remaining_sec_out = next_change.remaining_sec;
+        return true;
+    }
+
+    return false;
+}
+
 static void mqtt_track_runtime_snapshot(void)
 {
     app_runtime_t *rt = app_runtime_get();

@@ -87,6 +87,10 @@ void app_network_web_ui_json_add_config(cJSON *root, const app_config_t *cfg)
     cJSON_AddNumberToObject(root, "timeout_timer_done_sec", cfg->timeout_timer_done_sec);
     cJSON_AddNumberToObject(root, "backlight_bright_pct", cfg->backlight_bright_pct);
     cJSON_AddNumberToObject(root, "backlight_dim_pct", cfg->backlight_dim_pct);
+    cJSON_AddBoolToObject(root, "tod_remaining_enabled", cfg->tod_remaining_enabled);
+    cJSON_AddBoolToObject(root, "tod_remaining_dim_enabled", cfg->tod_remaining_dim_enabled);
+    cJSON_AddBoolToObject(root, "tod_remaining_threshold_enabled", cfg->tod_remaining_threshold_enabled);
+    cJSON_AddNumberToObject(root, "tod_remaining_threshold_sec", cfg->tod_remaining_threshold_sec);
     cJSON_AddNumberToObject(root, "ui_primary_color", cfg->ui_primary_color);
     cJSON_AddNumberToObject(root, "ui_secondary_color", cfg->ui_secondary_color);
     cJSON_AddNumberToObject(root, "timer_duration_sec", cfg->timer_duration_sec);

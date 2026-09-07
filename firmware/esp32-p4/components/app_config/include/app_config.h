@@ -111,6 +111,15 @@ typedef struct {
     uint8_t backlight_bright_pct;
     uint8_t backlight_dim_pct;
 
+    /** Show "NextMode in XX:YY" under the TOD clock. */
+    bool tod_remaining_enabled;
+    /** When true, also show remaining while TOD is dimmed (default off). */
+    bool tod_remaining_dim_enabled;
+    /** When true, only show remaining if it is strictly below the threshold. */
+    bool tod_remaining_threshold_enabled;
+    /** Threshold in seconds for conditional remaining display. */
+    uint32_t tod_remaining_threshold_sec;
+
     uint32_t ui_primary_color;
     uint32_t ui_secondary_color;
 

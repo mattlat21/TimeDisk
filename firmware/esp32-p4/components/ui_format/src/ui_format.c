@@ -23,6 +23,15 @@ void ui_format_mm_ss(char *buf, size_t len, uint32_t sec)
     snprintf(buf, len, "%02u:%02u", (unsigned)(sec / 60), (unsigned)(sec % 60));
 }
 
+void ui_format_countdown_xx_yy(char *buf, size_t len, uint32_t sec)
+{
+    if (sec >= 3600U) {
+        snprintf(buf, len, "%02u:%02u", (unsigned)(sec / 3600U), (unsigned)((sec % 3600U) / 60U));
+    } else {
+        ui_format_mm_ss(buf, len, sec);
+    }
+}
+
 void ui_format_duration_minutes(char *buf, size_t len, uint32_t sec)
 {
     unsigned mins = (unsigned)(sec / 60);

@@ -24,11 +24,14 @@
 #define SCHED_BTN_D_WF 180
 #define SCHED_BTN_TOP_WF 36
 #define SCHED_BTN_BORDER_PX 10
+/** Offset of remaining subtitle below the scaled clock (content coords). */
+#define TOD_REMAINING_Y_OFFSET 78
 
 typedef struct {
     lv_obj_t *row;
     lv_obj_t *hm;
     lv_obj_t *ampm;
+    lv_obj_t *remaining;
 } tod_clock_t;
 
 static lv_obj_t *s_scr_bright;
@@ -216,6 +219,70 @@ static void create_clock(lv_obj_t *scr, tod_clock_t *clock)
     lv_obj_set_style_text_color(clock->ampm, t->white, 0);
     lv_obj_set_style_text_font(clock->ampm, &lv_font_montserrat_34, 0);
     layout_ampm(clock);
+
+    clock->remaining = lv_label_create(scr);
+    lv_label_set_text(clock->remaining, "");
+    lv_obj_set_style_text_color(clock->remaining, t->white, 0);
+    lv_obj_set_style_text_font(clock->remaining, &lv_font_montserrat_22, 0);
+    lv_obj_set_style_text_align(clock->remaining, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_width(clock->remaining, UI_CONTENT_W(0));
+    lv_obj_align(clock->remaining, LV_ALIGN_CENTER, 0, TOD_REMAINING_Y_OFFSET);
+    lv_obj_add_flag(clock->remaining, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_remove_flag(clock->remaining, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_flag(clock->remaining, LV_OBJ_FLAG_EVENT_BUBBLE);
+}
+
+static const char *mode_display_name(app_mode_t mode)
+{
+    switch (mode) {
+    case APP_MODE_WIND_DOWN:
+        return "Wind Down";
+    case APP_MODE_SLEEP:
+        return "Sleep";
+    case APP_MODE_REST:
+        return "Rest";
+    case APP_MODE_WAKE:
+    default:
+        return "Wake";
+    }
+}
+
+static void refresh_remaining(tod_clock_t *clock)
+{
+    if (clock == NULL || clock->remaining == NULL) {
+        return;
+    }
+
+    const app_config_t *cfg = app_config_get();
+    if (!cfg->tod_remaining_enabled) {
+        lv_obj_add_flag(clock->remaining, LV_OBJ_FLAG_HIDDEN);
+        return;
+    }
+    if (s_showing_dim && !cfg->tod_remaining_dim_enabled) {
+        lv_obj_add_flag(clock->remaining, LV_OBJ_FLAG_HIDDEN);
+        return;
+    }
+
+    uint8_t next_mode = APP_MODE_WAKE;
+    uint32_t remaining_sec = 0;
+    if (!ui_nav_tod_next_transition(&next_mode, &remaining_sec) || remaining_sec == 0) {
+        lv_obj_add_flag(clock->remaining, LV_OBJ_FLAG_HIDDEN);
+        return;
+    }
+
+    if (cfg->tod_remaining_threshold_enabled &&
+        remaining_sec >= cfg->tod_remaining_threshold_sec) {
+        lv_obj_add_flag(clock->remaining, LV_OBJ_FLAG_HIDDEN);
+        return;
+    }
+
+    char time_buf[16];
+    char line[48];
+    ui_format_countdown_xx_yy(time_buf, sizeof(time_buf), remaining_sec);
+    snprintf(line, sizeof(line), "%s in %s", mode_display_name((app_mode_t)next_mode), time_buf);
+    lv_label_set_text(clock->remaining, line);
+    lv_obj_clear_flag(clock->remaining, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_align(clock->remaining, LV_ALIGN_CENTER, 0, TOD_REMAINING_Y_OFFSET);
 }
 
 static void refresh_clock(tod_clock_t *clock)
@@ -227,6 +294,9 @@ static void refresh_clock(tod_clock_t *clock)
     app_runtime_t *rt = app_runtime_get();
     if (!rt->time_valid) {
         lv_obj_add_flag(clock->row, LV_OBJ_FLAG_HIDDEN);
+        if (clock->remaining != NULL) {
+            lv_obj_add_flag(clock->remaining, LV_OBJ_FLAG_HIDDEN);
+        }
         return;
     }
 
@@ -247,6 +317,7 @@ static void refresh_clock(tod_clock_t *clock)
     lv_obj_set_style_transform_pivot_x(clock->hm, lv_obj_get_width(clock->hm) / 2, 0);
     lv_obj_set_style_transform_pivot_y(clock->hm, lv_obj_get_height(clock->hm) / 2, 0);
     layout_ampm(clock);
+    refresh_remaining(clock);
 }
 
 static void create_scheduled_button(lv_obj_t *scr)
@@ -352,6 +423,9 @@ static void build_screen(lv_obj_t **scr, lv_obj_t **bg, char *path_buf, tod_cloc
     if (clock->row != NULL) {
         lv_obj_move_foreground(clock->row);
     }
+    if (clock->remaining != NULL) {
+        lv_obj_move_foreground(clock->remaining);
+    }
     if (!dim && s_sched_btn != NULL) {
         lv_obj_move_foreground(s_sched_btn);
     }
@@ -415,7 +489,7 @@ void ui_screen_tod_on_show(bool dim)
 
 void ui_screen_tod_tick(void)
 {
-    /* Clock and scheduled button are minute-granular; skip redraw until either changes. */
+    /* Clock and scheduled button are minute-granular; remaining subtitle updates every tick. */
     const app_runtime_t *rt = app_runtime_get();
     const bool valid = rt->time_valid;
     int cur_min = -1;
@@ -426,16 +500,16 @@ void ui_screen_tod_tick(void)
         cur_min = tm_local.tm_hour * 60 + tm_local.tm_min;
     }
 
-    if (valid == s_last_time_valid && cur_min == s_last_clock_min) {
-        return;
-    }
-
-    s_last_time_valid = valid;
-    s_last_clock_min = cur_min;
-
     tod_clock_t *clock = s_showing_dim ? &s_clock_dim : &s_clock_bright;
-    refresh_clock(clock);
-    ui_screen_tod_refresh_scheduled_button();
+    const bool minute_changed = !(valid == s_last_time_valid && cur_min == s_last_clock_min);
+    if (minute_changed) {
+        s_last_time_valid = valid;
+        s_last_clock_min = cur_min;
+        refresh_clock(clock);
+        ui_screen_tod_refresh_scheduled_button();
+    } else {
+        refresh_remaining(clock);
+    }
 }
 
 static void apply_theme_to_clock(tod_clock_t *clock)
@@ -448,6 +522,10 @@ static void apply_theme_to_clock(tod_clock_t *clock)
     if (clock->ampm != NULL) {
         lv_obj_set_style_text_color(clock->ampm, t->white, 0);
         lv_obj_set_style_text_font(clock->ampm, &lv_font_montserrat_34, 0);
+    }
+    if (clock->remaining != NULL) {
+        lv_obj_set_style_text_color(clock->remaining, t->white, 0);
+        lv_obj_set_style_text_font(clock->remaining, &lv_font_montserrat_22, 0);
     }
 }
 

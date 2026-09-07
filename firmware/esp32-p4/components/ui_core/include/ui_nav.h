@@ -104,6 +104,13 @@ void ui_nav_apply_mode_action(uint8_t action, uint32_t duration_sec);
 /** Web UI: enter a single mode directly (no wind-down prefix; other segments zero). */
 void ui_nav_web_apply_mode_action(uint8_t action, uint32_t duration_sec);
 
+/**
+ * Next TOD transition for the remaining-time subtitle.
+ * @p next_mode_out receives an app_mode_t value.
+ * @return true when a next mode and positive remaining time are available.
+ */
+bool ui_nav_tod_next_transition(uint8_t *next_mode_out, uint32_t *remaining_sec_out);
+
 /** Restore cycle/timer state from NVS checkpoints after SNTP (when time_valid).
  *  Returns dim screen variants when a session is restored. */
 ui_screen_id_t mode_engine_restore_from_nvs(void);
