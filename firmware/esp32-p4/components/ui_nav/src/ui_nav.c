@@ -671,10 +671,10 @@ void ui_nav_start_aa_scheduled_button(uint8_t action)
         return;
     }
 
-    /* Start the mode immediately — no adult auth, no duration wizard. */
+    /* Enter the target mode directly — no adult auth, no wind-down prefix. */
     const uint32_t duration_sec =
         (action == APP_SCHEDULE_ACTION_WAKE) ? 0 : SCHEDULED_BUTTON_DEFAULT_DUR_SEC;
-    ui_nav_apply_mode_action(action, duration_sec);
+    ui_nav_web_apply_mode_action(action, duration_sec);
 }
 
 void ui_nav_aa_pass(void)
